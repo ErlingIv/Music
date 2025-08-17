@@ -1,149 +1,139 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full" data-theme="light">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Music Collections — GitHub Pages</title>
-  <meta name="description" content="Explore three historical music spreadsheets with descriptions and quick links." />
-  <link rel="icon" href="assets/favicon.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Erling’s Music Collections</title>
+  <meta name="description" content="Links and notes for historical music spreadsheets and projects." />
   <style>
-    :root { --accent: 59 130 246; }
-    html { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji','Segoe UI Emoji'; }
-    .container { max-width: 1100px; }
-    .shadow-smooth { box-shadow: 0 10px 30px rgba(0,0,0,.08); }
-    iframe.responsive { width: 100%; height: 65vh; border: 1px solid rgb(226 232 240); border-radius: 0.75rem; }
-    .tab-active { border-color: rgb(var(--accent)); color: rgb(var(--accent)); }
-    .card { border: 1px solid rgb(226 232 240); border-radius: 1rem; padding: 1.25rem; }
-    .dark .card { border-color: rgb(30 41 59); }
+    :root { --bg: #0f1115; --fg: #e8eaed; --muted:#a7b0c0; --card:#171a21; --brand:#7aa2f7; --border:#222733; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; background: var(--bg); color: var(--fg); }
+    header { position: sticky; top: 0; backdrop-filter: blur(8px); background: rgba(15,17,21,.7); border-bottom: 1px solid var(--border); z-index: 10; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 1rem; }
+    nav { display: flex; align-items: center; gap: 1rem; justify-content: space-between; }
+    .brand { font-weight: 700; letter-spacing:.3px; }
+    .navlinks a { color: var(--muted); text-decoration: none; margin: 0 .5rem; padding:.4rem .6rem; border-radius:.6rem; }
+    .navlinks a:hover { background: var(--card); color: var(--fg); }
+    .toggle { border: 1px solid var(--border); background: var(--card); color: var(--fg); padding: .4rem .7rem; border-radius: .6rem; cursor: pointer; }
+    .hero { padding: 3.5rem 1rem 2rem; text-align: center; border-bottom:1px solid var(--border); background: linear-gradient(180deg, rgba(122,162,247,.12), transparent 45%); }
+    h1 { font-size: clamp(1.8rem, 3.5vw, 3rem); margin: 0 0 .5rem; }
+    .sub { color: var(--muted); max-width: 70ch; margin: 0 auto 1rem; }
+    .cta { display:inline-flex; gap:.6rem; align-items:center; border:1px solid var(--border); background: var(--card); padding:.6rem .9rem; border-radius:.8rem; text-decoration:none; color: var(--fg); }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1rem; }
+    .section { padding: 2rem 0; }
+    .card { grid-column: span 12; border:1px solid var(--border); background: var(--card); border-radius:1rem; overflow: clip; }
+    @media (min-width: 768px) { .card { grid-column: span 6; } }
+    .card > header { position: static; backdrop-filter:none; background: none; border-bottom: 1px solid var(--border); }
+    .card h2 { margin:.2rem 0; font-size:1.1rem; }
+    .card .body { padding: 1rem; }
+    .card p { margin:.3rem 0 .8rem; color: var(--muted); }
+    .card a { color: var(--brand); text-decoration: none; }
+    .iframe-wrap { position: relative; width:100%; aspect-ratio: 16/10; background:#0b0d12; border-top:1px solid var(--border); }
+    .iframe-wrap iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+    footer { border-top:1px solid var(--border); color: var(--muted); }
+    footer .wrap { padding: 1.25rem; font-size:.95rem; display:flex; justify-content:space-between; gap:.75rem; flex-wrap:wrap; }
+    .light { --bg:#f7f8fb; --fg:#111418; --muted:#4b5563; --card:#ffffff; --brand:#1f4bff; --border:#e6e8ef; }
+    .light .hero { background: linear-gradient(180deg, rgba(31,75,255,.08), transparent 45%); }
   </style>
 </head>
-<body class="h-full bg-white text-slate-900 transition-colors duration-300 dark:bg-slate-900 dark:text-slate-100">
-  <header class="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-slate-200 dark:bg-slate-900/70 dark:border-slate-800">
-    <nav class="container mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <img src="assets/logo.svg" alt="Logo" class="w-8 h-8" />
-        <a href="#" class="font-bold text-lg">Music Collections</a>
-      </div>
-      <div class="flex items-center gap-3">
-        <button id="themeToggle" class="px-3 py-1 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">🌗 Toggle</button>
-        <a href="#explore" class="px-3 py-1 rounded-xl bg-blue-500 text-white hover:bg-blue-600">Explore</a>
-      </div>
-    </nav>
+<body>
+  <header>
+    <div class="wrap">
+      <nav>
+        <div class="brand">Erling’s Music Collections</div>
+        <div class="navlinks" role="navigation" aria-label="Primary">
+          <a href="#about">About</a>
+          <a href="#collections">Collections</a>
+          <a href="#notes">Notes</a>
+        </div>
+        <button class="toggle" id="modeToggle" aria-pressed="false" aria-label="Toggle color mode">Light</button>
+      </nav>
+    </div>
   </header>
 
-  <main class="container mx-auto px-4 py-8 space-y-12">
-    <section class="rounded-2xl p-8 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border border-slate-200 dark:border-slate-800 shadow-smooth">
-      <h1 class="text-3xl md:text-4xl font-extrabold leading-tight">Explore the Spreadsheets</h1>
-      <p class="mt-3 text-slate-600 dark:text-slate-300 max-w-prose">
-        This page brings together three spreadsheets with notes, composers, and publications from your collection.
-        Each card below gives a short explanation and a direct link. You can also expand any card to preview the sheet inline.
-      </p>
+  <section class="hero">
+    <div class="wrap">
+      <h1>Historic scores & research links</h1>
+      <p class="sub">A hub for my spreadsheet-based catalogs (classical and popular Scandinavian music) with short explanations and live embeds.</p>
+      <a class="cta" href="#collections">Jump to Collections ↓</a>
+    </div>
+  </section>
+
+  <main class="wrap">
+    <section id="about" class="section">
+      <h2>About</h2>
+      <p>Below you’ll find three published Google Sheets embedded directly on the page. Each card includes an <em>Open in a new tab</em> link if you prefer a full-screen view.</p>
     </section>
 
-    <section id="explore" class="space-y-6">
-      <div class="grid md:grid-cols-2 gap-6">
-        <!-- Sheet A -->
-        <article class="card space-y-3">
-          <header class="flex items-center justify-between gap-3">
-            <div>
-              <h2 class="font-semibold text-lg">Old classical music</h2>
-              <p class="text-sm text-slate-600 dark:text-slate-300">
-                Works by classical-era and romantic-era composers. Focus on historical editions,
-                publication data, and cross-references to archives (IMSLP, Hofmeister, etc.).
-              </p>
-            </div>
-            <button class="toggle px-3 py-1 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800" data-target="#frame-a">
-              Preview
-            </button>
+    <section id="collections" class="section">
+      <h2>Collections</h2>
+      <div class="grid">
+        <article class="card">
+          <header class="wrap">
+            <h2>Old classical music</h2>
+            <p>Transcriptions of (mostly) my score-collection of known and unknown composers. 
+               Primarily music not easily available elsewhere and to a large extent by Norwegian musicians.</p>
+            <p><a target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vSIWxwL1QqxwLOzDv_AIzXEwZ5-9v1G51cX2rWsnESZYBEtKaNr0ih_6YEHvkyILK_5ug8oycWz21aK/pubhtml">Open in a new tab ↗</a></p>
           </header>
-          <p class="text-sm">
-            Link:&nbsp;
-            <a class="underline text-blue-600 dark:text-blue-400 break-all"
-               href="https://docs.google.com/spreadsheets/d/e/2PACX-1vSIWxwL1QqxwLOzDv_AIzXEwZ5-9v1G51cX2rWsnESZYBEtKaNr0ih_6YEHvkyILK_5ug8oycWz21aK/pubhtml"
-               target="_blank" rel="noopener">Open spreadsheet</a>
-          </p>
-          <div id="frame-a" class="hidden">
-            <iframe class="responsive" loading="lazy"
-              src="https://docs.google.com/spreadsheets/d/e/2PACX-1vSIWxwL1QqxwLOzDv_AIzXEwZ5-9v1G51cX2rWsnESZYBEtKaNr0ih_6YEHvkyILK_5ug8oycWz21aK/pubhtml?widget=true&amp;headers=false"
-              referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+          <div class="iframe-wrap">
+            <iframe title="Old classical music spreadsheet" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vSIWxwL1QqxwLOzDv_AIzXEwZ5-9v1G51cX2rWsnESZYBEtKaNr0ih_6YEHvkyILK_5ug8oycWz21aK/pubhtml"></iframe>
           </div>
         </article>
 
-        <!-- Sheet B -->
-        <article class="card space-y-3">
-          <header class="flex items-center justify-between gap-3">
-            <div>
-              <h2 class="font-semibold text-lg">Old popular music (Norwegian &amp; Swedish)</h2>
-              <p class="text-sm text-slate-600 dark:text-slate-300">
-                Popular songs, waltzes, marches and salon pieces from Norway and Sweden.
-                Includes composer/lyricist details, publishers, and notable performances.
-              </p>
-            </div>
-            <button class="toggle px-3 py-1 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800" data-target="#frame-b">
-              Preview
-            </button>
+        <article class="card">
+          <header class="wrap">
+            <h2>Old popular music</h2>
+            <p>Popular songs mostly from Norway and Sweden. 
+               You have to be a member of the popular-music group to see them, due to most being in the “copyright” zone.</p>
+            <p><a target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vQqvBBaiFtSKobHuIllQA55CD5O5LIJR1JU_Cr-Z5X3AgpqnuhttVDA7GM0ms2nG8BgWF1ApYrZc-cw/pubhtml">Open in a new tab ↗</a></p>
           </header>
-          <p class="text-sm">
-            Link:&nbsp;
-            <a class="underline text-blue-600 dark:text-blue-400 break-all"
-               href="https://docs.google.com/spreadsheets/d/e/2PACX-1vQqvBBaiFtSKobHuIllQA55CD5O5LIJR1JU_Cr-Z5X3AgpqnuhttVDA7GM0ms2nG8BgWF1ApYrZc-cw/pubhtml"
-               target="_blank" rel="noopener">Open spreadsheet</a>
-          </p>
-          <div id="frame-b" class="hidden">
-            <iframe class="responsive" loading="lazy"
-              src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQqvBBaiFtSKobHuIllQA55CD5O5LIJR1JU_Cr-Z5X3AgpqnuhttVDA7GM0ms2nG8BgWF1ApYrZc-cw/pubhtml?widget=true&amp;headers=false"
-              referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+          <div class="iframe-wrap">
+            <iframe title="Old popular music spreadsheet" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQqvBBaiFtSKobHuIllQA55CD5O5LIJR1JU_Cr-Z5X3AgpqnuhttVDA7GM0ms2nG8BgWF1ApYrZc-cw/pubhtml"></iframe>
           </div>
         </article>
 
-        <!-- Sheet C -->
-        <article class="card space-y-3 md:col-span-2">
-          <header class="flex items-center justify-between gap-3">
-            <div>
-              <h2 class="font-semibold text-lg">Norges Melodier I–IV</h2>
-              <p class="text-sm text-slate-600 dark:text-slate-300">
-                A curated register of melodies from the multi-volume series <em>Norges Melodier</em> (vols. I–IV).
-                Useful for tracing tune variants, publication context, and connections to regional/folk sources.
-                Includes notes to help locate printed editions and related archival references.
-              </p>
-            </div>
-            <button class="toggle px-3 py-1 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800" data-target="#frame-c">
-              Preview
-            </button>
+        <article class="card">
+          <header class="wrap">
+            <h2>Norges Melodier I–IV</h2>
+            <p>500 songs from Grieg’s and Alnæs’ four books of old Norwegian music. 
+               To see all, be a member of the group “Norges Melodier”.</p>
+            <p><a target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vRuhQrhQ68I16YdsYa1PcPepXNT_qAAeXaC3znelNccKBmLulUlu3JEBGFgd0h3zXbmCVxlR863pZpV/pubhtml">Open in a new tab ↗</a></p>
           </header>
-          <p class="text-sm">
-            Link:&nbsp;
-            <a class="underline text-blue-600 dark:text-blue-400 break-all"
-               href="https://docs.google.com/spreadsheets/d/e/2PACX-1vRuhQrhQ68I16YdsYa1PcPepXNT_qAAeXaC3znelNccKBmLulUlu3JEBGFgd0h3zXbmCVxlR863pZpV/pubhtml"
-               target="_blank" rel="noopener">Open spreadsheet</a>
-          </p>
-          <div id="frame-c" class="hidden">
-            <iframe class="responsive" loading="lazy"
-              src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRuhQrhQ68I16YdsYa1PcPepXNT_qAAeXaC3znelNccKBmLulUlu3JEBGFgd0h3zXbmCVxlR863pZpV/pubhtml?widget=true&amp;headers=false"
-              referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+          <div class="iframe-wrap">
+            <iframe title="Norges Melodier I–IV spreadsheet" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRuhQrhQ68I16YdsYa1PcPepXNT_qAAeXaC3znelNccKBmLulUlu3JEBGFgd0h3zXbmCVxlR863pZpV/pubhtml"></iframe>
           </div>
         </article>
       </div>
     </section>
 
-    <section id="tips" class="space-y-3">
-      <h2 class="text-2xl font-bold">Tips</h2>
-      <ul class="list-disc pl-6 text-slate-700 dark:text-slate-300">
-        <li>Use the <strong>Preview</strong> button on each card to show or hide an inline preview.</li>
-        <li>To change text/links, edit this page in <code>index.html</code>. Look for the <code>&lt;article&gt;</code> cards.</li>
-        <li>All three links are the published <code>/pubhtml</code> format so they can embed on GitHub Pages.</li>
-      </ul>
+    <section id="notes" class="section">
+      <h2>Notes</h2>
+      <div class="card">
+        <div class="body">
+          <p>You can put research updates here — e.g., corrected attributions, publication trails, or links to IMSLP/MuseScore entries.</p>
+        </div>
+      </div>
     </section>
   </main>
 
-  <footer class="border-t border-slate-200 dark:border-slate-800 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
-    <p>© <span id="year"></span> Your Name</p>
+  <footer>
+    <div class="wrap">
+      <span>© <span id="year"></span> Erling</span>
+      <span><a href="#about">About</a> · <a href="#collections">Collections</a> · <a href="#notes">Notes</a></span>
+    </div>
   </footer>
 
-  <script src="assets/main.js"></script>
+  <script>
+    const btn = document.getElementById('modeToggle');
+    const saved = localStorage.getItem('mode');
+    if (saved === 'light') { document.body.classList.add('light'); btn.textContent = 'Dark'; }
+    btn.addEventListener('click', () => {
+      const isLight = document.body.classList.toggle('light');
+      btn.textContent = isLight ? 'Dark' : 'Light';
+      localStorage.setItem('mode', isLight ? 'light' : 'dark');
+    });
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
 </body>
 </html>
