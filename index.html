@@ -1,29 +1,149 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="en" class="h-full" data-theme="light">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Old Classical Music</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Music Collections — GitHub Pages</title>
+  <meta name="description" content="Explore three historical music spreadsheets with descriptions and quick links." />
+  <link rel="icon" href="assets/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.5; color: #222; }
-    header { padding: 12px 16px; border-bottom: 1px solid #eee; }
-    .wrap { padding: 12px 16px; }
-    iframe { width: 100%; height: 85vh; border: 1px solid #ddd; }
-    .note { font-size: 0.9rem; color: #555; }
-    a.btn { display: inline-block; margin-top: 8px; padding: 8px 12px; text-decoration: none; border: 1px solid #ccc; border-radius: 6px; }
+    :root { --accent: 59 130 246; }
+    html { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji','Segoe UI Emoji'; }
+    .container { max-width: 1100px; }
+    .shadow-smooth { box-shadow: 0 10px 30px rgba(0,0,0,.08); }
+    iframe.responsive { width: 100%; height: 65vh; border: 1px solid rgb(226 232 240); border-radius: 0.75rem; }
+    .tab-active { border-color: rgb(var(--accent)); color: rgb(var(--accent)); }
+    .card { border: 1px solid rgb(226 232 240); border-radius: 1rem; padding: 1.25rem; }
+    .dark .card { border-color: rgb(30 41 59); }
   </style>
 </head>
-<body>
-  <header>
-    <h1>Old music - transcriptions</h1>
-    <p class="note">If the sheet doesn’t load, <a class="btn" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vSIWxwL1QqxwLOzDv_AIzXEwZ5-9v1G51cX2rWsnESZYBEtKaNr0ih_6YEHvkyILK_5ug8oycWz21aK/pubhtml" target="_blank" rel="noopener">open it in a new tab</a>.</p>
+<body class="h-full bg-white text-slate-900 transition-colors duration-300 dark:bg-slate-900 dark:text-slate-100">
+  <header class="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-slate-200 dark:bg-slate-900/70 dark:border-slate-800">
+    <nav class="container mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <img src="assets/logo.svg" alt="Logo" class="w-8 h-8" />
+        <a href="#" class="font-bold text-lg">Music Collections</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <button id="themeToggle" class="px-3 py-1 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">🌗 Toggle</button>
+        <a href="#explore" class="px-3 py-1 rounded-xl bg-blue-500 text-white hover:bg-blue-600">Explore</a>
+      </div>
+    </nav>
   </header>
-  <div class="wrap">
-    <iframe
-      src="https://docs.google.com/spreadsheets/d/e/2PACX-1vSIWxwL1QqxwLOzDv_AIzXEwZ5-9v1G51cX2rWsnESZYBEtKaNr0ih_6YEHvkyILK_5ug8oycWz21aK/pubhtml"
-      title="Google Spreadsheet"
-      loading="lazy">
-    </iframe>
-  </div>
+
+  <main class="container mx-auto px-4 py-8 space-y-12">
+    <section class="rounded-2xl p-8 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border border-slate-200 dark:border-slate-800 shadow-smooth">
+      <h1 class="text-3xl md:text-4xl font-extrabold leading-tight">Explore the Spreadsheets</h1>
+      <p class="mt-3 text-slate-600 dark:text-slate-300 max-w-prose">
+        This page brings together three spreadsheets with notes, composers, and publications from your collection.
+        Each card below gives a short explanation and a direct link. You can also expand any card to preview the sheet inline.
+      </p>
+    </section>
+
+    <section id="explore" class="space-y-6">
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- Sheet A -->
+        <article class="card space-y-3">
+          <header class="flex items-center justify-between gap-3">
+            <div>
+              <h2 class="font-semibold text-lg">Old classical music</h2>
+              <p class="text-sm text-slate-600 dark:text-slate-300">
+                Works by classical-era and romantic-era composers. Focus on historical editions,
+                publication data, and cross-references to archives (IMSLP, Hofmeister, etc.).
+              </p>
+            </div>
+            <button class="toggle px-3 py-1 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800" data-target="#frame-a">
+              Preview
+            </button>
+          </header>
+          <p class="text-sm">
+            Link:&nbsp;
+            <a class="underline text-blue-600 dark:text-blue-400 break-all"
+               href="https://docs.google.com/spreadsheets/d/e/2PACX-1vSIWxwL1QqxwLOzDv_AIzXEwZ5-9v1G51cX2rWsnESZYBEtKaNr0ih_6YEHvkyILK_5ug8oycWz21aK/pubhtml"
+               target="_blank" rel="noopener">Open spreadsheet</a>
+          </p>
+          <div id="frame-a" class="hidden">
+            <iframe class="responsive" loading="lazy"
+              src="https://docs.google.com/spreadsheets/d/e/2PACX-1vSIWxwL1QqxwLOzDv_AIzXEwZ5-9v1G51cX2rWsnESZYBEtKaNr0ih_6YEHvkyILK_5ug8oycWz21aK/pubhtml?widget=true&amp;headers=false"
+              referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+          </div>
+        </article>
+
+        <!-- Sheet B -->
+        <article class="card space-y-3">
+          <header class="flex items-center justify-between gap-3">
+            <div>
+              <h2 class="font-semibold text-lg">Old popular music (Norwegian &amp; Swedish)</h2>
+              <p class="text-sm text-slate-600 dark:text-slate-300">
+                Popular songs, waltzes, marches and salon pieces from Norway and Sweden.
+                Includes composer/lyricist details, publishers, and notable performances.
+              </p>
+            </div>
+            <button class="toggle px-3 py-1 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800" data-target="#frame-b">
+              Preview
+            </button>
+          </header>
+          <p class="text-sm">
+            Link:&nbsp;
+            <a class="underline text-blue-600 dark:text-blue-400 break-all"
+               href="https://docs.google.com/spreadsheets/d/e/2PACX-1vQqvBBaiFtSKobHuIllQA55CD5O5LIJR1JU_Cr-Z5X3AgpqnuhttVDA7GM0ms2nG8BgWF1ApYrZc-cw/pubhtml"
+               target="_blank" rel="noopener">Open spreadsheet</a>
+          </p>
+          <div id="frame-b" class="hidden">
+            <iframe class="responsive" loading="lazy"
+              src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQqvBBaiFtSKobHuIllQA55CD5O5LIJR1JU_Cr-Z5X3AgpqnuhttVDA7GM0ms2nG8BgWF1ApYrZc-cw/pubhtml?widget=true&amp;headers=false"
+              referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+          </div>
+        </article>
+
+        <!-- Sheet C -->
+        <article class="card space-y-3 md:col-span-2">
+          <header class="flex items-center justify-between gap-3">
+            <div>
+              <h2 class="font-semibold text-lg">Norges Melodier I–IV</h2>
+              <p class="text-sm text-slate-600 dark:text-slate-300">
+                A curated register of melodies from the multi-volume series <em>Norges Melodier</em> (vols. I–IV).
+                Useful for tracing tune variants, publication context, and connections to regional/folk sources.
+                Includes notes to help locate printed editions and related archival references.
+              </p>
+            </div>
+            <button class="toggle px-3 py-1 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800" data-target="#frame-c">
+              Preview
+            </button>
+          </header>
+          <p class="text-sm">
+            Link:&nbsp;
+            <a class="underline text-blue-600 dark:text-blue-400 break-all"
+               href="https://docs.google.com/spreadsheets/d/e/2PACX-1vRuhQrhQ68I16YdsYa1PcPepXNT_qAAeXaC3znelNccKBmLulUlu3JEBGFgd0h3zXbmCVxlR863pZpV/pubhtml"
+               target="_blank" rel="noopener">Open spreadsheet</a>
+          </p>
+          <div id="frame-c" class="hidden">
+            <iframe class="responsive" loading="lazy"
+              src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRuhQrhQ68I16YdsYa1PcPepXNT_qAAeXaC3znelNccKBmLulUlu3JEBGFgd0h3zXbmCVxlR863pZpV/pubhtml?widget=true&amp;headers=false"
+              referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="tips" class="space-y-3">
+      <h2 class="text-2xl font-bold">Tips</h2>
+      <ul class="list-disc pl-6 text-slate-700 dark:text-slate-300">
+        <li>Use the <strong>Preview</strong> button on each card to show or hide an inline preview.</li>
+        <li>To change text/links, edit this page in <code>index.html</code>. Look for the <code>&lt;article&gt;</code> cards.</li>
+        <li>All three links are the published <code>/pubhtml</code> format so they can embed on GitHub Pages.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="border-t border-slate-200 dark:border-slate-800 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+    <p>© <span id="year"></span> Your Name</p>
+  </footer>
+
+  <script src="assets/main.js"></script>
 </body>
 </html>
