@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Erling’s Music Collections</title>
+  <title data-i18n="doc_title">Erling’s Music Collections</title>
   <meta name="description" content="Links and notes for historical music spreadsheets and projects." />
   <style>
     :root { --bg:#f7f8fb; --fg:#111418; --muted:#4b5563; --card:#ffffff; --brand:#1f4bff; --border:#e6e8ef; }
@@ -11,11 +11,11 @@
     body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; background: var(--bg); color: var(--fg); }
     header { position: sticky; top: 0; backdrop-filter: blur(8px); background: rgba(247,248,251,.9); border-bottom: 1px solid var(--border); z-index: 10; }
     .wrap { max-width: 1100px; margin: 0 auto; padding: 1rem; }
-    nav { display: flex; align-items: center; gap: 1rem; justify-content: space-between; }
+    nav { display: flex; align-items: center; gap: .75rem; justify-content: space-between; }
     .brand { font-weight: 700; letter-spacing:.3px; }
-    .navlinks a { color: var(--muted); text-decoration: none; margin: 0 .5rem; padding:.4rem .6rem; border-radius:.6rem; }
+    .navlinks a { color: var(--muted); text-decoration: none; margin: 0 .25rem; padding:.4rem .6rem; border-radius:.6rem; }
     .navlinks a:hover { background: var(--card); color: var(--fg); }
-    .toggle { border: 1px solid var(--border); background: var(--card); color: var(--fg); padding: .4rem .7rem; border-radius: .6rem; cursor: pointer; }
+    .btn { border: 1px solid var(--border); background: var(--card); color: var(--fg); padding: .4rem .7rem; border-radius: .6rem; cursor: pointer; }
     .hero { padding: 3.5rem 1rem 2rem; text-align: center; border-bottom:1px solid var(--border); background: linear-gradient(180deg, rgba(31,75,255,.08), transparent 45%); }
     h1 { font-size: clamp(1.8rem, 3.5vw, 3rem); margin: 0 0 .5rem; }
     .sub { color: var(--muted); max-width: 70ch; margin: 0 auto 1rem; }
@@ -33,8 +33,10 @@
     .iframe-wrap iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
     footer { border-top:1px solid var(--border); color: var(--muted); }
     footer .wrap { padding: 1.25rem; font-size:.95rem; display:flex; justify-content:space-between; gap:.75rem; flex-wrap:wrap; }
+    /* Dark mode vars */
     body.dark { --bg: #0f1115; --fg: #e8eaed; --muted:#a7b0c0; --card:#171a21; --brand:#7aa2f7; --border:#222733; }
     body.dark .hero { background: linear-gradient(180deg, rgba(122,162,247,.12), transparent 45%); }
+    .controls { display:flex; gap:.5rem; align-items:center; }
   </style>
 </head>
 <body>
@@ -43,75 +45,97 @@
       <nav>
         <div class="brand">Erling’s Music Collections</div>
         <div class="navlinks" role="navigation" aria-label="Primary">
-          <a href="#about">About</a>
-          <a href="#collections">Collections</a>
-          <a href="#notes">Notes</a>
+          <a href="#about" data-i18n="nav_about">About</a>
+          <a href="#collections" data-i18n="nav_collections">Collections</a>
+          <a href="#notes" data-i18n="nav_notes">Notes</a>
         </div>
-        <button class="toggle" id="modeToggle" aria-pressed="false" aria-label="Toggle color mode">Dark</button>
+        <div class="controls">
+          <button class="btn" id="langToggle" aria-pressed="false" aria-label="Toggle language" data-i18n="btn_lang_to_no">Norsk</button>
+          <button class="btn" id="modeToggle" aria-pressed="false" aria-label="Toggle color mode" data-i18n="btn_mode_dark">Dark</button>
+        </div>
       </nav>
     </div>
   </header>
 
   <section class="hero">
     <div class="wrap">
-      <h1>Old scores: classic and popular music</h1>
-      <p class="sub">A hub for my spreadsheet-based catalogs (classical and popular music) with short explanations and live embeds.</p>
-      <a class="cta" href="#collections">Jump to Collections ↓</a>
+      <h1 id="hero-title" data-i18n="hero_title">Old scores: classic and popular music</h1>
+      <p class="sub" id="hero-sub" data-i18n="hero_sub">
+        A hub for my spreadsheet-based catalogs (classical and popular Scandinavian music) with short explanations and live embeds.
+      </p>
+      <a class="cta" href="#collections" data-i18n="cta_jump">Jump to Collections ↓</a>
     </div>
   </section>
 
   <main class="wrap">
     <section id="about" class="section">
-      <h2>About</h2>
-      <p>Below you’ll find three published Google Sheets embedded directly on the page. Each card includes an <em>Open in a new tab</em> link if you prefer a full-screen view.</p>
+      <h2 data-i18n="about_title">About</h2>
+      <p data-i18n="about_p">
+        Below you’ll find three published Google Sheets embedded directly on the page. Each card includes an <em>Open in a new tab</em> link if you prefer a full-screen view.
+      </p>
     </section>
 
     <section id="collections" class="section">
-      <h2>Collections</h2>
+      <h2 data-i18n="collections_title">Collections</h2>
       <div class="grid">
+        <!-- Collection 1 -->
         <article class="card">
           <header class="wrap">
-            <h2>Old classical music</h2>
-            <p>Transcriptions of (mostly) my score-collection of known and unknown composers. 
-               Primarily music not easily available elsewhere and to a large extent by Norwegian musicians.</p>
-            <p><a target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vSIWxwL1QqxwLOzDv_AIzXEwZ5-9v1G51cX2rWsnESZYBEtKaNr0ih_6YEHvkyILK_5ug8oycWz21aK/pubhtml">Open in a new tab ↗</a></p>
+            <h2 data-i18n="c1_title">Old classical music</h2>
+            <p data-i18n="c1_desc">
+              Transcriptions of (mostly) my score-collection of known and unknown composers. 
+              Primarily music not easily available elsewhere and to a large extent by Norwegian musicians.
+            </p>
+            <p><a target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vSIWxwL1QqxwLOzDv_AIzXEwZ5-9v1G51cX2rWsnESZYBEtKaNr0ih_6YEHvkyILK_5ug8oycWz21aK/pubhtml" data-i18n="open_new_tab">Open in a new tab ↗</a></p>
           </header>
           <div class="iframe-wrap">
-            <iframe title="Old classical music spreadsheet" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vSIWxwL1QqxwLOzDv_AIzXEwZ5-9v1G51cX2rWsnESZYBEtKaNr0ih_6YEHvkyILK_5ug8oycWz21aK/pubhtml"></iframe>
+            <iframe title="Old classical music spreadsheet" id="c1_iframe"
+                    src="https://docs.google.com/spreadsheets/d/e/2PACX-1vSIWxwL1QqxwLOzDv_AIzXEwZ5-9v1G51cX2rWsnESZYBEtKaNr0ih_6YEHvkyILK_5ug8oycWz21aK/pubhtml"></iframe>
           </div>
         </article>
 
+        <!-- Collection 2 -->
         <article class="card">
           <header class="wrap">
-            <h2>Old popular music</h2>
-            <p>Popular songs mostly from Norway and Sweden. 
-               You have to be a member of the popular-music group to see them, due to most being in the “copyright” zone.</p>
-            <p><a target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vQqvBBaiFtSKobHuIllQA55CD5O5LIJR1JU_Cr-Z5X3AgpqnuhttVDA7GM0ms2nG8BgWF1ApYrZc-cw/pubhtml">Open in a new tab ↗</a></p>
+            <h2 data-i18n="c2_title">Old popular music</h2>
+            <p data-i18n="c2_desc">
+              Popular songs mostly from Norway and Sweden.  
+              You have to be a member of the popular-music group to see them, due to most being in the “copyright”
+              zone.
+            </p>
+            <p><a target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vQqvBBaiFtSKobHuIllQA55CD5O5LIJR1JU_Cr-Z5X3AgpqnuhttVDA7GM0ms2nG8BgWF1ApYrZc-cw/pubhtml" data-i18n="open_new_tab">Open in a new tab ↗</a></p>
           </header>
           <div class="iframe-wrap">
-            <iframe title="Old popular music spreadsheet" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQqvBBaiFtSKobHuIllQA55CD5O5LIJR1JU_Cr-Z5X3AgpqnuhttVDA7GM0ms2nG8BgWF1ApYrZc-cw/pubhtml"></iframe>
+            <iframe title="Old popular music spreadsheet" id="c2_iframe"
+                    src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQqvBBaiFtSKobHuIllQA55CD5O5LIJR1JU_Cr-Z5X3AgpqnuhttVDA7GM0ms2nG8BgWF1ApYrZc-cw/pubhtml"></iframe>
           </div>
         </article>
 
+        <!-- Collection 3 -->
         <article class="card">
           <header class="wrap">
-            <h2>Norges Melodier I–IV</h2>
-            <p>500 songs from Grieg’s and Alnæs’ four books of old Norwegian music. 
-               To see all, be a member of the group “Norges Melodier”.</p>
-            <p><a target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vRuhQrhQ68I16YdsYa1PcPepXNT_qAAeXaC3znelNccKBmLulUlu3JEBGFgd0h3zXbmCVxlR863pZpV/pubhtml">Open in a new tab ↗</a></p>
+            <h2 data-i18n="c3_title">Norges Melodier I–IV</h2>
+            <p data-i18n="c3_desc">
+              500 songs from Grieg’s and Alnæs’ four books of old Norwegian music.  
+              To see all, be a member of the group “Norges Melodier”.
+            </p>
+            <p><a target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vRuhQrhQ68I16YdsYa1PcPepXNT_qAAeXaC3znelNccKBmLulUlu3JEBGFgd0h3zXbmCVxlR863pZpV/pubhtml" data-i18n="open_new_tab">Open in a new tab ↗</a></p>
           </header>
           <div class="iframe-wrap">
-            <iframe title="Norges Melodier I–IV spreadsheet" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRuhQrhQ68I16YdsYa1PcPepXNT_qAAeXaC3znelNccKBmLulUlu3JEBGFgd0h3zXbmCVxlR863pZpV/pubhtml"></iframe>
+            <iframe title="Norges Melodier I–IV spreadsheet" id="c3_iframe"
+                    src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRuhQrhQ68I16YdsYa1PcPepXNT_qAAeXaC3znelNccKBmLulUlu3JEBGFgd0h3zXbmCVxlR863pZpV/pubhtml"></iframe>
           </div>
         </article>
       </div>
     </section>
 
     <section id="notes" class="section">
-      <h2>Notes</h2>
+      <h2 data-i18n="notes_title">Notes</h2>
       <div class="card">
         <div class="body">
-          <p>You can put research updates here — e.g., corrected attributions, publication trails, or links to IMSLP/MuseScore entries.</p>
+          <p data-i18n="notes_p">
+            You can put research updates here — e.g., corrected attributions, publication trails, or links to IMSLP/MuseScore entries.
+          </p>
         </div>
       </div>
     </section>
@@ -120,20 +144,121 @@
   <footer>
     <div class="wrap">
       <span>© <span id="year"></span> Erling</span>
-      <span><a href="#about">About</a> · <a href="#collections">Collections</a> · <a href="#notes">Notes</a></span>
+      <span>
+        <a href="#about" data-i18n="nav_about">About</a> ·
+        <a href="#collections" data-i18n="nav_collections">Collections</a> ·
+        <a href="#notes" data-i18n="nav_notes">Notes</a>
+      </span>
     </div>
   </footer>
 
   <script>
-    const btn = document.getElementById('modeToggle');
-    const saved = localStorage.getItem('mode');
-    if (saved === 'dark') { document.body.classList.add('dark'); btn.textContent = 'Light'; }
-    btn.addEventListener('click', () => {
+    // ---- Dark/Light mode (default light)
+    const modeBtn = document.getElementById('modeToggle');
+    const savedMode = localStorage.getItem('mode');
+    if (savedMode === 'dark') { document.body.classList.add('dark'); modeBtn.textContent = tr('btn_mode_light'); }
+    modeBtn.addEventListener('click', () => {
       const isDark = document.body.classList.toggle('dark');
-      btn.textContent = isDark ? 'Light' : 'Dark';
       localStorage.setItem('mode', isDark ? 'dark' : 'light');
+      modeBtn.textContent = tr(isDark ? 'btn_mode_light' : 'btn_mode_dark');
     });
     document.getElementById('year').textContent = new Date().getFullYear();
+
+    // ---- Simple i18n
+    const translations = {
+      en: {
+        doc_title: "Erling’s Music Collections",
+        nav_about: "About",
+        nav_collections: "Collections",
+        nav_notes: "Notes",
+        btn_lang_to_no: "Norsk",
+        btn_lang_to_en: "English",
+        btn_mode_dark: "Dark",
+        btn_mode_light: "Light",
+        hero_title: "Old scores: classic and popular music",
+        hero_sub: "A hub for my spreadsheet-based catalogs (classical and popular Scandinavian music) with short explanations and live embeds.",
+        cta_jump: "Jump to Collections ↓",
+        about_title: "About",
+        about_p: "Below you’ll find three published Google Sheets embedded directly on the page. Each card includes an <em>Open in a new tab</em> link if you prefer a full-screen view.",
+        collections_title: "Collections",
+        c1_title: "Old classical music",
+        c1_desc: "Transcriptions of (mostly) my score-collection of known and unknown composers. Primarily music not easily available elsewhere and to a large extent by Norwegian musicians.",
+        c2_title: "Old popular music",
+        c2_desc: "Popular songs mostly from Norway and Sweden. You have to be a member of the popular-music group to see them, due to most being in the “copyright” zone.",
+        c3_title: "Norges Melodier I–IV",
+        c3_desc: "500 songs from Grieg’s and Alnæs’ four books of old Norwegian music. To see all, be a member of the group “Norges Melodier”.",
+        open_new_tab: "Open in a new tab ↗",
+        notes_title: "Notes",
+        notes_p: "You can put research updates here — e.g., corrected attributions, publication trails, or links to IMSLP/MuseScore entries."
+      },
+      no: {
+        doc_title: "Erlings musikksamlinger",
+        nav_about: "Om",
+        nav_collections: "Samlinger",
+        nav_notes: "Notater",
+        btn_lang_to_no: "Norsk",
+        btn_lang_to_en: "English",
+        btn_mode_dark: "Mørk",
+        btn_mode_light: "Lys",
+        hero_title: "Gamle noter: klassisk og populærmusikk",
+        hero_sub: "En samling av mine regnearkbaserte kataloger (klassisk og populær skandinavisk musikk) med korte forklaringer og innebygde visninger.",
+        cta_jump: "Gå til samlingene ↓",
+        about_title: "Om",
+        about_p: "Nedenfor finner du tre publiserte Google-regneark som er innebygd på siden. Hver kortseksjon har også lenken <em>Åpne i ny fane</em> for fullskjermsvisning.",
+        collections_title: "Samlinger",
+        c1_title: "Gamle klassiske noter",
+        c1_desc: "Transkripsjoner av (hovedsakelig) min notesamling av kjente og ukjente komponister. Primært musikk som ikke er lett tilgjengelig andre steder og i stor grad av norske musikere.",
+        c2_title: "Gammel populærmusikk",
+        c2_desc: "Populære sanger, mest fra Norge og Sverige. Du må være medlem av gruppen for populærmusikk for å se dem, siden de fleste ligger i «opphavsrett»-sonen.",
+        c3_title: "Norges Melodier I–IV",
+        c3_desc: "500 sanger fra Griegs og Alnæs’ fire bøker med gammel norsk musikk. For å se alle, bli medlem av gruppen «Norges Melodier».",
+        open_new_tab: "Åpne i ny fane ↗",
+        notes_title: "Notater",
+        notes_p: "Her kan du legge inn forskningsoppdateringer — f.eks. korrigerte attribusjoner, utgivelsesspor eller lenker til IMSLP/MuseScore."
+      }
+    };
+
+    function tr(key){ 
+      const lang = localStorage.getItem('lang') || (navigator.language || '').startsWith('no') ? 'no' : 'en';
+      return translations[lang][key] || translations.en[key] || '';
+    }
+
+    function applyI18n(lang) {
+      document.documentElement.lang = lang === 'no' ? 'no' : 'en';
+      // Update all elements with data-i18n
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        const html = translations[lang][key] || translations.en[key] || '';
+        if (html) {
+          // Use innerHTML to allow <em> in strings
+          el.innerHTML = html;
+        }
+      });
+      // Update iframe titles for a11y
+      document.getElementById('c1_iframe').title = lang === 'no' ? 'Regneark: Gamle klassiske noter' : 'Old classical music spreadsheet';
+      document.getElementById('c2_iframe').title = lang === 'no' ? 'Regneark: Gammel populærmusikk' : 'Old popular music spreadsheet';
+      document.getElementById('c3_iframe').title = lang === 'no' ? 'Regneark: Norges Melodier I–IV' : 'Norges Melodier I–IV spreadsheet';
+      // Buttons need manual swap text to show the *target* language/mode
+      langBtn.textContent = translations[lang].btn_lang_to_en && lang === 'no' ? translations['en'].btn_lang_to_no : translations['no'].btn_lang_to_en;
+      modeBtn.textContent = document.body.classList.contains('dark')
+        ? translations[lang].btn_mode_light
+        : translations[lang].btn_mode_dark;
+      // Document title
+      document.title = translations[lang].doc_title;
+    }
+
+    // Language toggle
+    const langBtn = document.getElementById('langToggle');
+    const storedLang = localStorage.getItem('lang');
+    let currentLang = storedLang || ((navigator.language || '').startsWith('no') ? 'no' : 'en');
+    localStorage.setItem('lang', currentLang);
+    applyI18n(currentLang);
+
+    langBtn.addEventListener('click', () => {
+      currentLang = currentLang === 'en' ? 'no' : 'en';
+      localStorage.setItem('lang', currentLang);
+      applyI18n(currentLang);
+    });
   </script>
 </body>
 </html>
