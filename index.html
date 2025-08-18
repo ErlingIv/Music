@@ -37,6 +37,17 @@
     body.dark { --bg: #0f1115; --fg: #e8eaed; --muted:#a7b0c0; --card:#171a21; --brand:#7aa2f7; --border:#222733; }
     body.dark .hero { background: linear-gradient(180deg, rgba(122,162,247,.12), transparent 45%); }
     .controls { display:flex; gap:.5rem; align-items:center; }
+
+    /* Alphabetic frame styles */
+    .alpha-card { border:1px solid var(--border); background: var(--card); border-radius:1rem; overflow:hidden; }
+    .alpha-head { padding: 1rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap; }
+    .alpha-desc { color: var(--muted); margin:.2rem 0 0 0; }
+    .letterbar { display:flex; flex-wrap:wrap; gap:.25rem; }
+    .letter { border:1px solid var(--border); background:#fff; padding:.35rem .55rem; border-radius:.55rem; cursor:pointer; font-family:inherit; }
+    .letter[aria-selected="true"] { background:#eef2ff; border-color:#dbeafe; }
+    .alpha-frame { min-height: 240px; padding: 1rem; }
+    .alpha-frame .muted { color: var(--muted); }
+    .alpha-frame ul { margin:.25rem 0 .25rem 1.2rem; }
   </style>
 </head>
 <body>
@@ -47,6 +58,7 @@
         <div class="navlinks" role="navigation" aria-label="Primary">
           <a href="#about" data-i18n="nav_about">About</a>
           <a href="#collections" data-i18n="nav_collections">Collections</a>
+          <a href="#alphabetic" data-i18n="nav_alpha">Alphabetic</a>
           <a href="#notes" data-i18n="nav_notes">Notes</a>
         </div>
         <div class="controls">
@@ -129,6 +141,53 @@
       </div>
     </section>
 
+    <!-- Alphabetic frame A–Å -->
+    <section id="alphabetic" class="section">
+      <h2 data-i18n="alpha_title">Alphabetic A–Å</h2>
+      <div class="alpha-card">
+        <div class="alpha-head">
+          <div>
+            <strong data-i18n="alpha_head">Select a letter to view content</strong>
+            <div class="alpha-desc" data-i18n="alpha_desc">This frame can display your own HTML snippet for each letter. "A" is filled with Anna Alm as an example.</div>
+          </div>
+          <div class="letterbar" role="tablist" aria-label="Letters">
+            <button class="letter" role="tab" aria-selected="true" data-letter="A">A</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="B">B</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="C">C</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="D">D</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="E">E</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="F">F</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="G">G</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="H">H</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="I">I</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="J">J</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="K">K</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="L">L</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="M">M</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="N">N</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="O">O</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="P">P</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="Q">Q</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="R">R</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="S">S</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="T">T</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="U">U</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="V">V</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="W">W</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="X">X</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="Y">Y</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="Z">Z</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="Æ">Æ</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="Ø">Ø</button>
+            <button class="letter" role="tab" aria-selected="false" data-letter="Å">Å</button>
+          </div>
+        </div>
+        <div class="alpha-frame" id="alpha-frame" role="tabpanel" aria-live="polite">
+          <!-- Content injected by JS -->
+        </div>
+      </div>
+    </section>
+
     <section id="notes" class="section">
       <h2 data-i18n="notes_title">Notes</h2>
       <div class="card">
@@ -147,29 +206,24 @@
       <span>
         <a href="#about" data-i18n="nav_about">About</a> ·
         <a href="#collections" data-i18n="nav_collections">Collections</a> ·
+        <a href="#alphabetic" data-i18n="nav_alpha">Alphabetic</a> ·
         <a href="#notes" data-i18n="nav_notes">Notes</a>
       </span>
     </div>
   </footer>
 
   <script>
-    // ---- Dark/Light mode (default light)
+    // Cache important elements
     const modeBtn = document.getElementById('modeToggle');
-    const savedMode = localStorage.getItem('mode');
-    if (savedMode === 'dark') { document.body.classList.add('dark'); modeBtn.textContent = tr('btn_mode_light'); }
-    modeBtn.addEventListener('click', () => {
-      const isDark = document.body.classList.toggle('dark');
-      localStorage.setItem('mode', isDark ? 'dark' : 'light');
-      modeBtn.textContent = tr(isDark ? 'btn_mode_light' : 'btn_mode_dark');
-    });
-    document.getElementById('year').textContent = new Date().getFullYear();
+    const langBtn = document.getElementById('langToggle');
 
-    // ---- Simple i18n
+    // ---- Translations
     const translations = {
       en: {
         doc_title: "Erling’s Music Collections",
         nav_about: "About",
         nav_collections: "Collections",
+        nav_alpha: "Alphabetic",
         nav_notes: "Notes",
         btn_lang_to_no: "Norsk",
         btn_lang_to_en: "English",
@@ -189,12 +243,16 @@
         c3_desc: "500 songs from Grieg’s and Alnæs’ four books of old Norwegian music. To see all, be a member of the group “Norges Melodier”.",
         open_new_tab: "Open in a new tab ↗",
         notes_title: "Notes",
-        notes_p: "You can put research updates here — e.g., corrected attributions, publication trails, or links to IMSLP/MuseScore entries."
+        notes_p: "You can put research updates here — e.g., corrected attributions, publication trails, or links to IMSLP/MuseScore entries.",
+        alpha_title: "Alphabetic A–Å",
+        alpha_head: "Select a letter to view content",
+        alpha_desc: "This frame can display your own HTML snippet for each letter. \"A\" is filled with Anna Alm as an example."
       },
       no: {
         doc_title: "Erlings musikksamlinger",
         nav_about: "Om",
         nav_collections: "Samlinger",
+        nav_alpha: "Alfabetisk",
         nav_notes: "Notater",
         btn_lang_to_no: "Norsk",
         btn_lang_to_en: "English",
@@ -214,51 +272,93 @@
         c3_desc: "500 sanger fra Griegs og Alnæs’ fire bøker med gammel norsk musikk. For å se alle, bli medlem av gruppen «Norges Melodier».",
         open_new_tab: "Åpne i ny fane ↗",
         notes_title: "Notater",
-        notes_p: "Her kan du legge inn forskningsoppdateringer — f.eks. korrigerte attribusjoner, utgivelsesspor eller lenker til IMSLP/MuseScore."
+        notes_p: "Her kan du legge inn forskningsoppdateringer — f.eks. korrigerte attribusjoner, utgivelsesspor eller lenker til IMSLP/MuseScore.",
+        alpha_title: "Alfabetisk A–Å",
+        alpha_head: "Velg en bokstav for å vise innhold",
+        alpha_desc: "Denne rammen kan vise din egen HTML-kode per bokstav. «A» er fylt med Anna Alm som eksempel."
       }
     };
 
-    function tr(key){ 
-      const lang = localStorage.getItem('lang') || (navigator.language || '').startsWith('no') ? 'no' : 'en';
-      return translations[lang][key] || translations.en[key] || '';
-    }
+    // Helpers
+    function getDefaultLang() { return ((navigator.language || '').toLowerCase().startsWith('no')) ? 'no' : 'en'; }
+    function getLang() { const stored = localStorage.getItem('lang'); return stored ? stored : getDefaultLang(); }
 
     function applyI18n(lang) {
-      document.documentElement.lang = lang === 'no' ? 'no' : 'en';
-      // Update all elements with data-i18n
+      const dict = translations[lang] || translations.en;
+      document.documentElement.lang = (lang === 'no') ? 'no' : 'en';
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
-        const html = translations[lang][key] || translations.en[key] || '';
-        if (html) {
-          // Use innerHTML to allow <em> in strings
-          el.innerHTML = html;
-        }
+        const html = (dict[key] || translations.en[key] || '');
+        if (html) el.innerHTML = html;
       });
-      // Update iframe titles for a11y
       document.getElementById('c1_iframe').title = lang === 'no' ? 'Regneark: Gamle klassiske noter' : 'Old classical music spreadsheet';
       document.getElementById('c2_iframe').title = lang === 'no' ? 'Regneark: Gammel populærmusikk' : 'Old popular music spreadsheet';
       document.getElementById('c3_iframe').title = lang === 'no' ? 'Regneark: Norges Melodier I–IV' : 'Norges Melodier I–IV spreadsheet';
-      // Buttons need manual swap text to show the *target* language/mode
-      langBtn.textContent = translations[lang].btn_lang_to_en && lang === 'no' ? translations['en'].btn_lang_to_no : translations['no'].btn_lang_to_en;
-      modeBtn.textContent = document.body.classList.contains('dark')
-        ? translations[lang].btn_mode_light
-        : translations[lang].btn_mode_dark;
-      // Document title
-      document.title = translations[lang].doc_title;
+      langBtn.textContent = (lang === 'en') ? translations.en.btn_lang_to_no : translations.no.btn_lang_to_en;
+      modeBtn.textContent = document.body.classList.contains('dark') ? dict.btn_mode_light : dict.btn_mode_dark;
+      document.title = dict.doc_title;
     }
 
-    // Language toggle
-    const langBtn = document.getElementById('langToggle');
-    const storedLang = localStorage.getItem('lang');
-    let currentLang = storedLang || ((navigator.language || '').startsWith('no') ? 'no' : 'en');
+    // ---- Dark/Light mode
+    const savedMode = localStorage.getItem('mode');
+    if (savedMode === 'dark') { document.body.classList.add('dark'); }
+    document.getElementById('year').textContent = new Date().getFullYear();
+    modeBtn.addEventListener('click', () => {
+      const isDark = document.body.classList.toggle('dark');
+      localStorage.setItem('mode', isDark ? 'dark' : 'light');
+      const lang = getLang(); const dict = translations[lang] || translations.en;
+      modeBtn.textContent = isDark ? dict.btn_mode_light : dict.btn_mode_dark;
+    });
+
+    // ---- Language toggle
+    let currentLang = getLang();
     localStorage.setItem('lang', currentLang);
     applyI18n(currentLang);
-
     langBtn.addEventListener('click', () => {
-      currentLang = currentLang === 'en' ? 'no' : 'en';
+      currentLang = (currentLang === 'en') ? 'no' : 'en';
       localStorage.setItem('lang', currentLang);
       applyI18n(currentLang);
     });
+
+    // ---- Alphabetic frame logic
+    const alphaFrame = document.getElementById('alpha-frame');
+
+    const ALPHA_HTML = {
+      "A": `<div>
+              <h3>Anna Alm <span style="font-weight:normal;color:#666;">(1880–1935)</span></h3>
+              <p class="muted">Norwegian composer. Example entries below combine title + score link, and credit lyricists with years.</p>
+              <ul>
+                <li>
+                  <strong><a href="https://musescore.com/user/26911315/scores/20965716" target="_blank" rel="noopener">Bygden min</a></strong>
+                  <span class="muted">(1930)</span><br/>
+                  Lyricist: <a href="https://psykologisk.no/2021/11/klara-klok-var-innom-psykologisk.no/" target="_blank" rel="noopener">Ingrid Arnulf</a>
+                  <span class="muted">(1894–1978)</span><br/>
+                  <span class="muted">Source: Nationen 1930</span>
+                </li>
+                <li style="margin-top:.5rem;">
+                  <strong><a href="https://musescore.com/user/26911315/scores/5957173" target="_blank" rel="noopener">Salme</a></strong><br/>
+                  Lyricist: <a href="https://no.wikipedia.org/wiki/Anders_Hovden" target="_blank" rel="noopener">Anders Hovden</a>
+                  <span class="muted">(1860–1943)</span>
+                </li>
+              </ul>
+            </div>`
+      // Add more letters as needed: "B": "<div>...</div>", ...
+    };
+
+    function setLetter(letter) {
+      const html = ALPHA_HTML[letter] || `<p class="muted">No content for <strong>${letter}</strong> yet. Paste HTML into <code>ALPHA_HTML['${letter}']</code>.</p>`;
+      alphaFrame.innerHTML = html;
+      document.querySelectorAll('.letterbar .letter').forEach(btn => {
+        btn.setAttribute('aria-selected', btn.dataset.letter === letter ? 'true' : 'false');
+      });
+    }
+
+    // Init letter bar
+    document.querySelectorAll('.letterbar .letter').forEach(btn => {
+      btn.addEventListener('click', () => setLetter(btn.dataset.letter));
+    });
+    // default to A
+    setLetter("A");
   </script>
 </body>
 </html>
