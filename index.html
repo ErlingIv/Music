@@ -1,4 +1,18 @@
-<!DOCTYPE html>
+# Recreate a fresh, downloadable site scaffold (Option 2 structure) with
+# index.html, assets (CSS/JS), data/composers.json (sample), and one sample work page.
+from pathlib import Path
+import json, zipfile, html
+
+base = Path("/mnt/data")
+root = base  # put files directly under /mnt/data for easy download
+assets = root / "assets"
+data = root / "data"
+works = root / "works"
+for d in (assets, data, works):
+    d.mkdir(parents=True, exist_ok=True)
+
+# ---------- index.html
+index_html = """<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -132,3 +146,347 @@
   <script src="assets/app.js"></script>
 </body>
 </html>
+"""
+(index := (root/"index.html")).write_text(index_html, encoding="utf-8")
+
+# ---------- assets/styles.css
+styles = r"""
+:root { --bg:#f7f8fb; --fg:#111418; --muted:#4b5563; --card:#ffffff; --brand:#1f4bff; --border:#e6e8ef; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; background: var(--bg); color: var(--fg); }
+header { position: sticky; top: 0; backdrop-filter: blur(8px); background: rgba(247,248,251,.9); border-bottom: 1px solid var(--border); z-index: 10; }
+.wrap { max-width: 1100px; margin: 0 auto; padding: 1rem; }
+nav { display: flex; align-items: center; gap: .75rem; justify-content: space-between; }
+.brand { font-weight: 700; letter-spacing:.3px; }
+.navlinks a { color: var(--muted); text-decoration: none; margin: 0 .25rem; padding:.4rem .6rem; border-radius:.6rem; }
+.navlinks a:hover { background: var(--card); color: var(--fg); }
+.btn { border: 1px solid var(--border); background: var(--card); color: var(--fg); padding: .4rem .7rem; border-radius: .6rem; cursor: pointer; }
+.hero { padding: 3.5rem 1rem 2rem; text-align: center; border-bottom:1px solid var(--border); background: linear-gradient(180deg, rgba(31,75,255,.08), transparent 45%); }
+h1 { font-size: clamp(1.8rem, 3.5vw, 3rem); margin: 0 0 .5rem; }
+.sub { color: var(--muted); max-width: 70ch; margin: 0 auto 1rem; }
+.cta { display:inline-flex; gap:.6rem; align-items:center; border:1px solid var(--border); background: var(--card); padding:.6rem .9rem; border-radius:.8rem; text-decoration:none; color: var(--fg); }
+.grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1rem; }
+.section { padding: 2rem 0; }
+.card { grid-column: span 12; border:1px solid var(--border); background: var(--card); border-radius:1rem; overflow: clip; }
+@media (min-width: 768px) { .card { grid-column: span 6; } }
+.card > header { position: static; background: none; border-bottom: 1px solid var(--border); }
+.card h2 { margin:.2rem 0; font-size:1.1rem; }
+.card .body { padding: 1rem; }
+.card p { margin:.3rem 0 .8rem; color: var(--muted); }
+.card a { color: var(--brand); text-decoration: none; }
+.iframe-wrap { position: relative; width:100%; aspect-ratio: 16/10; background:#f0f2f9; border-top:1px solid var(--border); }
+.iframe-wrap iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+footer { border-top:1px solid var(--border); color: var(--muted); }
+footer .wrap { padding: 1.25rem; font-size:.95rem; display:flex; justify-content:space-between; gap:.75rem; flex-wrap:wrap; }
+
+/* Dark mode */
+body.dark { --bg: #0f1115; --fg: #e8eaed; --muted:#a7b0c0; --card:#171a21; --brand:#7aa2f7; --border:#222733; }
+body.dark .hero { background: linear-gradient(180deg, rgba(122,162,247,.12), transparent 45%); }
+
+/* Composers frame */
+.alpha-card { border:1px solid var(--border); background: var(--card); border-radius:1rem; overflow:hidden; }
+.alpha-head { padding: 1rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap; }
+.letterbar { display:flex; flex-wrap:wrap; gap:.25rem; }
+.letter { border:1px solid var(--border); background:#fff; padding:.35rem .55rem; border-radius:.55rem; cursor:pointer; font-family:inherit; }
+.letter[aria-selected="true"] { background:#eef2ff; border-color:#dbeafe; }
+.alpha-frame { min-height: 240px; padding: 1rem; }
+.alpha-frame .muted { color: var(--muted); }
+.alpha-frame ul { margin:.25rem 0 .25rem 1.2rem; }
+
+/* Work page */
+.work-hero { padding: 2rem 1rem 1rem; border-bottom:1px solid var(--border); }
+.meta { color: var(--muted); }
+.embed-wrap { position: relative; width:100%; aspect-ratio: 16/10; background:#f0f2f9; border:1px solid var(--border); border-radius: .75rem; overflow:hidden; margin: 1rem 0; }
+.embed-wrap iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+.work-notes p { margin: .6rem 0; }
+"""
+(assets/"styles.css").write_text(styles, encoding="utf-8")
+
+# ---------- assets/app.js
+app_js = r"""
+const translations = {
+  en: {
+    doc_title: "Erling’s Music Collections",
+    nav_about: "About",
+    nav_collections: "Collections",
+    nav_composers: "Composers",
+    nav_notes: "Notes",
+    btn_lang_to_no: "Norsk",
+    btn_lang_to_en: "English",
+    btn_mode_dark: "Dark",
+    btn_mode_light: "Light",
+    hero_title: "Old scores: classic and popular music",
+    hero_sub: "A hub for my spreadsheet-based catalogs (classical and popular Scandinavian music) with short explanations and live embeds.",
+    cta_jump: "Jump to Collections ↓",
+    about_title: "About",
+    about_p: "Below you’ll find three published Google Sheets embedded directly on the page. Each card includes an <em>Open in a new tab</em> link if you prefer a full-screen view.",
+    collections_title: "Collections",
+    c1_title: "Old classical music",
+    c1_desc: "Transcriptions of (mostly) my score-collection of known and unknown composers. Primarily music not easily available elsewhere and to a large extent by Norwegian musicians.",
+    c2_title: "Old popular music",
+    c2_desc: "Popular songs mostly from Norway and Sweden. You have to be a member of the popular-music group to see them, due to most being in the “copyright” zone.",
+    c3_title: "Norges Melodier I–IV",
+    c3_desc: "500 songs from Grieg’s and Alnæs’ four books of old Norwegian music. To see all, be a member of the group “Norges Melodier”.",
+    open_new_tab: "Open in a new tab ↗",
+    composers_title: "Composers",
+    notes_title: "Notes",
+    notes_p: "You can put research updates here — e.g., corrected attributions, publication trails, or links to IMSLP/MuseScore entries."
+  },
+  no: {
+    doc_title: "Erlings musikksamlinger",
+    nav_about: "Om",
+    nav_collections: "Samlinger",
+    nav_composers: "Komponister",
+    nav_notes: "Notater",
+    btn_lang_to_no: "Norsk",
+    btn_lang_to_en: "English",
+    btn_mode_dark: "Mørk",
+    btn_mode_light: "Lys",
+    hero_title: "Gamle noter: klassisk og populærmusikk",
+    hero_sub: "En samling av mine regnearkbaserte kataloger (klassisk og populær skandinavisk musikk) med korte forklaringer og innebygde visninger.",
+    cta_jump: "Gå til samlingene ↓",
+    about_title: "Om",
+    about_p: "Nedenfor finner du tre publiserte Google-regneark som er innebygd på siden. Hver kortseksjon har også lenken <em>Åpne i ny fane</em> for fullskjermsvisning.",
+    collections_title: "Samlinger",
+    c1_title: "Gamle klassiske noter",
+    c1_desc: "Transkripsjoner av (hovedsakelig) min notesamling av kjente og ukjente komponister. Primært musikk som ikke er lett tilgjengelig andre steder og i stor grad av norske musikere.",
+    c2_title: "Gammel populærmusikk",
+    c2_desc: "Populære sanger, mest fra Norge og Sverige. Du må være medlem av gruppen for populærmusikk for å se dem, siden de fleste ligger i «opphavsrett»-sonen.",
+    c3_title: "Norges Melodier I–IV",
+    c3_desc: "500 sanger fra Griegs og Alnæs’ fire bøker med gammel norsk musikk. For å se alle, bli medlem av gruppen «Norges Melodier».",
+    open_new_tab: "Åpne i ny fane ↗",
+    composers_title: "Komponister",
+    notes_title: "Notater",
+    notes_p: "Her kan du legge inn forskningsoppdateringer — f.eks. korrigerte attribusjoner, utgivelsesspor eller lenker til IMSLP/MuseScore."
+  }
+};
+
+function getDefaultLang(){ return ((navigator.language || '').toLowerCase().startsWith('no')) ? 'no' : 'en'; }
+function getLang(){ const s = localStorage.getItem('lang'); return s ? s : getDefaultLang(); }
+function tr(lang, key){ return (translations[lang] && translations[lang][key]) || translations.en[key] || ''; }
+
+function applyI18n(lang){
+  document.documentElement.lang = (lang === 'no') ? 'no' : 'en';
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const html = tr(lang, key);
+    if (html) el.innerHTML = html;
+  });
+  const isDark = document.body.classList.contains('dark');
+  const langBtn = document.getElementById('langToggle');
+  const modeBtn = document.getElementById('modeToggle');
+  if (langBtn) langBtn.textContent = (lang === 'en') ? translations.en.btn_lang_to_no : translations.no.btn_lang_to_en;
+  if (modeBtn) modeBtn.textContent = isDark ? tr(lang, 'btn_mode_light') : tr(lang, 'btn_mode_dark');
+  document.title = tr(lang, 'doc_title');
+}
+
+function initMode(){
+  const saved = localStorage.getItem('mode');
+  if (saved === 'dark') document.body.classList.add('dark');
+  const lang = getLang();
+  const modeBtn = document.getElementById('modeToggle');
+  if (modeBtn) modeBtn.textContent = document.body.classList.contains('dark') ? tr(lang, 'btn_mode_light') : tr(lang, 'btn_mode_dark');
+}
+
+function autoLink(text){ return text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>'); }
+function paragraphize(text){
+  if (!text) return '';
+  const paras = text.trim().split(/\n\s*\n/).map(p => `<p class="muted">${autoLink(p).replace(/\n/g,'<br/>')}</p>`);
+  return paras.join('');
+}
+
+async function initComposersIfPresent(){
+  const letterbar = document.getElementById('letterbar');
+  const frame = document.getElementById('alpha-frame');
+  if (!letterbar || !frame) return;
+
+  try {
+    const res = await fetch('data/composers.json', {cache:'no-store'});
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    function renderLetter(letter){
+      const composers = data[letter] || [];
+      if (!composers.length) {
+        frame.innerHTML = `<p class="muted">No entries for <strong>${letter}</strong>.</p>`;
+        return;
+      }
+      const blocks = composers.map(c => {
+        const name = c.url ? `<a href="${c.url}" target="_blank" rel="noopener">${c.name}</a>` : c.name;
+        const years = (c.birth || c.death) ? ` <span style="font-weight:normal;color:#666;">(${c.birth || ''}–${c.death || ''})</span>` : '';
+        const lis = (c.works || []).map(w => {
+          const href = `works/${w.slug}.html`;
+          const title = `<strong><a href="${href}">${w.title}</a></strong>`;
+          const bits = [];
+          if (w.year) bits.push(`<span class="muted">(${w.year})</span>`);
+          if (w.lyr) {
+            let lyr = w.lyr;
+            if (w.lyrUrl) lyr = `<a href="${w.lyrUrl}" target="_blank" rel="noopener">${lyr}</a>`;
+            let line = `Lyricist: ${lyr}`;
+            if (w.lb || w.ld) line += ` <span class="muted">(${w.lb || ''}–${w.ld || ''})</span>`;
+            bits.push("<br/>" + line);
+          }
+          if (w.comments) {
+            const notes = paragraphize(w.comments);
+            if (notes) bits.push("<br/>" + notes);
+          }
+          return `<li>${title} ${bits.join(' ')}</li>`;
+        }).join('\n');
+        return `<div><h3>${name}${years}</h3><ul>${lis}</ul></div>`;
+      });
+      frame.innerHTML = blocks.join('\n');
+    }
+
+    letterbar.innerHTML = '';
+    let firstWithContent = null;
+    ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","Æ","Ø","Å"].forEach(ch => {
+      const has = (data[ch] && data[ch].length);
+      const btn = document.createElement('button');
+      btn.className = 'letter';
+      btn.setAttribute('role','tab');
+      btn.setAttribute('aria-selected','false');
+      btn.dataset.letter = ch;
+      btn.textContent = ch;
+      btn.disabled = !has;
+      if (has && firstWithContent === null) firstWithContent = ch;
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#letterbar .letter').forEach(b => b.setAttribute('aria-selected','false'));
+        btn.setAttribute('aria-selected','true');
+        renderLetter(ch);
+      });
+      letterbar.appendChild(btn);
+    });
+    if (firstWithContent) {
+      const firstBtn = letterbar.querySelector(`button[data-letter="${firstWithContent}"]`);
+      if (firstBtn) { firstBtn.setAttribute('aria-selected','true'); renderLetter(firstWithContent); }
+    } else {
+      frame.innerHTML = `<p class="muted">No data.</p>`;
+    }
+  } catch (err) {
+    frame.innerHTML = `<p class="muted">Could not load <code>data/composers.json</code> (${err.message}).</p>`;
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  initMode();
+  let lang = getLang();
+  localStorage.setItem('lang', lang);
+  applyI18n(lang);
+
+  const langBtn = document.getElementById('langToggle');
+  if (langBtn) langBtn.addEventListener('click', () => {
+    lang = (lang === 'en') ? 'no' : 'en';
+    localStorage.setItem('lang', lang);
+    applyI18n(lang);
+  });
+  const modeBtn = document.getElementById('modeToggle');
+  if (modeBtn) modeBtn.addEventListener('click', () => {
+    const isDark = document.body.classList.toggle('dark');
+    localStorage.setItem('mode', isDark ? 'dark' : 'light');
+    const langNow = getLang();
+    modeBtn.textContent = isDark ? tr(langNow, 'btn_mode_light') : tr(langNow, 'btn_mode_dark');
+  });
+
+  const year = document.getElementById('year');
+  if (year) year.textContent = new Date().getFullYear();
+
+  initComposersIfPresent();
+});
+"""
+(assets/"app.js").write_text(app_js, encoding="utf-8")
+
+# ---------- data/composers.json (sample with one entry so the page shows something)
+sample = {
+  "A": [
+    {
+      "name": "Dagny Andersen",
+      "url": "",
+      "birth": "1867",
+      "death": "1940",
+      "works": [
+        {
+          "title": "Hjördis rheinländer",
+          "slug": "dagny-andersen-hjordis-rheinlander",
+          "year": "1888",
+          "lyr": "",
+          "lyrUrl": "",
+          "lb": "",
+          "ld": "",
+          "comments": "Dagny Andersen played the piano and the harp and had students in both instruments.\n\nHer main instrument eventually was harp which she played in several orchestras.\n\nWhen leaving “National Theatre orchestra”, the famous leader, Johan Halvorsen (1864 – 1935) called her the “good spirit of the orchestra”.\n\nThere seems to be only 2 compositions published by Dagny Andersen, the score I have a “rheinlender”: «…easy to play and perfect for dancing.» and a march. Both published in 1888.\n\nShe was married to one of the leading flute-players in the country at the time, Axel Andersen (1864 – 1943).\nDagny Andersen died in 1940.",
+          "url": ""
+        }
+      ]
+    }
+  ],
+  "B": [],"C": [],"D": [],"E": [],"F": [],"G": [],"H": [],"I": [],"J": [],"K": [],"L": [],"M": [],"N": [],"O": [],"P": [],"Q": [],"R": [],"S": [],"T": [],"U": [],"V": [],"W": [],"X": [],"Y": [],"Z": [],"Æ": [],"Ø": [],"Å": []
+}
+(data/"composers.json").write_text(json.dumps(sample, ensure_ascii=False, indent=2), encoding="utf-8")
+
+# ---------- works/dagny-andersen-hjordis-rheinlander.html
+work_html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hjördis rheinländer — Dagny Andersen</title>
+  <meta name="description" content="Score page for Hjördis rheinländer by Dagny Andersen." />
+  <link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <nav>
+        <div class="brand"><a href="../index.html" style="text-decoration:none;color:inherit">Erling’s Music Collections</a></div>
+        <div class="navlinks">
+          <a href="../index.html#composers">← Back to Composers</a>
+        </div>
+        <div class="controls">
+          <button class="btn" id="langToggle" aria-pressed="false" aria-label="Toggle language">Norsk</button>
+          <button class="btn" id="modeToggle" aria-pressed="false" aria-label="Toggle color mode">Dark</button>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <section class="work-hero">
+    <div class="wrap">
+      <h1>Hjördis rheinländer</h1>
+      <p class="meta">Dagny Andersen (1867–1940) · 1888</p>
+    </div>
+  </section>
+
+  <main class="wrap">
+    <section class="work-notes">
+      <p class="muted">When you add a real MuseScore/YouTube link in <code>data/composers.json</code>, this page will show an embedded player automatically.</p>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>© <span id="year"></span> Erling</span>
+    </div>
+  </footer>
+
+  <script src="../assets/app.js"></script>
+</body>
+</html>
+"""
+(works/"dagny-andersen-hjordis-rheinlander.html").write_text(work_html, encoding="utf-8")
+
+# ---------- zip everything for one-shot upload
+zip_path = root / "music_site_scaffold.zip"
+with zipfile.ZipFile(zip_path, "w") as z:
+    z.write(index, "index.html")
+    z.write(assets/"styles.css", "assets/styles.css")
+    z.write(assets/"app.js", "assets/app.js")
+    z.write(data/"composers.json", "data/composers.json")
+    z.write(works/"dagny-andersen-hjordis-rheinlander.html", "works/dagny-andersen-hjordis-rheinlander.html")
+
+{
+    "index": index.as_posix(),
+    "styles": (assets/"styles.css").as_posix(),
+    "app_js": (assets/"app.js").as_posix(),
+    "json": (data/"composers.json").as_posix(),
+    "work": (works/"dagny-andersen-hjordis-rheinlander.html").as_posix(),
+    "zip": zip_path.as_posix()
+}
