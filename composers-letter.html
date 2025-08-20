@@ -16,6 +16,7 @@
   nav.alpha{margin-top:.5rem}
   nav.alpha a{margin-right:.35rem;text-decoration:none;border:1px solid #e1e1e1;border-radius:8px;padding:.1rem .4rem;color:inherit}
   nav.alpha a.active{border-color:#0b5fff}
+  .topnav a{margin-right:.75rem}
 </style>
 
 <header>
@@ -23,8 +24,13 @@
     <h1 id="title">Composers</h1>
     <div class="muted" id="subtitle"></div>
   </div>
-  <nav class="alpha" id="alpha"></nav>
+  <div class="topnav">
+    <a href="index.html">← Home</a>
+    <a href="composers.html">A–Å index</a>
+  </div>
 </header>
+
+<nav class="alpha" id="alpha"></nav>
 
 <div id="out" class="msg">Loading…</div>
 <div id="host"></div>
@@ -34,58 +40,69 @@ const LETTERS=["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","
 const collator = new Intl.Collator("nb",{sensitivity:"base"});
 
 const params = new URLSearchParams(location.search);
-let L = params.get("L") || "A"; // default A
+let L = params.get("L") || "A";
 if(!LETTERS.includes(L)) L = "A";
 document.getElementById("title").textContent = `Composers — ${L}`;
 document.getElementById("subtitle").textContent = "Sorted by surname (A–Å). Click a composer or work to open links.";
 
-// alpha nav
+// Letter nav
 document.getElementById('alpha').innerHTML = LETTERS.map(ch =>
   `<a class="${ch===L?'active':''}" href="?L=${encodeURIComponent(ch)}">${ch}</a>`).join(' ');
 
 const OUT = document.getElementById('out');
 const HOST = document.getElementById('host');
 
-function safe(v){ return v==null ? "" : String(v); }
+function s(v){ return v==null ? "" : String(v); }
 function lifeSpan(b,d){
-  const B=safe(b).trim(), D=safe(d).trim();
+  const B=s(b).trim(), D=s(d).trim();
   if(!B && !D) return "";
   if(B && D) return `${B}–${D}`;
   return B ? `${B}–` : `–${D}`;
 }
-function surname(name){
-  let n = safe(name).trim();
-  if(n.includes(",")) n = n.split(",")[0].trim();
+function surname(full){
+  let n = s(full).trim();
+  if(!n) return "";
+  // If already "Surname, First", take left side as surname
+  if(n.includes(",")) return n.split(",")[0].trim();
   const parts = n.split(/\s+/);
   return parts[parts.length-1] || n;
 }
+// Display as "Surname, Firstname(s)" consistently
+function formatDisplayName(full){
+  let n = s(full).trim();
+  if(!n) return "";
+  if(n.includes(",")) return n; // already "Surname, First"
+  const parts = n.split(/\s+/);
+  const sur = parts.pop();
+  const given = parts.join(" ");
+  return given ? `${sur}, ${given}` : sur;
+}
 
-// normalize your JSON (letter buckets) to a list of {name, life, url, works:[{title,year,lyricist,notes,workUrl}]}
+// Normalize your JSON (letter buckets) for one letter
 function normalize(json, letter){
   const list = [];
-  // your shape: { "A":[{ name, birth, death, url, works:[...] }], ... }
   if (json && typeof json === "object" && Array.isArray(json[letter])) {
     for (const c of json[letter]) {
-      const name = safe(c.name || c.composer || c.navn || c["full name"]);
-      if(!name) continue;
-      const life = safe(c.life || lifeSpan(c.birth, c.death));
-      const url  = safe(c.url || "");
+      const nameRaw = s(c.name || c.composer || c.navn || c["full name"]);
+      if(!nameRaw) continue;
+      const life = s(c.life || lifeSpan(c.birth, c.death));
+      const url  = s(c.url || "");
       const works = Array.isArray(c.works) ? c.works : [];
       const outWorks = [];
       for (const w of works) {
-        const title = safe(w.title || w.work || w.tittel || w.verk);
+        const title = s(w.title || w.work || w.tittel || w.verk);
         if(!title) continue;
-        const year  = safe(w.year || w.published || w["composition year"]);
-        const lyr   = safe(w.lyr || w.lyricist || w.tekstforfatter || w.lyrics);
+        const year  = s(w.year || w.published || w["composition year"]);
+        const lyr   = s(w.lyr || w.lyricist || w.tekstforfatter || w.lyrics);
         const lyrYears = lifeSpan(w.lb, w.ld);
         const lyricist = lyr ? (lyrYears ? `${lyr} (${lyrYears})` : lyr) : "";
         outWorks.push({
           title, year, lyricist,
-          notes: safe(w.comments || w.notes || ""),
-          workUrl: safe(w.url || w.link || "")
+          notes: s(w.comments || w.notes || ""),
+          workUrl: s(w.url || w.link || "")
         });
       }
-      list.push({ name, life, url, works: outWorks });
+      list.push({ nameRaw, displayName: formatDisplayName(nameRaw), life, url, works: outWorks });
     }
   }
   return list;
@@ -105,14 +122,14 @@ fetch('data/composers.json?nocache='+Date.now(), {cache:'no-store'})
       return;
     }
 
-    // sort composers by surname, then full name
+    // sort composers by surname, then by full display
     comps.sort((a,b)=>{
-      const sa = surname(a.name), sb = surname(b.name);
+      const sa = surname(a.nameRaw), sb = surname(b.nameRaw);
       const s = collator.compare(sa, sb);
-      return s || collator.compare(a.name, b.name);
+      return s || collator.compare(a.displayName, b.displayName);
     });
 
-    // sort each composer's works by year, then title
+    // sort works by year then title
     comps.forEach(c=>{
       c.works.sort((x,y)=>{
         const ax = parseInt(x.year)||0, ay = parseInt(y.year)||0;
@@ -125,7 +142,7 @@ fetch('data/composers.json?nocache='+Date.now(), {cache:'no-store'})
 
     HOST.innerHTML = comps.map(c=>{
       const life = c.life ? ` <span class="muted">— ${c.life}</span>` : "";
-      const nameHTML = c.url ? `<a href="${c.url}" target="_blank" rel="noopener">${c.name}</a>` : c.name;
+      const nameHTML = c.url ? `<a href="${c.url}" target="_blank" rel="noopener">${c.displayName}</a>` : c.displayName;
       const worksHTML = c.works.map(w=>{
         const yr = w.year ? ` (${w.year})` : "";
         const titleHTML = w.workUrl
