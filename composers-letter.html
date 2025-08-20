@@ -13,7 +13,7 @@
   .composer h3 a:hover{text-decoration:underline}
   ul.works{padding-left:1.25rem;margin:.4rem 0}
   li.work{margin:.35rem 0}
-  nav.alpha{margin-top:.5rem}
+  nav.alpha{margin:.5rem 0 0}
   nav.alpha a{margin-right:.35rem;text-decoration:none;border:1px solid #e1e1e1;border-radius:8px;padding:.1rem .4rem;color:inherit}
   nav.alpha a.active{border-color:#0b5fff}
   .topnav a{margin-right:.75rem}
@@ -38,128 +38,108 @@
 <script>
 const LETTERS=["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","Æ","Ø","Å"];
 const collator = new Intl.Collator("nb",{sensitivity:"base"});
-
 const params = new URLSearchParams(location.search);
 let L = params.get("L") || "A";
 if(!LETTERS.includes(L)) L = "A";
 document.getElementById("title").textContent = `Composers — ${L}`;
-document.getElementById("subtitle").textContent = "Sorted by surname (A–Å). Click a composer or work to open links.";
-
-// Letter nav
+document.getElementById("subtitle").textContent = "Sorted by surname (A–Å). Click composer or work to open links.";
 document.getElementById('alpha').innerHTML = LETTERS.map(ch =>
   `<a class="${ch===L?'active':''}" href="?L=${encodeURIComponent(ch)}">${ch}</a>`).join(' ');
 
 const OUT = document.getElementById('out');
 const HOST = document.getElementById('host');
 
-function s(v){ return v==null ? "" : String(v); }
-function lifeSpan(b,d){
-  const B=s(b).trim(), D=s(d).trim();
-  if(!B && !D) return "";
-  if(B && D) return `${B}–${D}`;
-  return B ? `${B}–` : `–${D}`;
-}
-function surname(full){
-  let n = s(full).trim();
-  if(!n) return "";
-  // If already "Surname, First", take left side as surname
-  if(n.includes(",")) return n.split(",")[0].trim();
-  const parts = n.split(/\s+/);
-  return parts[parts.length-1] || n;
-}
-// Display as "Surname, Firstname(s)" consistently
-function formatDisplayName(full){
-  let n = s(full).trim();
-  if(!n) return "";
-  if(n.includes(",")) return n; // already "Surname, First"
-  const parts = n.split(/\s+/);
-  const sur = parts.pop();
-  const given = parts.join(" ");
-  return given ? `${sur}, ${given}` : sur;
-}
+const clean = v => (v==null ? "" : String(v).trim());
+const surname = n => {
+  let s = clean(n);
+  if(!s) return "";
+  if(s.includes(",")) return s.split(",")[0].trim();
+  const parts = s.split(/\s+/);
+  return parts[parts.length-1] || s;
+};
 
-// Normalize your JSON (letter buckets) for one letter
-function normalize(json, letter){
-  const list = [];
-  if (json && typeof json === "object" && Array.isArray(json[letter])) {
-    for (const c of json[letter]) {
-      const nameRaw = s(c.name || c.composer || c.navn || c["full name"]);
-      if(!nameRaw) continue;
-      const life = s(c.life || lifeSpan(c.birth, c.death));
-      const url  = s(c.url || "");
-      const works = Array.isArray(c.works) ? c.works : [];
-      const outWorks = [];
-      for (const w of works) {
-        const title = s(w.title || w.work || w.tittel || w.verk);
-        if(!title) continue;
-        const year  = s(w.year || w.published || w["composition year"]);
-        const lyr   = s(w.lyr || w.lyricist || w.tekstforfatter || w.lyrics);
-        const lyrYears = lifeSpan(w.lb, w.ld);
-        const lyricist = lyr ? (lyrYears ? `${lyr} (${lyrYears})` : lyr) : "";
-        outWorks.push({
-          title, year, lyricist,
-          notes: s(w.comments || w.notes || ""),
-          workUrl: s(w.url || w.link || "")
-        });
-      }
-      list.push({ nameRaw, displayName: formatDisplayName(nameRaw), life, url, works: outWorks });
-    }
-  }
-  return list;
+function normalizeForLetter(json, letter){
+  // Your JSON shape: { "A":[ { name, url, birth, death, works:[ {title,url,year,lyr,lyrUrl,comments} ] }, ... ], "B":[...], ... }
+  const arr = Array.isArray(json?.[letter]) ? json[letter] : [];
+  // sanitize odd "nan" strings if any
+  const fix = v => (clean(v).toLowerCase()==="nan" ? "" : clean(v));
+
+  return arr.map(c=>{
+    const name = fix(c.name);
+    const life = (fix(c.birth) || fix(c.death)) ? ` ${fix(c.birth)}–${fix(c.death)}`.replace("–","–").replace(/^ \–/," –") : "";
+    const url  = fix(c.url);
+    const works = Array.isArray(c.works) ? c.works.map(w=>{
+      const wtitle = fix(w.title);
+      return {
+        title: wtitle,
+        url: fix(w.url),                 // <-- clickable score link
+        year: fix(w.year),
+        lyr: fix(w.lyr),                 // text incl. years (already formatted)
+        lyrUrl: fix(w.lyrUrl),           // <-- clickable lyricist link
+        comments: fix(w.comments)
+      };
+    }) : [];
+    return { name, life, url, works };
+  }).filter(c=>c.name && c.works.length);
 }
 
 fetch('data/composers.json?nocache='+Date.now(), {cache:'no-store'})
-  .then(async r=>{
-    if(!r.ok) throw new Error("HTTP " + r.status);
-    const t = await r.text();
-    return JSON.parse(t.replace(/^\uFEFF/,''));
-  })
+  .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
+  .then(t=>JSON.parse(t.replace(/^\uFEFF/,'')))
   .then(json=>{
-    const comps = normalize(json, L);
-    if (!comps.length) {
-      OUT.className="msg";
-      OUT.innerHTML = `No composers found for letter <strong>${L}</strong>.`;
+    const comps = normalizeForLetter(json, L);
+    if(!comps.length){
+      OUT.className='msg';
+      OUT.innerHTML = `No composers for <strong>${L}</strong>.`;
       return;
     }
 
-    // sort composers by surname, then by full display
+    // sort composers by surname, then full name
     comps.sort((a,b)=>{
-      const sa = surname(a.nameRaw), sb = surname(b.nameRaw);
+      const sa = surname(a.name), sb = surname(b.name);
       const s = collator.compare(sa, sb);
-      return s || collator.compare(a.displayName, b.displayName);
+      return s || collator.compare(a.name, b.name);
     });
-
     // sort works by year then title
     comps.forEach(c=>{
       c.works.sort((x,y)=>{
         const ax = parseInt(x.year)||0, ay = parseInt(y.year)||0;
-        if (ax !== ay) return ax - ay;
+        if(ax !== ay) return ax - ay;
         return collator.compare(x.title, y.title);
       });
     });
 
-    OUT.textContent = ""; // clear "Loading…"
+    OUT.textContent = ""; // clear loading
 
     HOST.innerHTML = comps.map(c=>{
-      const life = c.life ? ` <span class="muted">— ${c.life}</span>` : "";
-      const nameHTML = c.url ? `<a href="${c.url}" target="_blank" rel="noopener">${c.displayName}</a>` : c.displayName;
+      const nameHTML = c.url
+        ? `<a href="${c.url}" target="_blank" rel="noopener">${c.name}</a>`
+        : c.name;
+      const lifeHTML = c.life ? ` <span class="muted">— ${c.life.replace(/^ /,'')}</span>` : "";
+
       const worksHTML = c.works.map(w=>{
         const yr = w.year ? ` (${w.year})` : "";
-        const titleHTML = w.workUrl
-          ? `<a href="${w.workUrl}" target="_blank" rel="noopener"><strong>${w.title}</strong></a>`
+        const titleHTML = w.url
+          ? `<a href="${w.url}" target="_blank" rel="noopener"><strong>${w.title}</strong></a>`
           : `<strong>${w.title}</strong>`;
-        const lyr = w.lyricist ? `<div class="muted">Lyricist: ${w.lyricist}</div>` : "";
-        const notes = w.notes ? `<div class="muted">${w.notes}</div>` : "";
-        return `<li class="work">${titleHTML}${yr}${lyr}${notes}</li>`;
+        const lyrHTML = w.lyr
+          ? (w.lyrUrl
+              ? `<a href="${w.lyrUrl}" target="_blank" rel="noopener">${w.lyr}</a>`
+              : `${w.lyr}`)
+          : "";
+        const lyrLine = lyrHTML ? `<div class="muted">Lyricist: ${lyrHTML}</div>` : "";
+        const notes = w.comments ? `<div class="muted">${w.comments}</div>` : "";
+        return `<li class="work">${titleHTML}${yr}${lyrLine}${notes}</li>`;
       }).join("");
+
       return `<article class="composer">
-        <h3>${nameHTML}${life}</h3>
+        <h3>${nameHTML}${lifeHTML}</h3>
         <ul class="works">${worksHTML}</ul>
       </article>`;
     }).join("");
   })
   .catch(err=>{
-    OUT.className="msg";
+    OUT.className='msg';
     OUT.innerHTML = `Error loading <code>data/composers.json</code>: ${err.message}`;
   });
 </script>
