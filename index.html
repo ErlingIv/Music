@@ -5,17 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Old scores: classic and popular music</title>
   <style>
-    :root { color-scheme: light; }
-    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#fff; color:#111; }
+    :root { color-scheme: light dark; }
+    body {
+      margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background:#fff; color:#111;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background:#0b0b0c; color:#eaeaea; }
+      .card { border-color:#2a2a2c; }
+    }
     header { border-bottom:1px solid #e5e5e5; padding:1.25rem; }
     h1 { margin:0; font-size:1.6rem; }
     main { max-width:900px; margin:0 auto; padding:1.25rem; }
-    .card { border:1px solid #eaeaea; border-radius:10px; padding:1rem; margin:1rem 0; }
-    .muted { color:#666; font-size:0.95rem; }
+    .card {
+      border:1px solid #eaeaea; border-radius:10px;
+      padding:1rem; margin:1rem 0;
+    }
+    .muted { color:#666; }
     a { color:#0b5fff; text-decoration:none; }
     a:hover { text-decoration:underline; }
-    .lang { display:flex; gap:.5rem; align-items:center; font-size:.95rem; }
-    .lang button { border:1px solid #ddd; background:#f9f9f9; padding:.35rem .6rem; border-radius:8px; }
+    .lang { margin-top:.5rem; }
+    .lang button {
+      border:1px solid #ddd; background:#f9f9f9;
+      padding:.3rem .6rem; border-radius:8px; margin-right:.3rem;
+    }
     .lang button.active { border-color:#0b5fff; }
   </style>
 </head>
@@ -23,7 +36,6 @@
   <header>
     <h1 id="title">Old scores: classic and popular music</h1>
     <div class="lang">
-      <span>Language:</span>
       <button id="enBtn" class="active">EN</button>
       <button id="noBtn">NO</button>
     </div>
@@ -32,7 +44,7 @@
     <section class="card">
       <h2 id="h2a">Project</h2>
       <p id="p1" class="muted">
-        A personal collection of Scandinavian music and research links. Pages are evolving; broken styles from earlier experiments have been removed.
+        A personal collection of Scandinavian music and research links.
       </p>
     </section>
 
@@ -40,18 +52,18 @@
       <h2 id="h2b">Embedded spreadsheets</h2>
       <ul>
         <li>
-          <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vSIWxwL1QqxwLOzDv_AIzXEwZ5-9v1G51cX2rWsnESZYBEtKaNr0ih_6YEHvkyILK_5ug8oycWz21aK/pubhtml" target="_blank" rel="noopener">
-            Old classical music (Google Sheet)
+          <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vSIWxwL1QqxwLOzDv_AIzXEwZ5-9v1G51cX2rWsnESZYBEtKaNr0ih_6YEHvkyILK_5ug8oycWz21aK/pubhtml" target="_blank">
+            Old classical music
           </a>
         </li>
         <li>
-          <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vQqvBBaiFtSKobHuIllQA55CD5O5LIJR1JU_Cr-Z5X3AgpqnuhttVDA7GM0ms2nG8BgWF1ApYrZc-cw/pubhtml" target="_blank" rel="noopener">
-            Old popular music, mainly Norwegian &amp; Swedish (Google Sheet)
+          <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vQqvBBaiFtSKobHuIllQA55CD5O5LIJR1JU_Cr-Z5X3AgpqnuhttVDA7GM0ms2nG8BgWF1ApYrZc-cw/pubhtml" target="_blank">
+            Old popular music, mainly Norwegian &amp; Swedish
           </a>
         </li>
         <li>
-          <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vRuhQrhQ68I16YdsYa1PcPepXNT_qAAeXaC3znelNccKBmLulUlu3JEBGFgd0h3zXbmCVxlR863pZpV/pubhtml" target="_blank" rel="noopener">
-            Norges Melodier I–IV (Google Sheet)
+          <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vRuhQrhQ68I16YdsYa1PcPepXNT_qAAeXaC3znelNccKBmLulUlu3JEBGFgd0h3zXbmCVxlR863pZpV/pubhtml" target="_blank">
+            Norges Melodier I–IV
           </a>
         </li>
       </ul>
@@ -59,8 +71,8 @@
 
     <section class="card">
       <h2 id="h2c">Composers</h2>
-      <p id="p2" class="muted">
-        A–Å listing and notes will return after cleanup. For now, use the spreadsheets above.
+      <p>
+        <a href="composers.html">Composers (A–Å)</a>
       </p>
     </section>
   </main>
@@ -68,34 +80,35 @@
   <script>
     const t = {
       en: {
-        title: "Old scores: classic and popular music",
-        h2a: "Project",
-        p1: "A personal collection of Scandinavian music and research links. Pages are evolving; broken styles from earlier experiments have been removed.",
-        h2b: "Embedded spreadsheets",
-        h2c: "Composers",
-        p2: "A–Å listing and notes will return after cleanup. For now, use the spreadsheets above."
+        title:"Old scores: classic and popular music",
+        h2a:"Project",
+        p1:"A personal collection of Scandinavian music and research links.",
+        h2b:"Embedded spreadsheets",
+        h2c:"Composers"
       },
       no: {
-        title: "Gamle noter: klassisk og populærmusikk",
-        h2a: "Prosjekt",
-        p1: "En personlig samling av skandinavisk musikk og forskningslenker. Sidene er under arbeid; ødelagte stiler fra tidligere forsøk er fjernet.",
-        h2b: "Innebygde regneark",
-        h2c: "Komponister",
-        p2: "A–Å-liste og merknader kommer tilbake etter opprydding. Bruk regnearkene over inntil videre."
-        <p><a href="composers.html">Composers (A–Å)</a></p>
+        title:"Gamle noter: klassisk og populærmusikk",
+        h2a:"Prosjekt",
+        p1:"En personlig samling av skandinavisk musikk og forskningslenker.",
+        h2b:"Innebygde regneark",
+        h2c:"Komponister"
       }
     };
-    const e = id => document.getElementById(id);
-    const setLang = L => {
-      Object.entries(t[L]).forEach(([k,v]) => e(k).textContent = v);
-      enBtn.classList.toggle('active', L==='en');
-      noBtn.classList.toggle('active', L==='no');
-      localStorage.setItem('lang', L);
-    };
-    const enBtn = e('enBtn'), noBtn = e('noBtn');
-    enBtn.onclick = () => setLang('en');
-    noBtn.onclick = () => setLang('no');
-    setLang(localStorage.getItem('lang') || 'en');
+    const e=id=>document.getElementById(id);
+    function setLang(L){
+      e("title").textContent=t[L].title;
+      e("h2a").textContent=t[L].h2a;
+      e("p1").textContent=t[L].p1;
+      e("h2b").textContent=t[L].h2b;
+      e("h2c").textContent=t[L].h2c;
+      enBtn.classList.toggle("active",L==="en");
+      noBtn.classList.toggle("active",L==="no");
+      localStorage.setItem("lang",L);
+    }
+    const enBtn=e("enBtn"), noBtn=e("noBtn");
+    enBtn.onclick=()=>setLang("en");
+    noBtn.onclick=()=>setLang("no");
+    setLang(localStorage.getItem("lang")||"en");
   </script>
 </body>
 </html>
