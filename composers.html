@@ -6,151 +6,196 @@
   h1{margin:.2rem 0 1rem}
   .msg{padding:1rem;border:1px solid #e0e0e0;border-radius:10px;background:#fafafa;color:#333}
   .muted{color:#666}
-  .group{margin-top:1.2rem;border-top:1px solid #eee;padding-top:.8rem}
-  ul{padding-left:1.25rem}
-  li{margin:.35rem 0}
+  .group{margin-top:1.6rem;border-top:1px solid #eee;padding-top:.9rem}
+  .composer{margin:.6rem 0 1rem}
+  .composer h3{margin:.2rem 0 .2rem;font-size:1.15rem}
+  .composer h3 a{color:inherit;text-decoration:none;border-bottom:1px dashed #999}
+  .composer h3 a:hover{text-decoration:underline}
+  ul.works{padding-left:1.25rem;margin:.4rem 0}
+  li.work{margin:.35rem 0}
+  .alpha{display:flex;flex-wrap:wrap;gap:.35rem .5rem;margin:0 0 1rem}
+  .alpha a{text-decoration:none;border:1px solid #e7e7e7;border-radius:8px;padding:.15rem .45rem;font-size:.92rem;color:inherit}
+  .alpha a:hover{text-decoration:underline}
 </style>
+
 <h1>Composers</h1>
+<div class="alpha" id="alpha"></div>
 <div id="out" class="msg">Loading…</div>
 <div id="host"></div>
 
 <script>
 const OUT = document.getElementById('out');
 const HOST = document.getElementById('host');
+const ALPHA = document.getElementById('alpha');
 
 const LETTERS = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","Æ","Ø","Å"];
 const collator = new Intl.Collator("nb",{sensitivity:"base"});
 
-function safe(s){ return (s==null ? "" : String(s)); }
+function safe(v){ return v==null ? "" : String(v); }
 function lifeSpan(birth, death){
   const b = safe(birth).trim(), d = safe(death).trim();
   if(!b && !d) return "";
   if(b && d) return `${b}–${d}`;
   return b ? `${b}–` : `–${d}`;
 }
-function initialFromName(name){
-  if(!name) return "#";
+function surname(name){
+  if(!name) return "";
   let n = name.trim();
   if(n.includes(",")) n = n.split(",")[0].trim();
   const parts = n.split(/\s+/);
-  const surname = parts[parts.length-1] || n;
-  const f = surname[0]?.toUpperCase() || "#";
+  return parts[parts.length-1] || n;
+}
+function initialFromSurname(name){
+  const s = surname(name);
+  const f = s[0]?.toUpperCase() || "#";
   const plain = f.normalize("NFD").replace(/\p{Diacritic}/gu,"");
   return ["Æ","Ø","Å"].includes(f) ? f : (/^[A-Z]$/.test(plain) ? plain : "#");
 }
 
-// Normalize from many possible JSON shapes into a flat list of works:
-// { composer, life, title, year, lyricist, notes }
-function normalize(json){
-  const rows = [];
+// Accept multiple JSON shapes and normalize to a composer-centric map:
+// key = composer name, value = { name, life, url, works: [{title,year,lyricist,lyricistYears,notes,workUrl}] }
+function extractComposerMap(json){
+  const map = new Map();
 
-  // Case 1: your structure — object keyed by letters
-  const isLetterBucket = json && typeof json === "object" && !Array.isArray(json);
-  if(isLetterBucket){
-    let hasLetter = false;
-    for(const key of Object.keys(json)){
-      if(LETTERS.includes(key.toUpperCase()) && Array.isArray(json[key])) { hasLetter = true; break; }
+  // Helper to add a work into the map
+  function addWork(cName, life, url, w){
+    if(!cName) return;
+    if(!map.has(cName)) map.set(cName, { name:cName, life, url, works: [] });
+    const entry = map.get(cName);
+    entry.life = entry.life || life; // keep first non-empty
+    entry.url = entry.url || url;
+
+    const title = safe(w.title || w.work || w.tittel || w.verk);
+    if(!title) return;
+    // lyricist & their years if present
+    const lyrName = safe(w.lyr || w.lyricist || w.tekstforfatter || w.lyrics);
+    const lyrYears = lifeSpan(w.lb, w.ld);
+    const lyricist = lyrName ? (lyrYears ? `${lyrName} (${lyrYears})` : lyrName) : "";
+    entry.works.push({
+      title,
+      year: safe(w.year || w.published || w["composition year"]),
+      lyricist,
+      notes: safe(w.comments || w.notes || ""),
+      workUrl: safe(w.url || w.link || "")
+    });
+  }
+
+  // Case 1: your letter-bucket shape
+  if(json && typeof json === "object" && !Array.isArray(json)){
+    let looksLikeBucket = false;
+    for(const k of Object.keys(json)){
+      if(LETTERS.includes(k.toUpperCase()) && Array.isArray(json[k])) { looksLikeBucket = true; break; }
     }
-    if(hasLetter){
+    if(looksLikeBucket){
       for(const L of Object.keys(json)){
         const composers = Array.isArray(json[L]) ? json[L] : [];
         for(const c of composers){
-          const composerName = safe(c.name || c.composer || c.navn || c["full name"]);
-          const life = lifeSpan(c.birth, c.death) || safe(c.life);
+          const name = safe(c.name || c.composer || c.navn || c["full name"]);
+          const life = safe(c.life || lifeSpan(c.birth, c.death));
+          const url  = safe(c.url || "");
           const works = Array.isArray(c.works) ? c.works : [];
-          for(const w of works){
-            const title = safe(w.title || w.work || w.tittel || w.verk);
-            if(!composerName || !title) continue;
-            const year = safe(w.year || w.published || w["composition year"]);
-            const lyricistName = safe(w.lyr || w.lyricist || w.tekstforfatter || w.lyrics);
-            const lyricistYears = lifeSpan(w.lb, w.ld);
-            const lyricistLine = lyricistName ? (lyricistYears ? `${lyricistName} (${lyricistYears})` : lyricistName) : "";
-            const notes = safe(w.comments || w.notes || "");
-            const links = {
-              work: safe(w.url),
-              composer: safe(c.url),
-              lyricist: safe(w.lyrUrl)
-            };
-            rows.push({ composer: composerName, life, title, year, lyricist: lyricistLine, notes, links });
-          }
+          for(const w of works) addWork(name, life, url, w);
         }
       }
-      return rows;
+      return map;
     }
   }
 
-  // Case 2: array or common wrappers
+  // Case 2: array or typical wrappers
   let arr = [];
   if(Array.isArray(json)) arr = json;
   else if(json && typeof json === "object"){
     const candidates = ["works","data","rows","items","entries","list"];
-    for(const k of candidates){ if(Array.isArray(json[k])) { arr = json[k]; break; } }
+    for(const key of candidates){ if(Array.isArray(json[key])) { arr = json[key]; break; } }
     if(!arr.length){
       for(const v of Object.values(json)){ if(Array.isArray(v)) { arr = v; break; } }
     }
   }
-
+  // Treat each item as a single "work" row that includes composer fields
   for(const it of arr){
-    const composer = safe(it.composer || it.name || it.navn || it["full name"]);
-    const title = safe(it.title || it.work || it.tittel || it.verk);
-    if(!composer || !title) continue;
-    const year = safe(it.year || it.published || it["composition year"]);
-    const lyricist = safe(it.lyricist || it.lyr || it.tekstforfatter || it.lyrics);
+    const name = safe(it.name || it.composer || it.navn || it["full name"]);
     const life = safe(it.life || lifeSpan(it.birth, it.death));
-    const notes = safe(it.notes || it.comments);
-    rows.push({ composer, life, title, year, lyricist, notes, links: {} });
+    const url  = safe(it.url || it.composer_url || "");
+    addWork(name, life, url, it);
   }
-  return rows;
+
+  return map;
+}
+
+function render(map){
+  // Build A–Å navigation
+  ALPHA.innerHTML = LETTERS.map(ch => `<a href="#grp-${ch}" aria-label="Jump to ${ch}">${ch}</a>`).join("");
+
+  // Group composers by surname initial, sort composers A–Å by surname
+  const byLetter = new Map();
+  for(const comp of map.values()){
+    const L = initialFromSurname(comp.name);
+    if(!byLetter.has(L)) byLetter.set(L, []);
+    byLetter.get(L).push(comp);
+  }
+
+  // Sort composers by surname (then full name), and works by year then title
+  for(const list of byLetter.values()){
+    list.sort((a,b)=>{
+      const sa = surname(a.name), sb = surname(b.name);
+      const s = collator.compare(sa, sb);
+      return s || collator.compare(a.name, b.name);
+    });
+    list.forEach(c=>{
+      c.works.sort((x,y)=>{
+        const ax = parseInt(x.year)||0, ay = parseInt(y.year)||0;
+        if(ax !== ay) return ax - ay;
+        return collator.compare(x.title, y.title);
+      });
+    });
+  }
+
+  // Render
+  const parts = [];
+  for(const L of LETTERS){
+    const list = byLetter.get(L) || [];
+    if(!list.length) continue;
+
+    const compsHTML = list.map(c=>{
+      const life = c.life ? ` <span class="muted">— ${c.life}</span>` : "";
+      const nameHTML = c.url ? `<a href="${c.url}" target="_blank" rel="noopener">${c.name}</a>` : c.name;
+      const worksHTML = c.works.map(w=>{
+        const yr = w.year ? ` (${w.year})` : "";
+        const lyr = w.lyricist ? `<div class="muted">Lyricist: ${w.lyricist}</div>` : "";
+        const notes = w.notes ? `<div class="muted">${w.notes}</div>` : "";
+        // Title shown as plain text (as requested). If you later want title→link, swap to <a> with w.workUrl.
+        return `<li class="work"><strong>${w.title}</strong>${yr}${lyr}${notes}</li>`;
+      }).join("");
+      return `<article class="composer">
+        <h3>${nameHTML}${life}</h3>
+        <ul class="works">${worksHTML}</ul>
+      </article>`;
+    }).join("");
+
+    parts.push(`<section class="group" id="grp-${L}">
+      <h2>${L}</h2>
+      ${compsHTML}
+    </section>`);
+  }
+
+  HOST.innerHTML = parts.join("") || `<div class="msg">No composers to display.</div>`;
 }
 
 fetch('data/composers.json?nocache='+Date.now(), {cache:'no-store'})
   .then(async r=>{
     if(!r.ok) throw new Error("HTTP " + r.status);
-    const text = await r.text();
-    const clean = text.replace(/^\uFEFF/, '');
-    return JSON.parse(clean);
+    const t = await r.text();
+    return JSON.parse(t.replace(/^\uFEFF/,''));
   })
   .then(json=>{
-    const items = normalize(json);
-    if(!items.length){
+    const map = extractComposerMap(json);
+    if(map.size === 0){
       OUT.className = "msg";
-      OUT.innerHTML = "Loaded <code>data/composers.json</code>, but found no items.<br>"
-        + "For your format, the JSON should be an object like <code>{ \"A\": [ { name, birth, death, works:[...] } ], \"B\": [...] }</code>.";
+      OUT.innerHTML = "Loaded <code>data/composers.json</code>, but found no composers.";
       return;
     }
-
-    // group by initial (from surname)
-    const groups = {};
-    for(const row of items){
-      const L = initialFromName(row.composer);
-      (groups[L] ||= []).push(row);
-    }
-
-    OUT.textContent = ""; // clear loading
-    const html = LETTERS.map(L=>{
-      const arr = groups[L] || [];
-      if(!arr.length) return "";
-      arr.sort((a,b)=> collator.compare(a.composer,b.composer) || collator.compare(a.title,b.title));
-      const lis = arr.map(x=>{
-        const yr = x.year ? ` (${x.year})` : "";
-        const life = x.life ? ` <span class="muted">— ${x.life}</span>` : "";
-        const lyr = x.lyricist ? `<div class="muted">Lyricist: ${x.lyricist}</div>` : "";
-        const note = x.notes ? `<div class="muted">${x.notes}</div>` : "";
-        // optional links if present
-        const linkBits = [];
-        if (x.links?.work) linkBits.push(`<a href="${x.links.work}" target="_blank" rel="noopener">Link</a>`);
-        if (x.links?.composer) linkBits.push(`<a href="${x.links.composer}" target="_blank" rel="noopener">Composer</a>`);
-        if (x.links?.lyricist) linkBits.push(`<a href="${x.links.lyricist}" target="_blank" rel="noopener">Lyricist</a>`);
-        const links = linkBits.length ? `<div class="muted">${linkBits.join(" · ")}</div>` : "";
-        return `<li><strong>${x.composer}</strong>${life} — ${x.title}${yr}${lyr}${links}${note}</li>`;
-      }).join("");
-      return `<section class="group" id="grp-${L}">
-        <h2>${L}</h2>
-        <ul>${lis}</ul>
-      </section>`;
-    }).join("");
-
-    HOST.innerHTML = html || `<div class="msg">Data loaded, but no groups to display.</div>`;
+    OUT.textContent = "";
+    render(map);
   })
   .catch(err=>{
     OUT.className = "msg";
