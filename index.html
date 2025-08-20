@@ -1,103 +1,212 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Old scores: classic and popular music</title>
-  <style>
-    :root { color-scheme: light dark; }
-    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#fff; color:#111; }
-    @media (prefers-color-scheme: dark) { body { background:#0b0b0c; color:#eaeaea; } .card { border-color:#2a2a2c; } }
-    header { border-bottom:1px solid #e5e5e5; padding:1.25rem; }
-    h1 { margin:0; font-size:1.6rem; }
-    main { max-width:900px; margin:0 auto; padding:1.25rem; }
-    .card { border:1px solid #eaeaea; border-radius:10px; padding:1rem; margin:1rem 0; }
-    .muted { color:#666; }
-    a { color:#0b5fff; text-decoration:none; }
-    a:hover { text-decoration:underline; }
-    .lang { margin-top:.5rem; }
-    .lang button { border:1px solid #ddd; background:#f9f9f9; padding:.3rem .6rem; border-radius:8px; margin-right:.3rem; }
-    .lang button.active { border-color:#0b5fff; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Old scores: classic and popular music</title>
+<meta name="color-scheme" content="light dark">
+<style>
+  :root{
+    --bg: #ffffff; --fg:#111213; --muted:#5f6770;
+    --card:#ffffff; --line:#e6e8eb;
+    --brand1:#7c3aed; /* purple */
+    --brand2:#06b6d4; /* cyan */
+    --brand3:#f97316; /* orange */
+    --link:#0b5fff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0b0c0f; --fg:#e8e9ea; --muted:#a2a9b0;
+      --card:#111318; --line:#22252b;
+      --link:#6aa6ff;
+    }
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--fg);}
+
+  /* HERO */
+  .hero{
+    position:relative;
+    padding: clamp(2rem, 6vw, 4rem) 1.25rem;
+    border-bottom:1px solid var(--line);
+    background:
+      radial-gradient(1200px 600px at 10% -20%, color-mix(in oklab, var(--brand1) 25%, transparent) 0, transparent 70%),
+      radial-gradient(1000px 600px at 100% 0%, color-mix(in oklab, var(--brand2) 25%, transparent) 0, transparent 70%),
+      linear-gradient(145deg, color-mix(in oklab, var(--brand1) 12%, transparent), color-mix(in oklab, var(--brand2) 10%, transparent) 60%, transparent);
+    overflow:hidden;
+  }
+  .brand{
+    max-width:1000px; margin:0 auto;
+    display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+  }
+  h1{font-size:clamp(1.6rem, 2.6vw, 2.2rem); margin:0 0 .5rem}
+  .tagline{color:var(--muted); margin:.25rem 0 0}
+  .lang{display:flex; gap:.4rem; align-items:center; margin-top:.75rem}
+  .lang button{
+    border:1px solid var(--line); background:var(--card); color:inherit;
+    padding:.35rem .6rem; border-radius:10px; font-size:.95rem; cursor:pointer;
+  }
+  .lang button.active{ outline:2px solid var(--link); }
+  .hero-notes{
+    position:absolute; inset:0; pointer-events:none; opacity:.65;
+  }
+  .note{ position:absolute; font-size:clamp(18px,2.4vw,26px); opacity:.65 }
+  @keyframes floatUp{
+    from{ transform: translateY(20px); opacity:.0 }
+    20%{ opacity:.7 }
+    to{ transform: translateY(-60px); opacity:0 }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .hero-notes{ display:none; }
+  }
+
+  main{ max-width:1000px; margin:0 auto; padding:1.25rem }
+  .grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:1rem; }
+  .card{
+    border:1px solid var(--line); background:var(--card); border-radius:14px; padding:1rem;
+    box-shadow: 0 1px 0 rgba(0,0,0,.03);
+  }
+  .card h2{ margin:.2rem 0 .6rem; font-size:1.15rem }
+  .muted{ color:var(--muted); }
+  a{ color:var(--link); text-decoration:none }
+  a:hover{ text-decoration:underline }
+
+  .cta{
+    margin-top:1rem; display:inline-flex; align-items:center; gap:.5rem;
+    border:1px solid var(--line); padding:.55rem .8rem; border-radius:10px;
+    background:linear-gradient(180deg, color-mix(in oklab, var(--brand3) 15%, transparent), transparent 60%);
+  }
+  .badge{
+    display:inline-block; font-size:.85rem; padding:.2rem .5rem; border-radius:999px;
+    border:1px solid var(--line); background:var(--card); color:var(--muted); margin-left:.4rem;
+  }
+  footer{ padding:2rem 1.25rem; text-align:center; color:var(--muted) }
+</style>
 </head>
 <body>
-  <header>
-    <h1 id="title">Old scores: classic and popular music</h1>
-    <div class="lang">
-      <button id="enBtn" class="active">EN</button>
-      <button id="noBtn">NO</button>
+
+  <header class="hero">
+    <div class="brand">
+      <div>
+        <h1 id="title">Old scores: classic and popular music</h1>
+        <p class="tagline" id="tag">A personal collection of Scandinavian music and research links.</p>
+        <div class="lang">
+          <span class="muted">Language:</span>
+          <button id="enBtn" class="active">EN</button>
+          <button id="noBtn">NO</button>
+          <span class="badge">Light/Dark</span>
+        </div>
+      </div>
+      <a class="cta" href="composers.html">🎼 Composers (A–Å) →</a>
     </div>
+
+    <!-- Floating music notes -->
+    <div class="hero-notes" id="notes"></div>
   </header>
 
   <main>
-    <section class="card">
-      <h2 id="h2a">Project</h2>
-      <p id="p1" class="muted">
-        A personal collection of Scandinavian music and research links.
-      </p>
-    </section>
+    <div class="grid">
+      <section class="card">
+        <h2 id="h2a">Old classical music</h2>
+        <p class="muted" id="p1">Curated public-domain scores and references.</p>
+        <p><a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vSIWxwL1QqxwLOzDv_AIzXEwZ5-9v1G51cX2rWsnESZYBEtKaNr0ih_6YEHvkyILK_5ug8oycWz21aK/pubhtml" target="_blank" rel="noopener">Open sheet →</a></p>
+      </section>
 
-    <section class="card">
-      <h2 id="h2b">Embedded spreadsheets</h2>
-      <ul>
-        <li>
-          <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vSIWxwL1QqxwLOzDv_AIzXEwZ5-9v1G51cX2rWsnESZYBEtKaNr0ih_6YEHvkyILK_5ug8oycWz21aK/pubhtml" target="_blank" rel="noopener">
-            Old classical music
-          </a>
-        </li>
-        <li>
-          <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vQqvBBaiFtSKobHuIllQA55CD5O5LIJR1JU_Cr-Z5X3AgpqnuhttVDA7GM0ms2nG8BgWF1ApYrZc-cw/pubhtml" target="_blank" rel="noopener">
-            Old popular music, mainly Norwegian &amp; Swedish
-          </a>
-        </li>
-        <li>
-          <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vRuhQrhQ68I16YdsYa1PcPepXNT_qAAeXaC3znelNccKBmLulUlu3JEBGFgd0h3zXbmCVxlR863pZpV/pubhtml" target="_blank" rel="noopener">
-            Norges Melodier I–IV
-          </a>
-        </li>
-      </ul>
-    </section>
+      <section class="card">
+        <h2 id="h2b">Old popular music (NO/SE)</h2>
+        <p class="muted" id="p2">Songs and light music; some items may be access-restricted.</p>
+        <p><a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vQqvBBaiFtSKobHuIllQA55CD5O5LIJR1JU_Cr-Z5X3AgpqnuhttVDA7GM0ms2nG8BgWF1ApYrZc-cw/pubhtml" target="_blank" rel="noopener">Open sheet →</a></p>
+      </section>
 
-    <section class="card">
-      <h2 id="h2c">Composers</h2>
-      <p>
-        <a href="composers.html">Composers (A–Å)</a>
-      </p>
-    </section>
+      <section class="card">
+        <h2 id="h2c">Norges Melodier I–IV</h2>
+        <p class="muted" id="p3">~500 songs from Grieg, Alnæs, and others.</p>
+        <p><a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vRuhQrhQ68I16YdsYa1PcPepXNT_qAAeXaC3znelNccKBmLulUlu3JEBGFgd0h3zXbmCVxlR863pZpV/pubhtml" target="_blank" rel="noopener">Open sheet →</a></p>
+      </section>
+
+      <section class="card">
+        <h2>Composers</h2>
+        <p class="muted" id="p4">Browse A–Å by surname; works are clickable; per-letter pages.</p>
+        <p><a href="composers.html">Go to A–Å index →</a></p>
+      </section>
+    </div>
   </main>
 
-  <script>
-    const t = {
-      en: {
-        title:"Old scores: classic and popular music",
-        h2a:"Project",
-        p1:"A personal collection of Scandinavian music and research links.",
-        h2b:"Embedded spreadsheets",
-        h2c:"Composers"
-      },
-      no: {
-        title:"Gamle noter: klassisk og populærmusikk",
-        h2a:"Prosjekt",
-        p1:"En personlig samling av skandinavisk musikk og forskningslenker.",
-        h2b:"Innebygde regneark",
-        h2c:"Komponister"
-      }
-    };
-    const e=id=>document.getElementById(id);
-    function setLang(L){
-      e("title").textContent=t[L].title;
-      e("h2a").textContent=t[L].h2a;
-      e("p1").textContent=t[L].p1;
-      e("h2b").textContent=t[L].h2b;
-      e("h2c").textContent=t[L].h2c;
-      enBtn.classList.toggle("active",L==="en");
-      noBtn.classList.toggle("active",L==="no");
-      localStorage.setItem("lang",L);
+  <footer>
+    <span id="foot">Built for research & listening pleasure • Hosted on GitHub Pages</span>
+  </footer>
+
+<script>
+  /* --- Language toggle (EN/NO) --- */
+  const T = {
+    en: {
+      title: "Old scores: classic and popular music",
+      tag: "A personal collection of Scandinavian music and research links.",
+      h2a: "Old classical music",
+      p1: "Curated public-domain scores and references.",
+      h2b: "Old popular music (NO/SE)",
+      p2: "Songs and light music; some items may be access-restricted.",
+      h2c: "Norges Melodier I–IV",
+      p3: "~500 songs from Grieg, Alnæs, and others.",
+      p4: "Browse A–Å by surname; works are clickable; per-letter pages.",
+      foot: "Built for research & listening pleasure • Hosted on GitHub Pages",
+      lang: "Language:"
+    },
+    no: {
+      title: "Gamle noter: klassisk og populærmusikk",
+      tag: "En personlig samling av skandinavisk musikk og forskningslenker.",
+      h2a: "Gammel klassisk musikk",
+      p1: "Kuraterte noter i public domain og referanser.",
+      h2b: "Gammel populærmusikk (NO/SE)",
+      p2: "Sanger og underholdningsmusikk; enkelte kan være tilgangsbegrenset.",
+      h2c: "Norges Melodier I–IV",
+      p3: "~500 sanger fra Grieg, Alnæs m.fl.",
+      p4: "Bla A–Å etter etternavn; verk er klikkbare; egne bokstavsider.",
+      foot: "Laget for forskning og lytteglede • Driftet på GitHub Pages",
+      lang: "Språk:"
     }
-    const enBtn=e("enBtn"), noBtn=e("noBtn");
-    enBtn.onclick=()=>setLang("en");
-    noBtn.onclick=()=>setLang("no");
-    setLang(localStorage.getItem("lang")||"en");
-  </script>
+  };
+  const $ = id => document.getElementById(id);
+  const enBtn = $("enBtn"), noBtn = $("noBtn");
+  function setLang(L){
+    const t = T[L];
+    $("title").textContent = t.title;
+    document.title = t.title; // tab title
+    $("tag").textContent = t.tag;
+    $("h2a").textContent = t.h2a; $("p1").textContent = t.p1;
+    $("h2b").textContent = t.h2b; $("p2").textContent = t.p2;
+    $("h2c").textContent = t.h2c; $("p3").textContent = t.p3;
+    $("p4").textContent = t.p4;   $("foot").textContent = t.foot;
+    document.querySelector(".lang span").textContent = (L==='no'? T.no.lang : T.en.lang);
+    enBtn.classList.toggle("active", L==='en');
+    noBtn.classList.toggle("active", L==='no');
+    localStorage.setItem("lang", L);
+  }
+  enBtn.onclick = ()=> setLang('en');
+  noBtn.onclick = ()=> setLang('no');
+  setLang(localStorage.getItem("lang") || (navigator.language||'en').toLowerCase().startsWith('no')?'no':'en');
+
+  /* --- Floating notes in hero --- */
+  const notesWrap = $("notes");
+  const notes = ["♪","♫","𝄞","♩","♬","𝄢","♭","♯","♮"];
+  function spawnNote(){
+    const n = document.createElement("div");
+    n.className = "note";
+    n.textContent = notes[Math.floor(Math.random()*notes.length)];
+    const x = Math.random()*90 + 5; // 5%..95%
+    const y = Math.random()*60 + 10; // 10%..70%
+    n.style.left = x + "%"; n.style.top = y + "%";
+    const dur = 4000 + Math.random()*3000;
+    n.style.animation = `floatUp ${dur}ms ease-out`;
+    notesWrap.appendChild(n);
+    setTimeout(()=> n.remove(), dur);
+  }
+  if(!window.matchMedia("(prefers-reduced-motion: reduce)").matches){
+    // burst on load, then trickle
+    for(let i=0;i<10;i++) setTimeout(spawnNote, 120*i);
+    setInterval(spawnNote, 1200);
+  }
+</script>
 </body>
 </html>
