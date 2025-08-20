@@ -1,273 +1,121 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!doctype html>
+<meta charset="utf-8">
 <title>Composers</title>
 <style>
-  :root { color-scheme: light dark; }
-  html,body { margin:0; padding:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-  body { background:#fff; color:#111; }
-  @media (prefers-color-scheme: dark) {
-    body { background:#0b0b0c; color:#eaeaea; }
-    .card, .group { border-color:#2a2a2c; }
-    .muted { color:#b6b6b6; }
-    .pill { background:#18181a; border-color:#2a2a2c; }
-    input[type="search"] { background:#111; color:#eee; border-color:#2a2a2c; }
-  }
-  header { position:sticky; top:0; backdrop-filter:saturate(180%) blur(8px);
-           background:rgba(255,255,255,.85); border-bottom:1px solid #e8e8e8; padding:.9rem 1rem; z-index:5; }
-  @media (prefers-color-scheme: dark) { header { background:rgba(11,11,12,.7); border-color:#2a2a2c; } }
-  h1 { margin:.1rem 0 .5rem; font-size:1.6rem; }
-  .bar { display:flex; gap:.75rem; flex-wrap:wrap; align-items:center; justify-content:space-between; }
-  .left, .right { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
-  .pill { border:1px solid #e7e7e7; border-radius:999px; padding:.35rem .7rem; font-size:.9rem; }
-  .pill button { border:0; background:none; padding:.15rem .5rem; border-radius:8px; }
-  .pill button.active { outline:2px solid #0b5fff; }
-  input[type="search"] { border:1px solid #ddd; border-radius:10px; padding:.55rem .7rem; min-width:16rem; }
-  main { max-width:1100px; margin:0 auto; padding:1rem; }
-  .alpha { display:flex; flex-wrap:wrap; gap:.35rem .5rem; margin:.5rem 0 1rem; }
-  .alpha a { text-decoration:none; border:1px solid #e7e7e7; border-radius:8px; padding:.15rem .45rem; font-size:.92rem; color:inherit; }
-  .alpha a:hover { text-decoration:underline; }
-  .group { border-top:1px solid #eee; padding-top:1rem; margin-top:1.25rem; }
-  .group h2 { margin:.2rem 0 .8rem; font-size:1.25rem; }
-  .composer { margin:.6rem 0; }
-  .composer h3 { margin:.1rem 0 .2rem; font-size:1.05rem; }
-  .life { font-size:.95rem; }
-  .works { margin:.25rem 0 .75rem; padding-left:1rem; }
-  .work { margin:.25rem 0; }
-  .meta { font-size:.92rem; }
-  .muted { color:#666; }
-  .card { border:1px solid #eaeaea; border-radius:12px; padding:1rem; margin:.5rem 0 1rem; }
-  .notes p { margin:.35rem 0; line-height:1.45; }
-  .counts { font-size:.9rem; }
-  .empty { padding:1rem; border:1px dashed #e0e0e0; border-radius:12px; text-align:center; }
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:1000px;margin:2rem auto;padding:0 1rem;line-height:1.45}
+  h1{margin:.2rem 0 1rem}
+  .msg{padding:1rem;border:1px solid #e0e0e0;border-radius:10px;background:#fafafa;color:#333}
+  ul{padding-left:1.25rem}
+  li{margin:.3rem 0}
+  .muted{color:#666}
+  .group{margin-top:1.2rem;border-top:1px solid #eee;padding-top:.8rem}
 </style>
-</head>
-<body>
-  <header>
-    <div class="bar">
-      <div class="left">
-        <h1 id="title">Composers</h1>
-        <span class="counts muted" id="counts"></span>
-      </div>
-      <div class="right">
-        <input id="q" type="search" placeholder="Search composer, title, year…" aria-label="Search" />
-        <div class="pill">
-          <button id="enBtn" class="active">EN</button>
-          <button id="noBtn">NO</button>
-        </div>
-      </div>
-    </div>
-    <nav class="alpha" id="alpha"></nav>
-  </header>
-
-  <main>
-    <div id="host"></div>
-  </main>
+<h1>Composers</h1>
+<div id="out" class="msg">Loading…</div>
+<div id="host"></div>
 
 <script>
-/** =========================
- *  CONFIG & TEXT (EN/NO)
- *  ========================= */
-const TEXT = {
-  en: {
-    title: "Composers",
-    searchPh: "Search composer, title, year…",
-    works: "works",
-    lyricist: "Lyricist",
-    noItems: "No results. Try a different search.",
-    groups: "Groups",
-  },
-  no: {
-    title: "Komponister",
-    searchPh: "Søk på komponist, tittel, år…",
-    works: "verk",
-    lyricist: "Tekstforfatter",
-    noItems: "Ingen treff. Prøv et annet søk.",
-    groups: "Grupper",
-  }
-};
+const OUT = document.getElementById('out');
+const HOST = document.getElementById('host');
 
-const LETTERS = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","Æ","Ø","Å"];
-const DATA_URL = "./data/composers.json"; // <-- make sure this file exists in your repo
-
-// language state
-const $ = (id)=>document.getElementById(id);
-const enBtn = $("enBtn"), noBtn = $("noBtn"), q = $("q"), host = $("host"), counts = $("counts"), titleEl = $("title"), alpha = $("alpha");
-let L = localStorage.getItem("lang") || "en";
-function setLang(lang) {
-  L = lang;
-  titleEl.textContent = TEXT[L].title;
-  q.placeholder = TEXT[L].searchPh;
-  enBtn.classList.toggle("active", L==="en");
-  noBtn.classList.toggle("active", L==="no");
-  localStorage.setItem("lang", L);
-  render(state.filtered || state.data);
+// helper: safe get with Norwegian/English variants
+function pick(obj, keys){
+  for(const k of keys){ if(obj && obj[k] != null && String(obj[k]).trim() !== "") return obj[k]; }
+  return "";
 }
-enBtn.onclick = ()=>setLang("en");
-noBtn.onclick = ()=>setLang("no");
-setLang(L);
-
-// Norwegian collation for surnames and letters
-const collator = new Intl.Collator("nb", { sensitivity:"base" });
-
-/** =========================
- *  UTILITIES
- *  ========================= */
-
-// Turn raw string notes into paragraphs with auto-linked URLs
-function linkify(text) {
-  if (!text) return "";
-  const urlRe = /(https?:\/\/[^\s)]+)|(www\.[^\s)]+)/gi;
-  let t = text.replace(urlRe, m => {
-    const url = m.startsWith("http") ? m : `https://${m}`;
-    return `<a href="${url}" target="_blank" rel="noopener">${m}</a>`;
-  });
-  // Split on blank lines into paragraphs
-  return t.split(/\n\s*\n/).map(p => `<p>${p.trim()}</p>`).join("");
+// initial (surname) from last token
+function initial(name){
+  if(!name) return "#";
+  let n = String(name).trim();
+  if(n.includes(",")) n = n.split(",")[0].trim();
+  const parts = n.split(/\s+/); const s = parts[parts.length-1] || n;
+  const f = s[0].toUpperCase().normalize("NFD").replace(/\p{Diacritic}/gu,"");
+  return ["Æ","Ø","Å"].includes(s[0].toUpperCase()) ? s[0].toUpperCase()
+       : /[A-Z]/.test(f) ? f : "#";
 }
 
-// Get surname initial (A–Å) respecting Norwegian rules
-function getInitial(name) {
-  if (!name) return "#";
-  // Take last token as surname (handles "Surname, First" too)
-  let n = name.trim();
-  if (n.includes(",")) n = n.split(",")[0].trim();
-  const parts = n.split(/\s+/);
-  const surname = parts[parts.length-1];
-  const first = surname[0].toUpperCase();
-  // Map to Æ/Ø/Å if applicable, else A–Z
-  if (["Æ","Ø","Å"].includes(first)) return first;
-  const AZ = first.normalize("NFD").replace(/\p{Diacritic}/gu, "");
-  return LETTERS.includes(AZ) ? AZ : "#";
-}
+fetch('data/composers.json?nocache=' + Date.now(), {cache:'no-store'})
+  .then(async r=>{
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    // handle BOM safely
+    const text = await r.text();
+    const clean = text.replace(/^\uFEFF/,'');
+    return JSON.parse(clean);
+  })
+  .then(json=>{
+    // accept array or {works:[…]}
+    let arr = Array.isArray(json) ? json
+             : (json && Array.isArray(json.works) ? json.works : []);
+    if(!Array.isArray(arr)) arr = [];
 
-// Case-insensitive includes
-const inc = (a,b)=> (a||"").toLowerCase().includes((b||"").toLowerCase());
+    if(arr.length === 0){
+      OUT.className = "msg";
+      OUT.innerHTML = "No items found in <code>data/composers.json</code>. Expected an array or <code>{ works:[…] }</code>.";
+      return;
+    }
 
-/** =========================
- *  RENDERING
- *  ========================= */
+    // normalize each item
+    const items = arr.map(it=>{
+      const composer = pick(it, ["composer","komponist","name","navn","full name","full_name"]) || "";
+      const title    = pick(it, ["title","tittel","work","verk","composition","komposisjon"]) || "";
+      let yearRaw    = pick(it, ["year","år","aar","published","composition year","publisert"]);
+      let year = "";
+      if(yearRaw){
+        const m = String(yearRaw).match(/\b(1[6-9]\d{2}|20\d{2})\b/);
+        year = m ? m[1] : String(yearRaw);
+      }
+      const lyricist = pick(it, ["lyricist","tekstforfatter","lyrics","tekst"]);
+      const notes    = pick(it, ["notes","kommentar","comments","comment","merknader","notater","anmerkning"]);
+      const life     = pick(it, ["life","years","birth–death","birth-death","født–død","fodt–dod","f-d"]);
 
-const state = { data: [], filtered: null };
-
-function renderAlpha() {
-  alpha.innerHTML = LETTERS.map(ch => `<a href="#grp-${ch}" aria-label="Jump to ${ch}">${ch}</a>`).join("");
-}
-
-function render(data) {
-  // group by initial of surname
-  const groups = {};
-  for (const item of data) {
-    const init = getInitial(item.composer);
-    if (!groups[init]) groups[init] = [];
-    groups[init].push(item);
-  }
-  // sort within groups by surname then given names
-  for (const k of Object.keys(groups)) {
-    groups[k].sort((a,b)=> collator.compare(a.composer, b.composer));
-  }
-
-  // Compose HTML
-  const parts = [];
-  let totalWorks = data.length;
-  let composerCounts = new Map();
-  data.forEach(d => {
-    composerCounts.set(d.composer, (composerCounts.get(d.composer)||0)+1);
-  });
-  const uniqueComposers = composerCounts.size;
-  counts.textContent = `${uniqueComposers} ${TEXT[L].title.toLowerCase()} • ${totalWorks} ${TEXT[L].works}`;
-
-  // build per-letter
-  LETTERS.forEach(letter => {
-    const arr = groups[letter] || [];
-    if (arr.length === 0) return;
-    // group by composer inside the letter
-    const byPerson = new Map();
-    arr.forEach(w => {
-      const key = w.composer;
-      if (!byPerson.has(key)) byPerson.set(key, []);
-      byPerson.get(key).push(w);
+      return { composer, title, year, lyricist, notes, life };
     });
 
-    parts.push(`<section class="group" id="grp-${letter}">
-      <h2>${letter}</h2>
-      ${[...byPerson.entries()].map(([person, works]) => {
-        // Extract life years if provided at top level (optional)
-        const life = works[0].life || ""; // e.g., "1843–1907"
-        // sort works by year/title
-        works.sort((a,b)=>{
-          const ay = a.year ?? 0, by = b.year ?? 0;
-          if (ay !== by) return ay - by;
-          return collator.compare(a.title||"", b.title||"");
-        });
-        return `<article class="composer card">
-            <h3>${person}</h3>
-            ${life ? `<div class="life muted">${life}</div>` : ``}
-            <ul class="works">
-              ${works.map(w => {
-                const lines = [];
-                // Title + year
-                const title = [w.title, w.year ? `(${w.year})` : ""].filter(Boolean).join(" ");
-                lines.push(`<div class="meta"><strong>${title}</strong></div>`);
-                // Lyricist (hide if empty)
-                if (w.lyricist) {
-                  lines.push(`<div class="meta">${TEXT[L].lyricist}: ${w.lyricist}</div>`);
-                }
-                // Links (optional: msc/imslp/etc.)
-                const linkBits = [];
-                if (w.url) linkBits.push(`<a href="${w.url}" target="_blank" rel="noopener">Link</a>`);
-                if (w.musescore) linkBits.push(`<a href="${w.musescore}" target="_blank" rel="noopener">MuseScore</a>`);
-                if (w.imslp) linkBits.push(`<a href="${w.imslp}" target="_blank" rel="noopener">IMSLP</a>`);
-                if (w.source) linkBits.push(`<a href="${w.source}" target="_blank" rel="noopener">Source</a>`);
-                if (linkBits.length) lines.push(`<div class="meta">${linkBits.join(" · ")}</div>`);
-                // Notes
-                const notesHTML = w.notes ? `<div class="notes">${linkify(w.notes)}</div>` : "";
-                return `<li class="work">${lines.join("")}${notesHTML}</li>`;
-              }).join("")}
-            </ul>
-          </article>`;
-      }).join("")}
-    </section>`;
-  }).join("")`);
+    // filter out rows missing the two required fields
+    const rows = items.filter(x => x.composer && x.title);
+    if(rows.length === 0){
+      OUT.className = "msg";
+      OUT.innerHTML = "Found data, but no entries with both <code>composer</code> and <code>title</code> keys.";
+      return;
+    }
 
-  const html = parts.join("");
-  host.innerHTML = html || `<div class="empty">${TEXT[L].noItems}</div>`;
-}
+    // group by initial of surname
+    const groups = {};
+    rows.forEach(r=>{
+      const init = initial(r.composer);
+      (groups[init] ||= []).push(r);
+    });
 
-// Search (composer, title, year, lyricist, notes)
-q.addEventListener("input", () => {
-  const term = q.value.trim();
-  if (!term) {
-    state.filtered = null;
-    render(state.data);
-    return;
-  }
-  const t = term.toLowerCase();
-  state.filtered = state.data.filter(w =>
-    inc(w.composer, t) || inc(w.title, t) || inc(String(w.year||""), t) ||
-    inc(w.lyricist, t) || inc(w.notes, t)
-  );
-  render(state.filtered);
-});
+    // render
+    OUT.textContent = ""; // clear "Loading…"
+    const letters = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","Æ","Ø","Å"];
+    const collator = new Intl.Collator("nb", {sensitivity:"base"});
 
-// Boot
-renderAlpha();
-fetch(DATA_URL, { cache: "no-store" })
-  .then(r => {
-    if (!r.ok) throw new Error("Failed to load composers.json");
-    return r.json();
+    HOST.innerHTML = letters.map(L=>{
+      const arr = groups[L] || [];
+      if(arr.length === 0) return "";
+      arr.sort((a,b)=> collator.compare(a.composer, b.composer) || collator.compare(a.title, b.title));
+      const itemsHTML = arr.map(x=>{
+        const yr = x.year ? ` (${x.year})` : "";
+        const life = x.life ? ` <span class="muted">— ${x.life}</span>` : "";
+        const lyr = x.lyricist ? `<div class="muted">Lyricist: ${x.lyricist}</div>` : "";
+        const notes = x.notes ? `<div class="muted">${String(x.notes)}</div>` : "";
+        return `<li><strong>${x.composer}</strong>${life} — ${x.title}${yr}${lyr}${notes}</li>`;
+      }).join("");
+      return `<section class="group" id="grp-${L}">
+        <h2>${L}</h2>
+        <ul>${itemsHTML}</ul>
+      </section>`;
+    }).join("");
+
+    if(!HOST.innerHTML.trim()){
+      OUT.className = "msg";
+      OUT.textContent = "Data loaded, but no groups to display.";
+    }
   })
-  .then(json => {
-    // Expect either array of works or {works:[...]}
-    const arr = Array.isArray(json) ? json : (Array.isArray(json.works) ? json.works : []);
-    state.data = arr;
-    render(arr);
-  })
-  .catch(err => {
-    host.innerHTML = `<div class="empty">Could not load <code>data/composers.json</code> (${err.message}).</div>`;
+  .catch(err=>{
+    OUT.className = "msg";
+    OUT.innerHTML = `Error loading <code>data/composers.json</code>: ${err.message}.<br>
+                     Check the file exists at that path and is valid JSON.`;
   });
 </script>
-</body>
-</html>
