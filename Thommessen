@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reidar Thommessen – Komposisjoner</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Cormorant+SC:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0e0c0a;--surface:#161310;--border:#2e2820;--gold:#c9a05a;--gold-dim:#7a5e2e;--text:#e8dfc8;--muted:#8a7d68}
+body{background:var(--bg);color:var(--text);font-family:'Cormorant Garamond',Georgia,serif;font-size:18px;line-height:1.6;min-height:100vh}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:48px 28px 40px;text-align:center;position:relative}
+header::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 50% -10%,rgba(201,160,90,0.08),transparent 70%);pointer-events:none}
+.eyebrow{font-family:'Cormorant SC',serif;font-size:.62rem;letter-spacing:.35em;color:var(--gold-dim);margin-bottom:14px;text-transform:uppercase}
+h1{font-family:'Cormorant Garamond',serif;font-size:clamp(2rem,6vw,3.8rem);font-weight:300;font-style:italic;line-height:1.08;color:var(--text)}
+.dates{font-family:'Cormorant SC',serif;font-size:.85rem;letter-spacing:.2em;color:var(--gold);margin-top:10px;min-height:1.2em}
+.rule{width:100px;height:1px;background:linear-gradient(90deg,transparent,var(--gold-dim),transparent);margin:20px auto}
+.bio{font-size:.95rem;line-height:1.75;color:var(--muted);max-width:560px;margin:0 auto}
+.bio-links{margin-top:18px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.bio-links a{font-family:'Cormorant SC',serif;font-size:.65rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);text-decoration:none;border:1px solid var(--gold-dim);padding:5px 14px;transition:background .2s,color .2s}
+.bio-links a:hover{background:var(--gold);color:var(--bg)}
+.pills{margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.pill{font-family:'Cormorant SC',serif;font-size:.6rem;letter-spacing:.15em;color:var(--bg);background:var(--gold-dim);padding:3px 10px}
+main{max-width:900px;margin:0 auto;padding:40px 24px 80px}
+.sec-head{display:flex;align-items:center;gap:14px;margin-bottom:24px}
+.sec-label{font-family:'Cormorant SC',serif;font-size:.62rem;letter-spacing:.28em;text-transform:uppercase;color:var(--gold-dim);white-space:nowrap}
+.sec-line{flex:1;height:1px;background:var(--border)}
+.sec-count{font-family:'Cormorant SC',serif;font-size:.62rem;letter-spacing:.15em;color:var(--gold-dim);white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:.93rem}
+thead tr{border-bottom:1px solid var(--border)}
+th{font-family:'Cormorant SC',serif;font-size:.6rem;letter-spacing:.18em;color:var(--gold-dim);font-weight:400;padding:0 12px 12px 0;text-align:left;white-space:nowrap}
+th:last-child{padding-right:0}
+tbody tr{border-bottom:1px solid #1e1c18;transition:background .12s}
+tbody tr:hover{background:rgba(201,160,90,0.04)}
+td{padding:13px 12px 13px 0;vertical-align:top}
+td:last-child{padding-right:0}
+.n{font-family:'Cormorant SC',serif;font-size:.68rem;color:var(--gold-dim);width:30px;padding-top:15px}
+.title{font-style:italic;color:var(--text);line-height:1.3}
+.notes{font-size:.75rem;color:var(--muted);margin-top:3px;font-style:normal;line-height:1.4}
+.year{font-family:'Cormorant SC',serif;font-size:.78rem;color:var(--muted);white-space:nowrap;padding-top:15px}
+.lyr{font-size:.85rem;color:var(--muted);font-style:italic}
+.pd{font-family:'Cormorant SC',serif;font-size:.68rem;white-space:nowrap;padding-top:14px}
+.pd-y{color:#7db87d}.pd-n{color:#b87d7d}.pd-u{color:var(--muted)}
+.links{white-space:nowrap;padding-top:10px}
+.ms-link{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid var(--border);color:var(--gold-dim);text-decoration:none;font-size:15px;transition:background .15s,color .15s}
+.ms-link:hover{background:var(--gold);color:var(--bg);border-color:var(--gold)}
+#status{padding:70px 0;text-align:center;font-style:italic;color:var(--muted)}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .75s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.err{background:#1e1010;border:1px solid #5a2020;border-radius:4px;padding:20px;color:#d08080;font-family:monospace;font-size:.8rem;white-space:pre-wrap;word-break:break-all;margin-top:16px;display:none}
+footer{text-align:center;padding:24px;font-family:'Cormorant SC',serif;font-size:.6rem;letter-spacing:.2em;color:var(--gold-dim);border-top:1px solid var(--border)}
+@media(max-width:600px){header,main{padding-left:16px;padding-right:16px}.hide-sm{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">Norsk musikk-katalog · Komponist</div>
+  <h1 id="name">Reidar Thommessen</h1>
+  <div class="dates" id="dates"></div>
+  <div class="rule"></div>
+  <p class="bio" id="bio"></p>
+  <div class="bio-links" id="biolinks"></div>
+  <div class="pills" id="pills"></div>
+</header>
+<main>
+  <div class="sec-head" id="sechead" style="display:none">
+    <span class="sec-label">Komposisjoner</span>
+    <span class="sec-line"></span>
+    <span class="sec-count" id="count"></span>
+  </div>
+  <div id="status"><span class="spin"></span> Henter data…</div>
+  <div class="err" id="err"></div>
+  <div id="tablewrap" style="display:none">
+    <table>
+      <thead><tr>
+        <th style="width:30px">#</th>
+        <th>Tittel</th>
+        <th class="hide-sm">År</th>
+        <th class="hide-sm">Tekstforfatter</th>
+        <th>PD</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</main>
+<footer>Historiske norske og nordiske komposisjoner</footer>
+<script>
+const B='https://tfqnzszyjsdgdeksizel.supabase.co/rest/v1';
+const K='sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
+const H={apikey:K,Authorization:'Bearer '+K};
+function $id(id){return document.getElementById(id)}
+function fail(msg){$id('status').textContent='⚠ Noe gikk galt';const e=$id('err');e.style.display='block';e.textContent=msg}
+async function get(path){const r=await fetch(B+path,{headers:H});if(!r.ok)throw new Error('HTTP '+r.status+'\n'+await r.text());return r.json()}
+function lbl(url){if(/wikipedia/i.test(url))return'Wikipedia';if(/nb\.no/.test(url))return'nb.no';if(/nbl\.snl/.test(url))return'NBL/SNL';if(/snl\.no/.test(url))return'SNL';if(/musescore/.test(url))return'MuseScore';try{return new URL(url).hostname.replace('www.','')}catch{return url}}
+(async()=>{
+try{
+const persons=await get('/person?last_name=ilike.*thommessen*&select=*');
+if(!persons.length){fail('Ingen komponist funnet.');return}
+const p=persons.find(x=>x.first_name?.toLowerCase().includes('reidar'))||persons[0];
+$id('name').textContent=[p.first_name,p.last_name].filter(Boolean).join(' ');
+document.title=$id('name').textContent+' – Komposisjoner';
+const b=p.born?p.born+(p.born_uncertain==='yes'?'?':''):null;
+const d=p.died?p.died+(p.died_uncertain==='yes'?'?':''):null;
+if(b||d)$id('dates').textContent=(b||'?')+' – '+(d||'');
+if(p.bio_text?.trim()){const t=p.bio_text.trim();$id('bio').textContent=t.length>600?t.slice(0,600)+'…':t}
+if(p.bio_url?.trim()){const el=$id('biolinks');p.bio_url.split(/[\n,;]+/).map(s=>s.trim()).filter(s=>s.startsWith('http')).forEach(url=>{const a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener';a.textContent=lbl(url);el.appendChild(a)})}
+const pills=$id('pills');
+[p.nationality,p.gender==='F'?'Kvinne':p.gender==='M'?'Mann':null].filter(Boolean).forEach(v=>{const s=document.createElement('span');s.className='pill';s.textContent=v;pills.appendChild(s)});
+const junctions=await get('/composition_composer?person_id=eq.'+p.person_id+'&select=composition_id');
+if(!junctions.length){fail('Ingen komposisjoner funnet.');return}
+const ids=junctions.map(j=>j.composition_id);
+const comps=await get('/composition?composition_id=in.('+ids+')&order=title.asc&select=*');
+const llinks=await get('/composition_lyricist?composition_id=in.('+ids+')&select=composition_id,person_id');
+const lpids=[...new Set(llinks.map(l=>l.person_id))];
+let lpersons=[];
+if(lpids.length)lpersons=await get('/person?person_id=in.('+lpids+')&select=person_id,first_name,last_name');
+const pById={};lpersons.forEach(x=>{pById[x.person_id]=x});
+const lByComp={};llinks.forEach(l=>{const x=pById[l.person_id];if(!x)return;const n=[x.first_name,x.last_name].filter(Boolean).join(' ');if(!lByComp[l.composition_id])lByComp[l.composition_id]=[];lByComp[l.composition_id].push(n)});
+$id('status').style.display='none';
+$id('sechead').style.display='flex';
+$id('count').textContent=comps.length+' verk';
+$id('tablewrap').style.display='block';
+const tbody=$id('tbody');
+comps.forEach((c,i)=>{
+const tr=document.createElement('tr');
+const tdN=document.createElement('td');tdN.className='n';tdN.textContent=String(i+1).padStart(2,'0');
+const tdT=document.createElement('td');const div=document.createElement('div');div.className='title';div.textContent=c.title||'–';tdT.appendChild(div);
+if(c.composition_notes?.trim()){const dn=document.createElement('div');dn.className='notes';const n=c.composition_notes.trim();dn.textContent=n.length>120?n.slice(0,120)+'…':n;tdT.appendChild(dn)}
+const tdY=document.createElement('td');tdY.className='year hide-sm';tdY.textContent=c.year_composed||'';
+const tdL=document.createElement('td');tdL.className='lyr hide-sm';tdL.textContent=(lByComp[c.composition_id]||[]).join(', ');
+const tdP=document.createElement('td');tdP.className='pd';tdP.innerHTML=c.public_domain==='Yes'?'<span class="pd-y">✦ Fri</span>':c.public_domain==='No'?'<span class="pd-n">✗ ©</span>':'<span class="pd-u">–</span>';
+const tdL2=document.createElement('td');tdL2.className='links';
+if(c.musescore_link?.trim()){const a=document.createElement('a');a.className='ms-link';a.href=c.musescore_link.trim();a.target='_blank';a.rel='noopener';a.title='MuseScore';a.textContent='♩';tdL2.appendChild(a)}
+tr.append(tdN,tdT,tdY,tdL,tdP,tdL2);tbody.appendChild(tr)});
+}catch(e){fail(e.message)}
+})();
+</script>
+</body>
+</html>
