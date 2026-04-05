@@ -532,11 +532,7 @@
         </div>
         <div class="field">
           <label>MuseScore-lenke</label>
-          <div class="file-upload-wrap">
-            <input type="text" id="e_msLink" placeholder="https://musescore.com/…">
-            <button type="button" class="btn-upload" onclick="fetchMusescoreInfo()">Hent info</button>
-          </div>
-          <div class="upload-progress" id="msInfoProgress"></div>
+          <input type="text" id="e_msLink" placeholder="https://musescore.com/…">
         </div>
         <div class="field">
           <label>Kommentarer</label>
@@ -1261,50 +1257,6 @@ async function uploadFile(input, urlFieldId, bucket) {
   input.value = '';
 }
 
-// ── Fetch MuseScore score info ────────────────────────────────────────────────
-
-async function fetchMusescoreInfo() {
-  const url = document.getElementById('e_msLink').value.trim();
-  const progress = document.getElementById('msInfoProgress');
-
-  if (!url) { alert('Ingen MuseScore-lenke angitt.'); return; }
-
-  progress.style.display = 'block';
-  progress.textContent = 'Henter info fra MuseScore…';
-
-  try {
-    // Try direct fetch — will work if CORS allows it
-    const r = await fetch(url, { credentials: 'include' });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const html = await r.text();
-
-    // Extract JSON-LD
-    const match = html.match(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/i);
-    if (!match) throw new Error('Fant ikke JSON-LD på siden.');
-
-    const data = JSON.parse(match[1]);
-    const text = data.text || data.description || '';
-
-    if (!text) throw new Error('Ingen tekstinfo funnet i JSON-LD.');
-
-    // Fill into composition_notes
-    const existing = document.getElementById('e_notes').value.trim();
-    if (existing && !confirm(`Kommentarfeltet har allerede innhold:
-
-"${existing.substring(0,100)}…"
-
-Overskrive?`)) {
-      progress.textContent = 'Avbrutt.';
-      return;
-    }
-
-    document.getElementById('e_notes').value = text;
-    progress.textContent = `✓ Info hentet (${text.length} tegn)`;
-
-  } catch(err) {
-    progress.textContent = `⚠ Feil: ${err.message} — MuseScore blokkerer trolig direkte henting (CORS). Prøv å åpne MuseScore-lenken manuelt og kopier beskrivelsen.`;
-  }
-}
 </script>
 </body>
 </html>
