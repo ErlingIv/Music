@@ -1273,11 +1273,7 @@ Overskrive?`)) {
     progress.textContent = `✓ Info hentet (${text.length} tegn)`;
 
   } catch(err) {
-    if (err.message.includes('Failed to fetch') || err.message.includes('CORS') || err.message.includes('NetworkError')) {
-      progress.textContent = '⚠ CORS blokkert — fungerer ikke fra lokal fil. Host siden på GitHub Pages og prøv igjen.';
-    } else {
-      progress.textContent = `Feil: ${err.message}`;
-    }
+    progress.textContent = `⚠ Feil: ${err.message} — MuseScore blokkerer trolig direkte henting (CORS). Prøv å åpne MuseScore-lenken manuelt og kopier beskrivelsen.`;
   }
 }
 </script>
