@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Musikk — Administrasjon</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Source+Sans+3:wght@300;400;500&display=swap');
+
+  :root {
+    --ink:     #1a1612;
+    --paper:   #f5f0e8;
+    --warm:    #e8e0d0;
+    --accent:  #8b3a2a;
+    --accent2: #4a6741;
+    --muted:   #7a7068;
+    --border:  #c8bfb0;
+    --radius:  4px;
+    --shadow:  0 2px 12px rgba(26,22,18,0.10);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Source Sans 3', sans-serif;
+    font-weight: 300;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.2rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .container { max-width: 700px; margin: 0 auto; }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid var(--border);
+  }
+
+  .tab { background: none; border: none; font-family: inherit; cursor: pointer;
+    padding: 0.6rem 1.5rem;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .tab:hover { color: var(--ink); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Cards */
+  .card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    margin-bottom: 1.25rem;
+  }
+
+  .card-title {
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--accent);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--warm);
+  }
+
+  .field { margin-bottom: 1rem; }
+  .field:last-child { margin-bottom: 0; }
+
+  label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    margin-bottom: 0.3rem;
+  }
+
+  input[type=text], input[type=number], select, textarea {
+    width: 100%;
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 0.93rem;
+    font-weight: 300;
+    background: var(--paper);
+    color: var(--ink);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    outline: none;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(139,58,42,0.10);
+    background: white;
+  }
+
+  textarea { resize: vertical; min-height: 65px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+  /* Lookup */
+  .lookup-wrap { position: relative; }
+
+  .lookup-results {
+    position: absolute;
+    top: 100%; left: 0; right: 0;
+    background: white;
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 var(--radius) var(--radius);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: var(--shadow);
+    display: none;
+  }
+
+  .lookup-results.open { display: block; }
+
+  .lookup-item {
+    padding: 0.45rem 0.7rem;
+    cursor: pointer;
+    font-size: 0.88rem;
+    border-bottom: 1px solid var(--warm);
+  }
+
+  .lookup-item:last-child { border-bottom: none; }
+  .lookup-item:hover { background: var(--warm); }
+  .lookup-item.add-new { color: var(--accent2); font-weight: 500; }
+  .lookup-item .meta { font-size: 0.75rem; color: var(--muted); }
+
+  /* Tags */
+  .tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.5rem; }
+
+  .tag {
+    background: var(--warm);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 0.18rem 0.45rem 0.18rem 0.6rem;
+    font-size: 0.83rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .tag button {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 1rem; line-height: 1; padding: 0;
+  }
+
+  .tag button:hover { color: var(--accent); }
+
+  /* Search results (edit tab) */
+  .search-results { margin-top: 0.75rem; }
+
+  .result-row {
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 0.4rem;
+    cursor: pointer;
+    background: white;
+    transition: background 0.1s;
+  }
+
+  .result-row:hover { background: var(--warm); }
+  .result-row .result-title { font-weight: 400; font-size: 0.95rem; }
+  .result-row .result-meta  { font-size: 0.78rem; color: var(--muted); margin-top: 0.1rem; }
+
+  /* Buttons */
+  .btn {
+    display: inline-block;
+    padding: 0.55rem 1.4rem;
+    border-radius: var(--radius);
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 0.83rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+  }
+
+  .btn-primary   { background: var(--accent);  color: white; }
+  .btn-primary:hover { background: #722f22; }
+  .btn-primary:disabled { background: var(--border); cursor: not-allowed; }
+  .btn-secondary { background: transparent; color: var(--accent2); border: 1px solid var(--accent2); }
+  .btn-secondary:hover { background: var(--accent2); color: white; }
+  .btn-danger    { background: transparent; color: #8b2222; border: 1px solid #c8aaaa; }
+  .btn-danger:hover { background: #8b2222; color: white; }
+
+  .actions { display: flex; gap: 0.75rem; align-items: center; margin-top: 1.25rem; flex-wrap: wrap; }
+
+  /* Messages */
+  .msg {
+    padding: 0.65rem 0.9rem;
+    border-radius: var(--radius);
+    font-size: 0.88rem;
+    margin-bottom: 1rem;
+    display: none;
+  }
+
+  .msg.success { background: #eaf4e8; border: 1px solid #b2d9aa; color: #2d6b27; display: block; }
+  .msg.error   { background: #fbeaea; border: 1px solid #e0aaaa; color: #8b2222; display: block; }
+
+  /* Modal */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(26,22,18,0.45); z-index: 200;
+    align-items: center; justify-content: center;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: white; border-radius: var(--radius);
+    padding: 1.75rem; width: 100%; max-width: 460px;
+    box-shadow: 0 8px 40px rgba(26,22,18,0.2);
+    border: 1px solid var(--border);
+  }
+
+  .modal h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.15rem; margin-bottom: 1.1rem;
+  }
+
+  .modal-actions { display: flex; gap: 0.65rem; margin-top: 1.1rem; justify-content: flex-end; }
+
+  .spinner {
+    display: inline-block; width: 13px; height: 13px;
+    border: 2px solid rgba(255,255,255,0.4); border-top-color: white;
+    border-radius: 50%; animation: spin 0.6s linear infinite;
+    vertical-align: middle; margin-right: 0.35rem;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Approval */
+  .approved-badge {
+    display: inline-block;
+    background: #eaf4e8; border: 1px solid #b2d9aa;
+    color: #2d6b27; border-radius: 2px;
+    padding: 0.15rem 0.5rem; font-size: 0.75rem;
+    font-weight: 500; text-transform: uppercase;
+    letter-spacing: 0.06em; vertical-align: middle;
+  }
+
+  .unapproved-badge {
+    display: inline-block;
+    background: var(--warm); border: 1px solid var(--border);
+    color: var(--muted); border-radius: 2px;
+    padding: 0.15rem 0.5rem; font-size: 0.75rem;
+    font-weight: 500; text-transform: uppercase;
+    letter-spacing: 0.06em; vertical-align: middle;
+  }
+
+  .result-row.is-approved { border-left: 3px solid #4a6741; }
+
+  .check-links { margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+  .link-btn {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    background: var(--warm); border: 1px solid var(--border);
+    border-radius: var(--radius); font-size: 0.8rem;
+    color: var(--ink); text-decoration: none;
+    transition: background 0.15s;
+  }
+  .link-btn:hover { background: var(--border); }
+  .link-btn.disabled { opacity: 0.4; pointer-events: none; }
+
+
+  .file-upload-wrap {
+    display: flex; gap: 0.5rem; align-items: center;
+  }
+  .file-upload-wrap input[type=text] { flex: 1; }
+  .btn-upload {
+    padding: 0.5rem 0.85rem;
+    background: var(--warm);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    color: var(--ink);
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+  .btn-upload:hover { background: var(--border); }
+  .upload-progress {
+    font-size: 0.78rem; color: var(--muted);
+    margin-top: 0.2rem; display: none;
+  }
+
+
+  .edit-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+
+  .edit-header h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem; color: var(--ink);
+  }
+
+  #editPanel { display: none; }
+  #editPanel.open { display: block; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Musikk — Administrasjon</h1>
+  </header>
+
+  <div class="tabs">
+    <button type="button" class="tab active" onclick="switchTab('new')">Ny innføring</button>
+    <button type="button" class="tab" onclick="switchTab('edit')">Rediger</button>
+  </div>
+
+  <!-- ═══════════════════════ NEW ENTRY TAB ═══════════════════════ -->
+  <div id="tab-new" class="tab-content active">
+    <div id="newMsg" class="msg"></div>
+    <form id="newForm" autocomplete="off">
+
+      <div class="card">
+        <div class="card-title">Komposisjon</div>
+        <div class="field">
+          <label>Tittel *</label>
+          <input type="text" id="n_title" required placeholder="Tittel på komposisjonen">
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Komposisjonsår</label>
+            <input type="text" id="n_year" placeholder="f.eks. 1923">
+          </div>
+          <div class="field">
+            <label>Kategori *</label>
+            <select id="n_category" required>
+              <option value="">— velg —</option>
+              <option value="pd">Offentlig domene (PD)</option>
+              <option value="copyright">Opphavsrettsbeskyttet</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Kommentarer</label>
+          <textarea id="n_notes" placeholder="Notater, merknader…"></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Komponist(er)</div>
+        <div id="n_composerTags" class="tags"></div>
+        <div class="field">
+          <div class="lookup-wrap">
+            <input type="text" id="n_composerSearch" placeholder="Søk etter komponist…" autocomplete="off">
+            <div id="n_composerResults" class="lookup-results"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Tekstforfatter (valgfritt)</div>
+        <div id="n_lyricistTags" class="tags"></div>
+        <div class="field">
+          <div class="lookup-wrap">
+            <input type="text" id="n_lyricistSearch" placeholder="Søk etter tekstforfatter…" autocomplete="off">
+            <div id="n_lyricistResults" class="lookup-results"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Noteeksemplar</div>
+        <div class="row2">
+          <div class="field">
+            <label>Forlag</label>
+            <div class="lookup-wrap">
+              <input type="text" id="n_publisherSearch" placeholder="Søk etter forlag…" autocomplete="off">
+              <div id="n_publisherResults" class="lookup-results"></div>
+              <input type="hidden" id="n_publisherId">
+            </div>
+          </div>
+          <div class="field">
+            <label>Platenummer</label>
+            <input type="text" id="n_plateNumber" placeholder="f.eks. 7200">
+          </div>
+        </div>
+        <div class="field">
+          <label>PDF-fil</label>
+          <div class="file-upload-wrap">
+            <input type="text" id="n_pdfUrl" placeholder="URL settes automatisk ved opplasting…" readonly>
+            <button type="button" class="btn-upload" onclick="triggerUpload('n_pdfFile')">Last opp PDF</button>
+            <input type="file" id="n_pdfFile" accept=".pdf" style="display:none" onchange="uploadFile(this,'n_pdfUrl','scores-pdf')">
+          </div>
+          <div class="upload-progress" id="n_pdfProgress">Laster opp…</div>
+        </div>
+        <div class="field">
+          <label>MP3-fil</label>
+          <div class="file-upload-wrap">
+            <input type="text" id="n_mp3Url" placeholder="URL settes automatisk ved opplasting…" readonly>
+            <button type="button" class="btn-upload" onclick="triggerUpload('n_mp3File')">Last opp MP3</button>
+            <input type="file" id="n_mp3File" accept=".mp3,audio/*" style="display:none" onchange="uploadFile(this,'n_mp3Url','scores-mp3')">
+          </div>
+          <div class="upload-progress" id="n_mp3Progress">Laster opp…</div>
+        </div>
+        <div class="field">
+          <label>Kilde</label>
+          <select id="n_source">
+            <option value="">— velg —</option>
+            <option>Physical score</option>
+            <option>Nasjonalbiblioteket</option>
+            <option>IMSLP</option>
+            <option>PDF</option>
+            <option>Internet</option>
+            <option>Received from person</option>
+            <option>UIB</option>
+            <option>E-bay</option>
+            <option>MuseScore transcription</option>
+            <option>Unknown</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="btn btn-primary" id="newSubmitBtn">Lagre innføring</button>
+        <button type="button" class="btn btn-secondary" onclick="resetNewForm()">Nullstill</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ═══════════════════════ EDIT TAB ═══════════════════════ -->
+  <div id="tab-edit" class="tab-content">
+    <div id="editMsg" class="msg"></div>
+
+    <div class="card">
+      <div class="card-title">Søk etter komposisjon</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
+        <div class="field" style="margin-bottom:0">
+          <select id="editSearchMode">
+            <option value="composer">Søk på komponist</option>
+            <option value="title">Søk på tittel</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <select id="editApprovalFilter">
+            <option value="">Alle</option>
+            <option value="unapproved">Ikke godkjent</option>
+            <option value="approved">Godkjent</option>
+            <option value="hide_approved">Skjul godkjente</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <select id="editMusescoreFilter">
+            <option value="">Alle</option>
+            <option value="with_link">Med MuseScore-lenke</option>
+            <option value="without_link">Uten MuseScore-lenke</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <input type="text" id="editSearch" placeholder="Søk på komponist…" autocomplete="off">
+      </div>
+      <div id="editSearchResults" class="search-results"></div>
+    </div>
+
+    <!-- Edit form (hidden until a result is selected) -->
+    <div id="editPanel">
+      <div class="edit-header">
+        <h3 id="editPanelTitle">Redigerer…</h3>
+        <button class="btn btn-secondary" onclick="closeEditPanel()">← Tilbake</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Komposisjon</div>
+        <input type="hidden" id="e_compId">
+        <input type="hidden" id="e_approved">
+        <div class="field">
+          <label>Tittel *</label>
+          <input type="text" id="e_title" required>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Komposisjonsår</label>
+            <input type="text" id="e_year">
+          </div>
+          <div class="field">
+            <label>Kategori *</label>
+            <select id="e_category">
+              <option value="pd">Offentlig domene (PD)</option>
+              <option value="copyright">Opphavsrettsbeskyttet</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>MuseScore-lenke</label>
+          <div class="file-upload-wrap">
+            <input type="text" id="e_msLink" placeholder="https://musescore.com/…">
+            <button type="button" class="btn-upload" onclick="fetchMusescoreInfo()">Hent info</button>
+          </div>
+          <div class="upload-progress" id="msInfoProgress"></div>
+        </div>
+        <div class="field">
+          <label>Kommentarer</label>
+          <textarea id="e_notes"></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Komponist(er)</div>
+        <div id="e_composerTags" class="tags"></div>
+        <div class="field">
+          <div class="lookup-wrap">
+            <input type="text" id="e_composerSearch" placeholder="Legg til komponist…" autocomplete="off">
+            <div id="e_composerResults" class="lookup-results"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Tekstforfatter</div>
+        <div id="e_lyricistTags" class="tags"></div>
+        <div class="field">
+          <div class="lookup-wrap">
+            <input type="text" id="e_lyricistSearch" placeholder="Legg til tekstforfatter…" autocomplete="off">
+            <div id="e_lyricistResults" class="lookup-results"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Noteeksemplar</div>
+        <input type="hidden" id="e_scoreId">
+        <div class="row2">
+          <div class="field">
+            <label>Forlag</label>
+            <div class="lookup-wrap">
+              <input type="text" id="e_publisherSearch" placeholder="Søk etter forlag…" autocomplete="off">
+              <div id="e_publisherResults" class="lookup-results"></div>
+              <input type="hidden" id="e_publisherId">
+            </div>
+          </div>
+          <div class="field">
+            <label>Platenummer</label>
+            <input type="text" id="e_plateNumber">
+          </div>
+        </div>
+        <div class="field">
+          <label>PDF-fil</label>
+          <div class="file-upload-wrap">
+            <input type="text" id="e_pdfUrl" placeholder="URL settes automatisk ved opplasting…">
+            <button type="button" class="btn-upload" onclick="triggerUpload('e_pdfFile')">Last opp PDF</button>
+            <input type="file" id="e_pdfFile" accept=".pdf" style="display:none" onchange="uploadFile(this,'e_pdfUrl','scores-pdf')">
+          </div>
+          <div class="upload-progress" id="e_pdfProgress">Laster opp…</div>
+        </div>
+        <div class="field">
+          <label>MP3-fil</label>
+          <div class="file-upload-wrap">
+            <input type="text" id="e_mp3Url" placeholder="URL settes automatisk ved opplasting…">
+            <button type="button" class="btn-upload" onclick="triggerUpload('e_mp3File')">Last opp MP3</button>
+            <input type="file" id="e_mp3File" accept=".mp3,audio/*" style="display:none" onchange="uploadFile(this,'e_mp3Url','scores-mp3')">
+          </div>
+          <div class="upload-progress" id="e_mp3Progress">Laster opp…</div>
+        </div>
+        <div class="field">
+          <label>Kilde</label>
+          <select id="e_source">
+            <option value="">— velg —</option>
+            <option>Physical score</option>
+            <option>Nasjonalbiblioteket</option>
+            <option>IMSLP</option>
+            <option>PDF</option>
+            <option>Internet</option>
+            <option>Received from person</option>
+            <option>UIB</option>
+            <option>E-bay</option>
+            <option>MuseScore transcription</option>
+            <option>Unknown</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Kontroll</div>
+        <div class="check-links" id="checkLinks"></div>
+        <div style="margin-top:1rem">
+          <span id="approvalStatus"></span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="editSaveBtn" onclick="saveEdit()">Lagre endringer</button>
+        <button class="btn btn-primary" id="approveBtn" onclick="toggleApproval()" style="background:var(--accent2)">✓ Godkjenn</button>
+        <button class="btn btn-secondary" onclick="closeEditPanel()">Avbryt</button>
+        <button class="btn btn-danger" onclick="deleteComposition()">Slett</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Person Modal -->
+<div class="modal-overlay" id="addPersonModal">
+  <div class="modal">
+    <h2>Legg til ny person</h2>
+    <div class="row2">
+      <div class="field">
+        <label>Fornavn</label>
+        <input type="text" id="m_firstName" placeholder="Fornavn">
+      </div>
+      <div class="field">
+        <label>Etternavn *</label>
+        <input type="text" id="m_lastName" placeholder="Etternavn">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Født</label>
+        <input type="number" id="m_born" placeholder="årstall">
+      </div>
+      <div class="field">
+        <label>Død</label>
+        <input type="number" id="m_died" placeholder="årstall">
+      </div>
+    </div>
+    <div class="field">
+      <label>Bio-lenke</label>
+      <input type="text" id="m_bioUrl" placeholder="https://…">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closePersonModal()">Avbryt</button>
+      <button class="btn btn-primary" onclick="saveNewPerson()">Lagre</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SB   = 'https://tfqnzszyjsdgdeksizel.supabase.co/rest/v1';
+const KEY  = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
+const H    = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`,
+               'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+
+// ── API ───────────────────────────────────────────────────────────────────────
+
+async function get(path) {
+  const r = await fetch(SB + path, { headers: H });
+  if (!r.ok) throw new Error(`GET ${path} → ${r.status}`);
+  return r.json();
+}
+
+async function post(table, data) {
+  const r = await fetch(`${SB}/${table}`, { method: 'POST', headers: H, body: JSON.stringify(data) });
+  if (!r.ok) throw new Error(`POST ${table} → ${r.status}: ${await r.text()}`);
+  const j = await r.json(); return Array.isArray(j) ? j[0] : j;
+}
+
+async function patch(table, filter, data) {
+  const r = await fetch(`${SB}/${table}?${filter}`, { method: 'PATCH', headers: H, body: JSON.stringify(data) });
+  if (!r.ok) throw new Error(`PATCH ${table} → ${r.status}: ${await r.text()}`);
+  return r.status;
+}
+
+async function del(table, filter) {
+  const r = await fetch(`${SB}/${table}?${filter}`, { method: 'DELETE', headers: H });
+  if (!r.ok) throw new Error(`DELETE ${table} → ${r.status}: ${await r.text()}`);
+  return r.status;
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.tab:${name === 'new' ? 'first-child' : 'last-child'}`).classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+}
+
+// ── Person lookup factory ─────────────────────────────────────────────────────
+
+function makeLookup(searchId, resultsId, tagsId, list, modalTarget) {
+  const inp = document.getElementById(searchId);
+  const res = document.getElementById(resultsId);
+  let t;
+
+  inp.addEventListener('input', () => {
+    clearTimeout(t);
+    const q = inp.value.trim();
+    if (q.length < 2) { res.classList.remove('open'); return; }
+    t = setTimeout(async () => {
+      const rows = await get(`/person?or=(last_name.ilike.*${encodeURIComponent(q)}*,first_name.ilike.*${encodeURIComponent(q)}*)&select=person_id,first_name,last_name&limit=12&order=last_name`);
+      res.innerHTML = '';
+      rows.forEach(p => {
+        const name = [p.first_name, p.last_name].filter(Boolean).join(' ');
+        const d = document.createElement('div');
+        d.className = 'lookup-item';
+        d.textContent = name;
+        d.onclick = () => { addTag(p.person_id, name, tagsId, list); inp.value = ''; res.classList.remove('open'); };
+        res.appendChild(d);
+      });
+      const add = document.createElement('div');
+      add.className = 'lookup-item add-new';
+      add.textContent = `+ Legg til "${q}" som ny person`;
+      add.onclick = () => { openPersonModal(q, tagsId, list); inp.value = ''; res.classList.remove('open'); };
+      res.appendChild(add);
+      res.classList.add('open');
+    }, 250);
+  });
+
+  document.addEventListener('click', e => {
+    if (!inp.contains(e.target) && !res.contains(e.target)) res.classList.remove('open');
+  });
+}
+
+function addTag(pid, name, tagsId, list) {
+  if (list.find(x => x.person_id === pid)) return;
+  list.push({ person_id: pid, name });
+  renderTags(tagsId, list);
+}
+
+function renderTags(tagsId, list) {
+  const c = document.getElementById(tagsId);
+  c.innerHTML = '';
+  list.forEach((p, i) => {
+    const t = document.createElement('div');
+    t.className = 'tag';
+    t.innerHTML = `${p.name}<button type="button">×</button>`;
+    t.querySelector('button').onclick = () => { list.splice(i,1); renderTags(tagsId, list); };
+    c.appendChild(t);
+  });
+}
+
+// ── Publisher lookup factory ──────────────────────────────────────────────────
+
+function makePubLookup(searchId, resultsId, hiddenId, stateObj, key) {
+  const inp = document.getElementById(searchId);
+  const res = document.getElementById(resultsId);
+  let t;
+
+  inp.addEventListener('input', () => {
+    clearTimeout(t);
+    stateObj[key] = null;
+    document.getElementById(hiddenId).value = '';
+    const q = inp.value.trim();
+    if (q.length < 2) { res.classList.remove('open'); return; }
+    t = setTimeout(async () => {
+      const rows = await get(`/publisher?publisher_name=ilike.*${encodeURIComponent(q)}*&select=publisher_id,publisher_name&limit=10&order=publisher_name`);
+      res.innerHTML = '';
+      rows.forEach(p => {
+        const d = document.createElement('div');
+        d.className = 'lookup-item';
+        d.textContent = p.publisher_name;
+        d.onclick = () => {
+          inp.value = p.publisher_name;
+          stateObj[key] = p.publisher_id;
+          document.getElementById(hiddenId).value = p.publisher_id;
+          res.classList.remove('open');
+        };
+        res.appendChild(d);
+      });
+      const add = document.createElement('div');
+      add.className = 'lookup-item add-new';
+      add.textContent = `+ Bruk "${q}" (legges til automatisk)`;
+      add.onclick = () => { inp.value = q; stateObj[key] = null; res.classList.remove('open'); };
+      res.appendChild(add);
+      res.classList.add('open');
+    }, 250);
+  });
+
+  document.addEventListener('click', e => {
+    if (!inp.contains(e.target) && !res.contains(e.target)) res.classList.remove('open');
+  });
+}
+
+async function resolvePublisher(searchId, stateObj, key) {
+  if (stateObj[key]) return stateObj[key];
+  const name = document.getElementById(searchId).value.trim();
+  if (!name) return null;
+  const existing = await get(`/publisher?publisher_name=eq.${encodeURIComponent(name)}&select=publisher_id`);
+  if (existing.length > 0) return existing[0].publisher_id;
+  const np = await post('publisher', { publisher_name: name });
+  return np.publisher_id;
+}
+
+// ── Add person modal ──────────────────────────────────────────────────────────
+
+let modalTarget = null;
+
+function openPersonModal(prefill, tagsId, list) {
+  modalTarget = { tagsId, list };
+  ['m_firstName','m_lastName','m_born','m_died','m_bioUrl'].forEach(id => document.getElementById(id).value = '');
+  const parts = prefill.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    document.getElementById('m_firstName').value = parts.slice(0,-1).join(' ');
+    document.getElementById('m_lastName').value  = parts[parts.length-1];
+  } else {
+    document.getElementById('m_lastName').value = prefill;
+  }
+  document.getElementById('addPersonModal').classList.add('open');
+}
+
+function closePersonModal() {
+  document.getElementById('addPersonModal').classList.remove('open');
+  modalTarget = null;
+}
+
+async function saveNewPerson() {
+  const last = document.getElementById('m_lastName').value.trim();
+  if (!last) { alert('Etternavn er påkrevd.'); return; }
+  const data = {
+    first_name: document.getElementById('m_firstName').value.trim() || null,
+    last_name:  last,
+    born:       parseInt(document.getElementById('m_born').value)  || null,
+    died:       parseInt(document.getElementById('m_died').value)  || null,
+    bio_url:    document.getElementById('m_bioUrl').value.trim()   || null,
+  };
+  try {
+    const p = await post('person', data);
+    const name = [data.first_name, data.last_name].filter(Boolean).join(' ');
+    if (modalTarget) addTag(p.person_id, name, modalTarget.tagsId, modalTarget.list);
+    closePersonModal();
+  } catch(e) { alert('Feil: ' + e.message); }
+}
+
+// ── Source cache ──────────────────────────────────────────────────────────────
+
+
+// ── NEW ENTRY ─────────────────────────────────────────────────────────────────
+
+const nComposers  = [];
+const nLyricists  = [];
+const nPubState   = {};
+
+makeLookup('n_composerSearch', 'n_composerResults', 'n_composerTags', nComposers);
+makeLookup('n_lyricistSearch', 'n_lyricistResults', 'n_lyricistTags', nLyricists);
+makePubLookup('n_publisherSearch', 'n_publisherResults', 'n_publisherId', nPubState, 'id');
+
+function showMsg(tabId, text, type) {
+  const el = document.getElementById(tabId);
+  el.textContent = text;
+  el.className = 'msg' + (type ? ' ' + type : '');
+}
+
+document.getElementById('newForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = document.getElementById('newSubmitBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Lagrer…';
+  showMsg('newMsg', '', '');
+  try {
+    const title    = document.getElementById('n_title').value.trim();
+    const year     = document.getElementById('n_year').value.trim();
+    const cat      = document.getElementById('n_category').value;
+    const notes    = document.getElementById('n_notes').value.trim();
+    const plate    = document.getElementById('n_plateNumber').value.trim();
+    const pdfUrl   = document.getElementById('n_pdfUrl').value.trim();
+    const mp3Url   = document.getElementById('n_mp3Url').value.trim();
+    if (!title) throw new Error('Tittel er påkrevd.');
+    if (!cat)   throw new Error('Kategori er påkrevd.');
+
+    const pubDomain = cat === 'pd' ? 'Yes' : 'No';
+    const catName   = cat === 'pd' ? 'Eldre klassisk' : 'Eldre populærmusikk';
+    const pubId     = await resolvePublisher('n_publisherSearch', nPubState, 'id');
+
+    const comp = await post('composition', { title, public_domain: pubDomain, year_composed: year||null, composition_notes: notes||null });
+    const compId = comp.composition_id;
+    if (!compId) throw new Error('Feil ved lagring.');
+
+    for (const c of nComposers) await post('composition_composer', { composition_id: compId, person_id: c.person_id });
+    for (const l of nLyricists) await post('composition_lyricist', { composition_id: compId, person_id: l.person_id });
+
+    const source   = document.getElementById('n_source').value;
+    await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, pdf_url: pdfUrl||null, mp3_url: mp3Url||null, source: source||null });
+
+    showMsg('newMsg', `✓ "${title}" er lagret (id=${compId})`, 'success');
+    resetNewForm();
+  } catch(err) {
+    showMsg('newMsg', 'Feil: ' + err.message, 'error');
+  }
+  btn.disabled = false; btn.textContent = 'Lagre innføring';
+});
+
+function resetNewForm() {
+  document.getElementById('newForm').reset();
+  nComposers.length = 0; nLyricists.length = 0; nPubState.id = null;
+  ['n_composerTags','n_lyricistTags'].forEach(id => document.getElementById(id).innerHTML = '');
+  ['n_composerSearch','n_lyricistSearch','n_publisherSearch'].forEach(id => document.getElementById(id).value = '');
+}
+
+// ── EDIT TAB ──────────────────────────────────────────────────────────────────
+
+const eComposers = [];
+const eLyricists = [];
+const ePubState  = {};
+
+makeLookup('e_composerSearch', 'e_composerResults', 'e_composerTags', eComposers);
+makeLookup('e_lyricistSearch', 'e_lyricistResults', 'e_lyricistTags', eLyricists);
+makePubLookup('e_publisherSearch', 'e_publisherResults', 'e_publisherId', ePubState, 'id');
+
+let editSearchTimeout;
+document.getElementById('editApprovalFilter').addEventListener('change', () => {
+  const q = document.getElementById('editSearch').value.trim();
+  if (q.length >= 2) searchCompositions(q);
+});
+
+document.getElementById('editMusescoreFilter').addEventListener('change', () => {
+  const q = document.getElementById('editSearch').value.trim();
+  if (q.length >= 2) searchCompositions(q);
+});
+
+document.getElementById('editSearchMode').addEventListener('change', () => {
+  const mode = document.getElementById('editSearchMode').value;
+  document.getElementById('editSearch').placeholder = mode === 'composer' ? 'Søk på komponist…' : 'Søk på tittel…';
+  document.getElementById('editSearch').value = '';
+  document.getElementById('editSearchResults').innerHTML = '';
+});
+
+document.getElementById('editSearch').addEventListener('input', () => {
+  clearTimeout(editSearchTimeout);
+  const q = document.getElementById('editSearch').value.trim();
+  if (q.length < 2) { document.getElementById('editSearchResults').innerHTML = ''; return; }
+  editSearchTimeout = setTimeout(() => searchCompositions(q), 300);
+});
+
+async function searchCompositions(q) {
+  const approvalFilter = document.getElementById('editApprovalFilter').value;
+  const mode = document.getElementById('editSearchMode').value;
+  const container = document.getElementById('editSearchResults');
+  container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">Søker…</div>';
+
+  const msFilter = document.getElementById('editMusescoreFilter').value;
+  const approvalQ = approvalFilter === 'approved' ? '&approved=eq.true' : (approvalFilter === 'unapproved' || approvalFilter === 'hide_approved') ? '&approved=eq.false' : '';
+  const msQ = msFilter === 'with_link' ? '&musescore_link=not.is.null' : msFilter === 'without_link' ? '&musescore_link=is.null' : '';
+  let results = [];
+
+  if (mode === 'title') {
+    results = await get(`/composition?title=ilike.*${encodeURIComponent(q)}*&select=composition_id,title,year_composed,public_domain,approved,musescore_link${approvalQ}${msQ}&limit=30&order=title`);
+
+  } else {
+    // Composer mode only — find persons, then their compositions
+    const persons = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name&limit=10&order=last_name`);
+    for (const p of persons) {
+      const cc = await get(`/composition_composer?person_id=eq.${p.person_id}&select=composition_id,composition(composition_id,title,year_composed,public_domain,approved,musescore_link)`);
+      cc.forEach(row => {
+        if (row.composition && !results.find(r => r.composition_id === row.composition.composition_id)) {
+          row.composition._composer = [p.first_name, p.last_name].filter(Boolean).join(' ');
+          results.push(row.composition);
+        }
+      });
+    }
+    if (approvalFilter === 'approved')                          results = results.filter(r => r.approved);
+    if (approvalFilter === 'unapproved' || approvalFilter === 'hide_approved') results = results.filter(r => !r.approved);
+    if (msFilter === 'with_link')    results = results.filter(r => r.musescore_link);
+    if (msFilter === 'without_link') results = results.filter(r => !r.musescore_link);
+    results.sort((a,b) => a.title.localeCompare(b.title));
+  }
+
+  if (!results.length) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">Ingen treff.</div>';
+    return;
+  }
+
+  container.innerHTML = '';
+  results.slice(0, 30).forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'result-row';
+    const approvedBadge = c.approved ? ' <span class="approved-badge">✓</span>' : '';
+    const composerMeta = c._composer ? ` · ${c._composer}` : '';
+    d.innerHTML = `<div class="result-title">${c.title}${approvedBadge}</div>
+                   <div class="result-meta">${c.year_composed || '—'} · ${c.public_domain === 'Yes' ? 'PD' : 'Opphavsrett'}${composerMeta}</div>`;
+    if (c.approved) d.classList.add('is-approved');
+    d.onclick = () => loadEditForm(c.composition_id);
+    container.appendChild(d);
+  });
+}
+
+async function loadEditForm(compId) {
+  showMsg('editMsg', '', '');
+  document.getElementById('editSearchResults').innerHTML = '';
+  document.getElementById('editSearch').value = '';
+
+  const [comp, cc, cl, scores] = await Promise.all([
+    get(`/composition?composition_id=eq.${compId}&select=*`),  // includes approved
+    get(`/composition_composer?composition_id=eq.${compId}&select=person_id,person(person_id,first_name,last_name,bio_url)`),  // bio_url for check links
+    get(`/composition_lyricist?composition_id=eq.${compId}&select=person_id,person(person_id,first_name,last_name)`),
+    get(`/score?composition_id=eq.${compId}&select=*,publisher(publisher_id,publisher_name)`)
+  ]);
+
+  const c = comp[0];
+  document.getElementById('e_compId').value  = compId;
+  document.getElementById('e_title').value   = c.title || '';
+  document.getElementById('e_year').value    = c.year_composed || '';
+  document.getElementById('e_category').value = c.public_domain === 'Yes' ? 'pd' : 'copyright';
+  document.getElementById('e_msLink').value  = c.musescore_link || '';
+  document.getElementById('e_notes').value   = c.composition_notes || '';
+
+  eComposers.length = 0;
+  cc.forEach(row => eComposers.push({ person_id: row.person.person_id, name: [row.person.first_name, row.person.last_name].filter(Boolean).join(' ') }));
+  renderTags('e_composerTags', eComposers);
+
+  eLyricists.length = 0;
+  cl.forEach(row => eLyricists.push({ person_id: row.person.person_id, name: [row.person.first_name, row.person.last_name].filter(Boolean).join(' ') }));
+  renderTags('e_lyricistTags', eLyricists);
+
+  const score = scores[0];
+  document.getElementById('e_scoreId').value = score ? score.score_id : '';
+  document.getElementById('e_plateNumber').value = score?.plate_number || '';
+  if (score?.publisher) {
+    document.getElementById('e_publisherSearch').value = score.publisher.publisher_name;
+    document.getElementById('e_publisherId').value     = score.publisher.publisher_id;
+    ePubState.id = score.publisher.publisher_id;
+  } else {
+    document.getElementById('e_publisherSearch').value = '';
+    document.getElementById('e_publisherId').value     = '';
+    ePubState.id = null;
+  }
+  document.getElementById('e_source').value  = score?.source || '';
+  document.getElementById('e_pdfUrl').value  = score?.pdf_url || '';
+  document.getElementById('e_mp3Url').value  = score?.mp3_url || '';
+
+  // Approval state
+  const approved = c.approved || false;
+  document.getElementById('e_approved').value = approved ? 'true' : 'false';
+  updateApprovalUI(approved);
+
+  // Check links
+  const linksDiv = document.getElementById('checkLinks');
+  linksDiv.innerHTML = '';
+  const msLink = c.musescore_link;
+  const msBtn = document.createElement('a');
+  msBtn.className = 'link-btn' + (msLink ? '' : ' disabled');
+  msBtn.href = msLink || '#';
+  msBtn.target = '_blank';
+  msBtn.textContent = '🎵 MuseScore';
+  linksDiv.appendChild(msBtn);
+
+  // Composer bio links
+  for (const row of cc) {
+    const bioUrl = row.person?.bio_url;
+    const name = [row.person?.first_name, row.person?.last_name].filter(Boolean).join(' ');
+    const bioBtn = document.createElement('a');
+    bioBtn.className = 'link-btn' + (bioUrl ? '' : ' disabled');
+    bioBtn.href = bioUrl || '#';
+    bioBtn.target = '_blank';
+    bioBtn.textContent = '👤 ' + name;
+    linksDiv.appendChild(bioBtn);
+  }
+
+  document.getElementById('editPanelTitle').textContent = c.title;
+  document.getElementById('editPanel').classList.add('open');
+}
+
+function updateApprovalUI(approved) {
+  const status = document.getElementById('approvalStatus');
+  const btn    = document.getElementById('approveBtn');
+  if (approved) {
+    status.innerHTML = '<span class="approved-badge">✓ Godkjent</span>';
+    btn.textContent = '✗ Fjern godkjenning';
+    btn.style.background = 'var(--muted)';
+  } else {
+    status.innerHTML = '<span class="unapproved-badge">Ikke godkjent</span>';
+    btn.textContent = '✓ Godkjenn';
+    btn.style.background = 'var(--accent2)';
+  }
+}
+
+async function toggleApproval() {
+  const compId  = document.getElementById('e_compId').value;
+  const current = document.getElementById('e_approved').value === 'true';
+  const newVal  = !current;
+  try {
+    await patch('composition', `composition_id=eq.${compId}`, { approved: newVal });
+    document.getElementById('e_approved').value = newVal ? 'true' : 'false';
+    updateApprovalUI(newVal);
+    showMsg('editMsg', newVal ? '✓ Godkjent' : 'Godkjenning fjernet', 'success');
+  } catch(err) {
+    showMsg('editMsg', 'Feil: ' + err.message, 'error');
+  }
+}
+
+async function saveEdit() {
+  const btn = document.getElementById('editSaveBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Lagrer…';
+  showMsg('editMsg', '', '');
+  try {
+    const compId = document.getElementById('e_compId').value;
+    const scoreId = document.getElementById('e_scoreId').value;
+    const cat = document.getElementById('e_category').value;
+
+    await patch('composition', `composition_id=eq.${compId}`, {
+      title:             document.getElementById('e_title').value.trim(),
+      year_composed:     document.getElementById('e_year').value.trim() || null,
+      public_domain:     cat === 'pd' ? 'Yes' : 'No',
+      musescore_link:    document.getElementById('e_msLink').value.trim() || null,
+      composition_notes: document.getElementById('e_notes').value.trim() || null,
+    });
+
+    // Update composers
+    await del('composition_composer', `composition_id=eq.${compId}`);
+    for (const c of eComposers) await post('composition_composer', { composition_id: parseInt(compId), person_id: c.person_id });
+
+    // Update lyricists
+    await del('composition_lyricist', `composition_id=eq.${compId}`);
+    for (const l of eLyricists) await post('composition_lyricist', { composition_id: parseInt(compId), person_id: l.person_id });
+
+    // Update score
+    const pubId   = await resolvePublisher('e_publisherSearch', ePubState, 'id');
+    const plate   = document.getElementById('e_plateNumber').value.trim();
+    const catName = cat === 'pd' ? 'Eldre klassisk' : 'Eldre populærmusikk';
+    const pdfUrl  = document.getElementById('e_pdfUrl').value.trim();
+    const mp3Url  = document.getElementById('e_mp3Url').value.trim();
+    const esource  = document.getElementById('e_source').value;
+    const scoreData = { plate_number: plate||null, publisher_id: pubId||null, category: catName, pdf_url: pdfUrl||null, mp3_url: mp3Url||null, source: esource||null };
+
+    if (scoreId) {
+      await patch('score', `score_id=eq.${scoreId}`, scoreData);
+    } else {
+      await post('score', { composition_id: parseInt(compId), ...scoreData });
+    }
+
+    showMsg('editMsg', `✓ Endringer lagret`, 'success');
+  } catch(err) {
+    showMsg('editMsg', 'Feil: ' + err.message, 'error');
+  }
+  btn.disabled = false; btn.textContent = 'Lagre endringer';
+}
+
+async function deleteComposition() {
+  const compId = document.getElementById('e_compId').value;
+  const title  = document.getElementById('e_title').value;
+  if (!confirm(`Slette "${title}"? Dette kan ikke angres.`)) return;
+  try {
+    await del('composition_composer', `composition_id=eq.${compId}`);
+    await del('composition_lyricist', `composition_id=eq.${compId}`);
+    await del('score',                `composition_id=eq.${compId}`);
+    await del('composition',          `composition_id=eq.${compId}`);
+    closeEditPanel();
+    showMsg('editMsg', `✓ "${title}" er slettet.`, 'success');
+  } catch(err) {
+    showMsg('editMsg', 'Feil: ' + err.message, 'error');
+  }
+}
+
+function closeEditPanel() {
+  document.getElementById('editPanel').classList.remove('open');
+  eComposers.length = 0; eLyricists.length = 0; ePubState.id = null;
+}
+
+// ── File upload to Supabase Storage ──────────────────────────────────────────
+
+function triggerUpload(inputId) {
+  document.getElementById(inputId).click();
+}
+
+async function uploadFile(input, urlFieldId, bucket) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const progressId = urlFieldId.replace('Url', 'Progress');
+  const progress = document.getElementById(progressId);
+  if (progress) { progress.style.display = 'block'; progress.textContent = 'Laster opp…'; }
+
+  try {
+    // Use composition title + timestamp as filename to avoid collisions
+    const ext      = file.name.split('.').pop();
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path     = `${Date.now()}_${safeName}`;
+
+    const r = await fetch(
+      `https://tfqnzszyjsdgdeksizel.supabase.co/storage/v1/object/${bucket}/${path}`,
+      {
+        method: 'POST',
+        headers: {
+          'apikey':        KEY,
+          'Authorization': `Bearer ${KEY}`,
+          'Content-Type':  file.type || 'application/octet-stream',
+        },
+        body: file
+      }
+    );
+
+    if (!r.ok) {
+      const err = await r.text();
+      throw new Error(`Upload feilet (${r.status}): ${err}`);
+    }
+
+    const publicUrl = `https://tfqnzszyjsdgdeksizel.supabase.co/storage/v1/object/public/${bucket}/${path}`;
+    document.getElementById(urlFieldId).value = publicUrl;
+    if (progress) { progress.textContent = `✓ ${file.name} lastet opp`; }
+  } catch(err) {
+    if (progress) { progress.textContent = `Feil: ${err.message}`; }
+    alert('Opplasting feilet: ' + err.message);
+  }
+
+  // Reset file input so same file can be re-uploaded if needed
+  input.value = '';
+}
+
+// ── Fetch MuseScore score info ────────────────────────────────────────────────
+
+async function fetchMusescoreInfo() {
+  const url = document.getElementById('e_msLink').value.trim();
+  const progress = document.getElementById('msInfoProgress');
+
+  if (!url) { alert('Ingen MuseScore-lenke angitt.'); return; }
+
+  progress.style.display = 'block';
+  progress.textContent = 'Henter info fra MuseScore…';
+
+  try {
+    // Try direct fetch — will work if CORS allows it
+    const r = await fetch(url, { credentials: 'include' });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const html = await r.text();
+
+    // Extract JSON-LD
+    const match = html.match(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/i);
+    if (!match) throw new Error('Fant ikke JSON-LD på siden.');
+
+    const data = JSON.parse(match[1]);
+    const text = data.text || data.description || '';
+
+    if (!text) throw new Error('Ingen tekstinfo funnet i JSON-LD.');
+
+    // Fill into composition_notes
+    const existing = document.getElementById('e_notes').value.trim();
+    if (existing && !confirm(`Kommentarfeltet har allerede innhold:
+
+"${existing.substring(0,100)}…"
+
+Overskrive?`)) {
+      progress.textContent = 'Avbrutt.';
+      return;
+    }
+
+    document.getElementById('e_notes').value = text;
+    progress.textContent = `✓ Info hentet (${text.length} tegn)`;
+
+  } catch(err) {
+    if (err.message.includes('Failed to fetch') || err.message.includes('CORS') || err.message.includes('NetworkError')) {
+      progress.textContent = '⚠ CORS blokkert — fungerer ikke fra lokal fil. Host siden på GitHub Pages og prøv igjen.';
+    } else {
+      progress.textContent = `Feil: ${err.message}`;
+    }
+  }
+}
+</script>
+</body>
+</html>
