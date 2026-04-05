@@ -542,6 +542,10 @@
           <label>Kommentarer</label>
           <textarea id="e_notes"></textarea>
         </div>
+        <div class="field">
+          <label>MuseScore-info (automatisk hentet)</label>
+          <textarea id="e_msNotes" style="background:#f9f6f0;color:var(--muted);font-size:0.85rem" readonly></textarea>
+        </div>
       </div>
 
       <div class="card">
@@ -1016,7 +1020,7 @@ async function loadEditForm(compId) {
   document.getElementById('editSearch').value = '';
 
   const [comp, cc, cl, scores] = await Promise.all([
-    get(`/composition?composition_id=eq.${compId}&select=*`),  // includes approved
+    get(`/composition?composition_id=eq.${compId}&select=*`),  // includes approved and musescore_notes
     get(`/composition_composer?composition_id=eq.${compId}&select=person_id,person(person_id,first_name,last_name,bio_url)`),  // bio_url for check links
     get(`/composition_lyricist?composition_id=eq.${compId}&select=person_id,person(person_id,first_name,last_name)`),
     get(`/score?composition_id=eq.${compId}&select=*,publisher(publisher_id,publisher_name)`)
@@ -1029,6 +1033,7 @@ async function loadEditForm(compId) {
   document.getElementById('e_category').value = c.public_domain === 'Yes' ? 'pd' : 'copyright';
   document.getElementById('e_msLink').value  = c.musescore_link || '';
   document.getElementById('e_notes').value   = c.composition_notes || '';
+  document.getElementById('e_msNotes').value = c.musescore_notes || '';
 
   eComposers.length = 0;
   cc.forEach(row => eComposers.push({ person_id: row.person.person_id, name: [row.person.first_name, row.person.last_name].filter(Boolean).join(' ') }));
