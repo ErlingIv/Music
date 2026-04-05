@@ -1016,6 +1016,14 @@ async function searchCompositions(q) {
 
 async function loadEditForm(compId) {
   showMsg('editMsg', '', '');
+  // Save search state so we can restore it on Back
+  window._savedSearch = {
+    query:          document.getElementById('editSearch').value,
+    mode:           document.getElementById('editSearchMode').value,
+    approvalFilter: document.getElementById('editApprovalFilter').value,
+    msFilter:       document.getElementById('editMusescoreFilter').value,
+    results:        document.getElementById('editSearchResults').innerHTML
+  };
   document.getElementById('editSearchResults').innerHTML = '';
   document.getElementById('editSearch').value = '';
 
@@ -1185,6 +1193,22 @@ async function deleteComposition() {
 function closeEditPanel() {
   document.getElementById('editPanel').classList.remove('open');
   eComposers.length = 0; eLyricists.length = 0; ePubState.id = null;
+
+  // Restore previous search state
+  if (window._savedSearch) {
+    const s = window._savedSearch;
+    document.getElementById('editSearchMode').value       = s.mode;
+    document.getElementById('editApprovalFilter').value   = s.approvalFilter;
+    document.getElementById('editMusescoreFilter').value  = s.msFilter;
+    document.getElementById('editSearch').value           = s.query;
+    // Re-run search to reflect any approval changes
+    if (s.query.length >= 2) {
+      searchCompositions(s.query);
+    } else {
+      document.getElementById('editSearchResults').innerHTML = s.results;
+    }
+    window._savedSearch = null;
+  }
 }
 
 // ── File upload to Supabase Storage ──────────────────────────────────────────
