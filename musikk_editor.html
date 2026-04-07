@@ -384,6 +384,10 @@
           <label>Kommentarer</label>
           <textarea id="n_notes" placeholder="Notater, merknader…"></textarea>
         </div>
+        <div class="field">
+          <label>Dedikasjon</label>
+          <input type="text" id="n_dedication" placeholder="Dedikert til…">
+        </div>
       </div>
 
       <div class="card">
@@ -537,6 +541,10 @@
         <div class="field">
           <label>Kommentarer</label>
           <textarea id="e_notes"></textarea>
+        </div>
+        <div class="field">
+          <label>Dedikasjon</label>
+          <input type="text" id="e_dedication">
         </div>
         <div class="field">
           <label>MuseScore-info (automatisk hentet)</label>
@@ -725,7 +733,7 @@ function makeLookup(searchId, resultsId, tagsId, list, modalTarget) {
     const q = inp.value.trim();
     if (q.length < 2) { res.classList.remove('open'); return; }
     t = setTimeout(async () => {
-      const rows = await get(`/person?or=(last_name.ilike.*${encodeURIComponent(q)}*,first_name.ilike.*${encodeURIComponent(q)}*)&select=person_id,first_name,last_name&limit=12&order=last_name`);
+      const rows = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name&limit=12&order=last_name`);
       res.innerHTML = '';
       rows.forEach(p => {
         const name = [p.first_name, p.last_name].filter(Boolean).join(' ');
@@ -887,7 +895,8 @@ document.getElementById('newForm').addEventListener('submit', async e => {
     const title    = document.getElementById('n_title').value.trim();
     const year     = document.getElementById('n_year').value.trim();
     const cat      = document.getElementById('n_category').value;
-    const notes    = document.getElementById('n_notes').value.trim();
+    const notes      = document.getElementById('n_notes').value.trim();
+    const dedication = document.getElementById('n_dedication').value.trim();
     const plate    = document.getElementById('n_plateNumber').value.trim();
     const pdfUrl   = document.getElementById('n_pdfUrl').value.trim();
     const mp3Url   = document.getElementById('n_mp3Url').value.trim();
@@ -1036,7 +1045,8 @@ async function loadEditForm(compId) {
   document.getElementById('e_year').value    = c.year_composed || '';
   document.getElementById('e_category').value = c.public_domain === 'Yes' ? 'pd' : 'copyright';
   document.getElementById('e_msLink').value  = c.musescore_link || '';
-  document.getElementById('e_notes').value   = c.composition_notes || '';
+  document.getElementById('e_notes').value       = c.composition_notes || '';
+  document.getElementById('e_dedication').value  = c.dedication || '';
   document.getElementById('e_msNotes').value = c.musescore_notes || '';
 
   eComposers.length = 0;
@@ -1138,6 +1148,7 @@ async function saveEdit() {
       public_domain:     cat === 'pd' ? 'Yes' : 'No',
       musescore_link:    document.getElementById('e_msLink').value.trim() || null,
       composition_notes: document.getElementById('e_notes').value.trim() || null,
+      dedication:        document.getElementById('e_dedication').value.trim() || null,
     });
 
     // Update composers
