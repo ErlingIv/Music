@@ -353,6 +353,7 @@
   <div class="tabs">
     <button type="button" class="tab active" onclick="switchTab('new')">Ny innføring</button>
     <button type="button" class="tab" onclick="switchTab('edit')">Rediger</button>
+    <button type="button" class="tab" onclick="switchTab('person')">Komponist</button>
   </div>
 
   <!-- ═══════════════════════ NEW ENTRY TAB ═══════════════════════ -->
@@ -643,6 +644,116 @@
       </div>
     </div>
   </div>
+
+  <!-- ═══════════════════════ PERSON TAB ═══════════════════════ -->
+  <div id="tab-person" class="tab-content">
+    <div id="personMsg" class="msg"></div>
+
+    <div class="card">
+      <div class="card-title">Søk etter komponist</div>
+      <div class="field">
+        <input type="text" id="personSearch" placeholder="Søk på etternavn…" autocomplete="off">
+      </div>
+      <div id="personSearchResults" class="search-results"></div>
+    </div>
+
+    <div id="personPanel" style="display:none">
+      <div class="card">
+        <div class="card-title">Komponistdetaljer</div>
+        <input type="hidden" id="p_personId">
+        <div class="row2">
+          <div class="field">
+            <label>Fornavn</label>
+            <input type="text" id="p_firstName">
+          </div>
+          <div class="field">
+            <label>Etternavn *</label>
+            <input type="text" id="p_lastName">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Født</label>
+            <input type="text" id="p_born" placeholder="årstall">
+          </div>
+          <div class="field">
+            <label>Død</label>
+            <input type="text" id="p_died" placeholder="årstall">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Nasjonalitet (landkode)</label>
+            <div style="display:flex;gap:0.5rem;align-items:center">
+              <input type="text" id="p_nationality" placeholder="NO, DE, SE…" style="width:6rem;flex:none">
+              <span id="p_flag" style="font-size:1.8rem"></span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Pseudonym</label>
+            <input type="text" id="p_pseudonym">
+          </div>
+        </div>
+        <div class="field">
+          <label>Bio-lenke (Wikipedia e.l.)</label>
+          <div style="display:flex;gap:0.5rem;align-items:center">
+            <input type="text" id="p_bioUrl" placeholder="https://…" style="flex:1">
+            <a id="p_bioLink" href="#" target="_blank" class="btn-upload" style="display:none">Åpne</a>
+          </div>
+        </div>
+        <div class="field">
+          <label>Biografi</label>
+          <textarea id="p_bioText" placeholder="Biografi…"></textarea>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" onclick="savePerson()">Lagre endringer</button>
+        <button class="btn btn-secondary" onclick="closePerson()">Avbryt</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:1.5rem">
+      <div class="card-title">Legg til ny komponist</div>
+      <div class="row2">
+        <div class="field">
+          <label>Fornavn</label>
+          <input type="text" id="np_firstName">
+        </div>
+        <div class="field">
+          <label>Etternavn *</label>
+          <input type="text" id="np_lastName">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Født</label>
+          <input type="text" id="np_born" placeholder="årstall">
+        </div>
+        <div class="field">
+          <label>Død</label>
+          <input type="text" id="np_died" placeholder="årstall">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Nasjonalitet</label>
+          <div style="display:flex;gap:0.5rem;align-items:center">
+            <input type="text" id="np_nationality" placeholder="NO, DE…" style="width:6rem;flex:none">
+            <span id="np_flag" style="font-size:1.8rem"></span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Bio-lenke</label>
+          <input type="text" id="np_bioUrl" placeholder="https://…">
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" onclick="addNewPerson()">Legg til komponist</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- Add Person Modal -->
@@ -715,8 +826,10 @@ async function del(table, filter) {
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
 function switchTab(name) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelector(`.tab:${name === 'new' ? 'first-child' : 'last-child'}`).classList.add('active');
+  const tabs = document.querySelectorAll('.tab');
+  tabs.forEach(t => t.classList.remove('active'));
+  const idx = {'new': 0, 'edit': 1, 'person': 2}[name];
+  tabs[idx].classList.add('active');
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   document.getElementById(`tab-${name}`).classList.add('active');
 }
@@ -1266,6 +1379,117 @@ async function uploadFile(input, urlFieldId, bucket) {
 
   // Reset file input so same file can be re-uploaded if needed
   input.value = '';
+}
+
+
+// ── PERSON TAB ────────────────────────────────────────────────────────────────
+
+function countryCodeToFlag(code) {
+  if (!code || code.length !== 2) return '';
+  const offset = 127397;
+  return Array.from(code.toUpperCase()).map(c => String.fromCodePoint(c.charCodeAt(0) + offset)).join('');
+}
+
+document.getElementById('p_nationality').addEventListener('input', function() {
+  document.getElementById('p_flag').textContent = countryCodeToFlag(this.value);
+});
+document.getElementById('np_nationality').addEventListener('input', function() {
+  document.getElementById('np_flag').textContent = countryCodeToFlag(this.value);
+});
+document.getElementById('p_bioUrl').addEventListener('input', function() {
+  const link = document.getElementById('p_bioLink');
+  if (this.value.trim()) { link.href = this.value.trim(); link.style.display = 'block'; }
+  else { link.style.display = 'none'; }
+});
+
+let personSearchTimeout;
+document.getElementById('personSearch').addEventListener('input', () => {
+  clearTimeout(personSearchTimeout);
+  const q = document.getElementById('personSearch').value.trim();
+  if (q.length < 2) { document.getElementById('personSearchResults').innerHTML = ''; return; }
+  personSearchTimeout = setTimeout(async () => {
+    const rows = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name,born,died,nationality&limit=20&order=last_name`);
+    const container = document.getElementById('personSearchResults');
+    container.innerHTML = '';
+    if (!rows.length) { container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">Ingen treff.</div>'; return; }
+    rows.forEach(p => {
+      const d = document.createElement('div');
+      d.className = 'result-row';
+      const flag = countryCodeToFlag(p.nationality || '');
+      const years = p.born ? `${p.born}${p.died ? ' – ' + p.died : ''}` : '';
+      d.innerHTML = `<div class="result-title">${flag} ${p.first_name || ''} ${p.last_name}</div>
+                     <div class="result-meta">${years}</div>`;
+      d.onclick = () => loadPersonForm(p.person_id);
+      container.appendChild(d);
+    });
+  }, 250);
+});
+
+async function loadPersonForm(personId) {
+  const rows = await get(`/person?person_id=eq.${personId}&select=*`);
+  const p = rows[0];
+  document.getElementById('p_personId').value   = p.person_id;
+  document.getElementById('p_firstName').value  = p.first_name || '';
+  document.getElementById('p_lastName').value   = p.last_name  || '';
+  document.getElementById('p_born').value       = p.born       || '';
+  document.getElementById('p_died').value       = p.died       || '';
+  document.getElementById('p_nationality').value= p.nationality|| '';
+  document.getElementById('p_pseudonym').value  = p.pseudonym  || '';
+  document.getElementById('p_bioUrl').value     = p.bio_url    || '';
+  document.getElementById('p_bioText').value    = p.bio_text   || '';
+  document.getElementById('p_flag').textContent = countryCodeToFlag(p.nationality || '');
+  const link = document.getElementById('p_bioLink');
+  if (p.bio_url) { link.href = p.bio_url; link.style.display = 'block'; }
+  else link.style.display = 'none';
+  document.getElementById('personPanel').style.display = 'block';
+  document.getElementById('personSearchResults').innerHTML = '';
+  document.getElementById('personSearch').value = '';
+}
+
+async function savePerson() {
+  const personId = document.getElementById('p_personId').value;
+  const last     = document.getElementById('p_lastName').value.trim();
+  if (!last) { alert('Etternavn er påkrevd.'); return; }
+  try {
+    await patch('person', `person_id=eq.${personId}`, {
+      first_name:  document.getElementById('p_firstName').value.trim() || null,
+      last_name:   last,
+      born:        parseInt(document.getElementById('p_born').value) || null,
+      died:        parseInt(document.getElementById('p_died').value) || null,
+      nationality: document.getElementById('p_nationality').value.trim() || null,
+      pseudonym:   document.getElementById('p_pseudonym').value.trim() || null,
+      bio_url:     document.getElementById('p_bioUrl').value.trim() || null,
+      bio_text:    document.getElementById('p_bioText').value.trim() || null,
+    });
+    showMsg('personMsg', '✓ Komponist oppdatert', 'success');
+    closePerson();
+  } catch(err) {
+    showMsg('personMsg', 'Feil: ' + err.message, 'error');
+  }
+}
+
+function closePerson() {
+  document.getElementById('personPanel').style.display = 'none';
+}
+
+async function addNewPerson() {
+  const last = document.getElementById('np_lastName').value.trim();
+  if (!last) { alert('Etternavn er påkrevd.'); return; }
+  try {
+    const p = await post('person', {
+      first_name:  document.getElementById('np_firstName').value.trim() || null,
+      last_name:   last,
+      born:        parseInt(document.getElementById('np_born').value) || null,
+      died:        parseInt(document.getElementById('np_died').value) || null,
+      nationality: document.getElementById('np_nationality').value.trim() || null,
+      bio_url:     document.getElementById('np_bioUrl').value.trim() || null,
+    });
+    showMsg('personMsg', `✓ ${document.getElementById('np_firstName').value} ${last} lagt til (id=${p.person_id})`, 'success');
+    ['np_firstName','np_lastName','np_born','np_died','np_nationality','np_bioUrl'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('np_flag').textContent = '';
+  } catch(err) {
+    showMsg('personMsg', 'Feil: ' + err.message, 'error');
+  }
 }
 
 </script>
