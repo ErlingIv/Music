@@ -1540,7 +1540,7 @@ async function loadPersonCompositions(personId) {
           <td style="text-align:center;color:var(--muted);padding:0.3rem">${c.year_composed||'—'}</td>
           <td style="text-align:center;padding:0.3rem">${c.public_domain==='Yes'?'✓':''}</td>
           <td style="text-align:center;padding:0.3rem">${c.musescore_link?`<a href="${c.musescore_link}" target="_blank">🔗</a>`:''}</td>
-          <td style="text-align:center;padding:0.3rem"><button type="button" onclick="switchTab('edit');loadComp(${c.composition_id})" style="background:none;border:1px solid var(--border);border-radius:3px;padding:0.1rem 0.4rem;cursor:pointer;font-size:0.8rem">✏️</button></td>
+          <td style="text-align:center;padding:0.3rem"><button type="button" onclick="switchTab('edit');loadEditForm(${c.composition_id})" style="background:none;border:1px solid var(--border);border-radius:3px;padding:0.1rem 0.4rem;cursor:pointer;font-size:0.8rem">✏️</button></td>
         </tr>`).join('')}
       </table>
     </div>`;
