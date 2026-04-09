@@ -1440,6 +1440,9 @@ document.getElementById('p_bioUrl').addEventListener('input', function() {
 let personSearchTimeout;
 document.getElementById('personSearch').addEventListener('input', () => {
   clearTimeout(personSearchTimeout);
+  // Clear form when user starts typing a new search
+  document.getElementById('personPanel').style.display = 'none';
+  document.getElementById('personCompositions').innerHTML = '';
   const q = document.getElementById('personSearch').value.trim();
   if (q.length < 2) { document.getElementById('personSearchResults').innerHTML = ''; return; }
   personSearchTimeout = setTimeout(async () => {
@@ -1530,12 +1533,14 @@ async function loadPersonCompositions(personId) {
           <th style="text-align:center;padding:0.3rem">År</th>
           <th style="text-align:center;padding:0.3rem">PD</th>
           <th style="text-align:center;padding:0.3rem">MS</th>
+          <th style="text-align:center;padding:0.3rem">Rediger</th>
         </tr>
-        ${comps.map(c => `<tr style="border-bottom:1px solid var(--border)" class="comp-row" onclick="loadComp(${c.composition_id})" style="cursor:pointer">
-          <td style="padding:0.3rem 0.5rem;cursor:pointer">${c.title}</td>
+        ${comps.map(c => `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:0.3rem 0.5rem">${c.title}</td>
           <td style="text-align:center;color:var(--muted);padding:0.3rem">${c.year_composed||'—'}</td>
           <td style="text-align:center;padding:0.3rem">${c.public_domain==='Yes'?'✓':''}</td>
-          <td style="text-align:center;padding:0.3rem">${c.musescore_link?`<a href="${c.musescore_link}" target="_blank" onclick="event.stopPropagation()">🔗</a>`:''}</td>
+          <td style="text-align:center;padding:0.3rem">${c.musescore_link?`<a href="${c.musescore_link}" target="_blank">🔗</a>`:''}</td>
+          <td style="text-align:center;padding:0.3rem"><button type="button" onclick="switchTab('edit');loadComp(${c.composition_id})" style="background:none;border:1px solid var(--border);border-radius:3px;padding:0.1rem 0.4rem;cursor:pointer;font-size:0.8rem">✏️</button></td>
         </tr>`).join('')}
       </table>
     </div>`;
