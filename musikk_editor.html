@@ -897,8 +897,18 @@ function renderTags(tagsId, list) {
   list.forEach((p, i) => {
     const t = document.createElement('div');
     t.className = 'tag';
-    t.innerHTML = `${p.name}<button type="button">×</button>`;
-    t.querySelector('button').onclick = () => { list.splice(i,1); renderTags(tagsId, list); };
+    t.style.cssText = 'display:inline-flex;align-items:center;gap:0.3rem';
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = p.name;
+    nameSpan.style.cursor = 'pointer';
+    nameSpan.title = 'Vis komposisjoner';
+    nameSpan.onclick = () => openComposerScores(p.person_id, p.name);
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.textContent = '×';
+    delBtn.onclick = () => { list.splice(i,1); renderTags(tagsId, list); };
+    t.appendChild(nameSpan);
+    t.appendChild(delBtn);
     c.appendChild(t);
   });
 }
@@ -1117,6 +1127,7 @@ async function searchCompositions(q) {
       cc.forEach(row => {
         if (row.composition && !results.find(r => r.composition_id === row.composition.composition_id)) {
           row.composition._composer = [p.first_name, p.last_name].filter(Boolean).join(' ');
+          row.composition._composer_id = p.person_id;
           results.push(row.composition);
         }
       });
@@ -1138,7 +1149,9 @@ async function searchCompositions(q) {
     const d = document.createElement('div');
     d.className = 'result-row';
     const approvedBadge = c.approved ? ' <span class="approved-badge">✓</span>' : '';
-    const composerMeta = c._composer ? ` · ${c._composer}` : '';
+    const composerMeta = c._composer
+      ? ` · <span style="cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();openComposerScores(${c._composer_id||'null'},'${(c._composer||'').replace(/'/g,"\\'")}')">🎵 ${c._composer}</span>`
+      : '';
     d.innerHTML = `<div class="result-title">${c.title}${approvedBadge}</div>
                    <div class="result-meta">${c.year_composed || '—'} · ${c.public_domain === 'Yes' ? 'PD' : 'Opphavsrett'}${composerMeta}</div>`;
     if (c.approved) d.classList.add('is-approved');
@@ -1432,9 +1445,20 @@ document.getElementById('personSearch').addEventListener('input', () => {
       d.className = 'result-row';
       const flag = countryCodeToFlag(p.nationality || '');
       const years = p.born ? `${p.born}${p.died ? ' – ' + p.died : ''}` : '';
-      d.innerHTML = `<div class="result-title">${flag} ${p.first_name || ''} ${p.last_name}</div>
+      d.style.cssText = 'display:flex;justify-content:space-between;align-items:center';
+      const personLeft = document.createElement('div');
+      personLeft.style.cursor = 'pointer';
+      personLeft.innerHTML = `<div class="result-title">${flag} ${p.first_name || ''} ${p.last_name}</div>
                      <div class="result-meta">${years}</div>`;
-      d.onclick = () => loadPersonForm(p.person_id);
+      personLeft.onclick = () => loadPersonForm(p.person_id);
+      const scoreBtn = document.createElement('button');
+      scoreBtn.type = 'button';
+      scoreBtn.title = 'Vis komposisjoner';
+      scoreBtn.textContent = '🎵';
+      scoreBtn.style.cssText = 'background:none;border:1px solid var(--border);border-radius:4px;padding:0.1rem 0.4rem;cursor:pointer;font-size:0.9rem;flex-shrink:0';
+      scoreBtn.onclick = (e) => { e.stopPropagation(); openComposerScores(p.person_id, [p.first_name, p.last_name].filter(Boolean).join(' ')); };
+      d.appendChild(personLeft);
+      d.appendChild(scoreBtn);
       container.appendChild(d);
     });
   }, 250);
