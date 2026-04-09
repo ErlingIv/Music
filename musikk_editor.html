@@ -1455,12 +1455,11 @@ document.getElementById('personSearch').addEventListener('input', () => {
       d.className = 'result-row';
       const flag = countryCodeToFlag(p.nationality || '');
       const years = p.born ? `${p.born}${p.died ? ' – ' + p.died : ''}` : '';
-      d.style.cssText = 'display:flex;justify-content:space-between;align-items:center';
+      d.style.cssText = 'display:flex;justify-content:space-between;align-items:center;cursor:pointer';
+      d.onclick = () => loadPersonForm(p.person_id);
       const personLeft = document.createElement('div');
-      personLeft.style.cursor = 'pointer';
       personLeft.innerHTML = `<div class="result-title">${flag} ${p.first_name || ''} ${p.last_name}</div>
                      <div class="result-meta">${years}</div>`;
-      personLeft.onclick = () => loadPersonForm(p.person_id);
       const scoreBtn = document.createElement('button');
       scoreBtn.type = 'button';
       scoreBtn.title = 'Vis komposisjoner';
