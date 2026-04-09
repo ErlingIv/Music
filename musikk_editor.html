@@ -635,7 +635,13 @@
 
     <div id="personPanel" style="display:none">
       <div class="card">
-        <div class="card-title">Komponistdetaljer</div>
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Komponistdetaljer</span>
+          <button type="button" onclick="loadPersonCompositions(document.getElementById('p_personId').value)"
+            style="background:none;border:1px solid var(--border);border-radius:4px;padding:0.2rem 0.6rem;cursor:pointer;font-size:0.85rem">
+            🎵 Vis komposisjoner
+          </button>
+        </div>
         <input type="hidden" id="p_personId">
         <div class="row2">
           <div class="field">
@@ -687,6 +693,7 @@
         <button class="btn btn-primary" onclick="savePerson()">Lagre endringer</button>
         <button class="btn btn-secondary" onclick="closePerson()">Avbryt</button>
       </div>
+      <div id="personCompositions" style="margin-top:1rem"></div>
     </div>
 
     <div class="card" style="margin-top:1.5rem">
@@ -1483,6 +1490,7 @@ async function loadPersonForm(personId) {
   document.getElementById('personPanel').style.display = 'block';
   document.getElementById('personSearchResults').innerHTML = '';
   document.getElementById('personSearch').value = '';
+  document.getElementById('personCompositions').innerHTML = '';
 }
 
 async function savePerson() {
@@ -1505,6 +1513,32 @@ async function savePerson() {
   } catch(err) {
     showMsg('personMsg', 'Feil: ' + err.message, 'error');
   }
+}
+
+async function loadPersonCompositions(personId) {
+  const container = document.getElementById('personCompositions');
+  container.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Laster komposisjoner…</div>';
+  const cc = await get(`/composition_composer?person_id=eq.${personId}&select=composition_id,composition(composition_id,title,year_composed,public_domain,musescore_link)&limit=200`);
+  const comps = cc.map(r => r.composition).filter(Boolean).sort((a,b) => (a.title||'').localeCompare(b.title||''));
+  if (!comps.length) { container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:0.5rem 0">Ingen komposisjoner funnet.</div>'; return; }
+  container.innerHTML = `
+    <div class="card">
+      <div class="card-title">Komposisjoner (${comps.length})</div>
+      <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+        <tr style="border-bottom:2px solid var(--border)">
+          <th style="text-align:left;padding:0.3rem 0.5rem">Tittel</th>
+          <th style="text-align:center;padding:0.3rem">År</th>
+          <th style="text-align:center;padding:0.3rem">PD</th>
+          <th style="text-align:center;padding:0.3rem">MS</th>
+        </tr>
+        ${comps.map(c => `<tr style="border-bottom:1px solid var(--border)" class="comp-row" onclick="loadComp(${c.composition_id})" style="cursor:pointer">
+          <td style="padding:0.3rem 0.5rem;cursor:pointer">${c.title}</td>
+          <td style="text-align:center;color:var(--muted);padding:0.3rem">${c.year_composed||'—'}</td>
+          <td style="text-align:center;padding:0.3rem">${c.public_domain==='Yes'?'✓':''}</td>
+          <td style="text-align:center;padding:0.3rem">${c.musescore_link?`<a href="${c.musescore_link}" target="_blank" onclick="event.stopPropagation()">🔗</a>`:''}</td>
+        </tr>`).join('')}
+      </table>
+    </div>`;
 }
 
 function closePerson() {
