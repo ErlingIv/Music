@@ -812,6 +812,32 @@ function switchTab(name) {
 
 // ── Person lookup factory ─────────────────────────────────────────────────────
 
+async function openComposerScores(personId, name) {
+  const cc = await get(`/composition_composer?person_id=eq.${personId}&select=composition_id,composition(composition_id,title,year_composed,public_domain,musescore_link)&limit=100`);
+  const comps = cc.map(r => r.composition).filter(Boolean).sort((a,b) => (a.title||'').localeCompare(b.title||''));
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center';
+  const box = document.createElement('div');
+  box.style.cssText = 'background:white;border-radius:8px;padding:1.5rem;max-width:600px;width:90%;max-height:80vh;overflow-y:auto';
+  box.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+    <h3 style="margin:0;font-size:1rem">${name} — ${comps.length} komposisjoner</h3>
+    <button type="button" onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:1.2rem;cursor:pointer">✕</button>
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+    <tr style="border-bottom:2px solid #eee"><th style="text-align:left;padding:0.3rem">Tittel</th><th>År</th><th>PD</th><th>MS</th></tr>
+    ${comps.map(c => `<tr style="border-bottom:1px solid #f0f0f0">
+      <td style="padding:0.3rem">${c.title}</td>
+      <td style="text-align:center;color:#666">${c.year_composed||'—'}</td>
+      <td style="text-align:center">${c.public_domain==='Yes'?'✓':''}</td>
+      <td style="text-align:center">${c.musescore_link?`<a href="${c.musescore_link}" target="_blank">🔗</a>`:''}</td>
+    </tr>`).join('')}
+  </table>`;
+  modal.className = 'modal-overlay';
+  modal.appendChild(box);
+  modal.onclick = e => { if(e.target===modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+
 function makeLookup(searchId, resultsId, tagsId, list, modalTarget) {
   const inp = document.getElementById(searchId);
   const res = document.getElementById(resultsId);
@@ -822,14 +848,27 @@ function makeLookup(searchId, resultsId, tagsId, list, modalTarget) {
     const q = inp.value.trim();
     if (q.length < 2) { res.classList.remove('open'); return; }
     t = setTimeout(async () => {
-      const rows = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name&limit=12&order=last_name`);
+      const rows = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name,nationality,born,died&limit=12&order=last_name`);
       res.innerHTML = '';
       rows.forEach(p => {
         const name = [p.first_name, p.last_name].filter(Boolean).join(' ');
+        const flag = p.nationality ? countryCodeToFlag(p.nationality) : '';
+        const years = p.born ? ` ${p.born}${p.died ? '–'+p.died : ''}` : '';
         const d = document.createElement('div');
         d.className = 'lookup-item';
-        d.textContent = name;
-        d.onclick = () => { addTag(p.person_id, name, tagsId, list); inp.value = ''; res.classList.remove('open'); };
+        d.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:0.5rem';
+        const left = document.createElement('span');
+        left.innerHTML = `${flag} ${name}<span style="color:var(--muted);font-size:0.8rem">${years}</span>`;
+        left.style.cursor = 'pointer';
+        left.onclick = () => { addTag(p.person_id, name, tagsId, list); inp.value = ''; res.classList.remove('open'); };
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = '🎵';
+        btn.title = 'Se scores';
+        btn.style.cssText = 'background:none;border:1px solid var(--border);border-radius:4px;padding:0 0.4rem;cursor:pointer;font-size:0.85rem;flex-shrink:0';
+        btn.onclick = (e) => { e.stopPropagation(); openComposerScores(p.person_id, name); inp.value = ''; res.classList.remove('open'); };
+        d.appendChild(left);
+        d.appendChild(btn);
         res.appendChild(d);
       });
       const add = document.createElement('div');
