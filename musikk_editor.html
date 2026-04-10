@@ -1426,9 +1426,11 @@ function countryCodeToFlag(code) {
 }
 
 document.getElementById('p_nationality').addEventListener('input', function() {
+  this.value = this.value.toUpperCase();
   document.getElementById('p_flag').textContent = countryCodeToFlag(this.value);
 });
 document.getElementById('np_nationality').addEventListener('input', function() {
+  this.value = this.value.toUpperCase();
   document.getElementById('np_flag').textContent = countryCodeToFlag(this.value);
 });
 document.getElementById('p_bioUrl').addEventListener('input', function() {
