@@ -551,7 +551,7 @@
         </div>
         <div class="field">
           <label>MuseScore-info (automatisk hentet)</label>
-          <textarea id="e_msNotes" style="background:#f9f6f0;color:var(--muted);font-size:0.85rem" readonly></textarea>
+          <div id="e_msNotes" style="background:#f9f6f0;color:var(--muted);font-size:0.85rem;padding:0.5rem 0.6rem;border-radius:6px;border:1px solid var(--border);min-height:3rem;line-height:1.6;white-space:pre-wrap;"></div>
         </div>
         <div class="field" style="display:flex;align-items:center;gap:0.6rem;margin-top:0.25rem">
           <input type="checkbox" id="e_toInvestigate" style="width:auto;margin:0;accent-color:var(--accent)">
@@ -1238,7 +1238,7 @@ async function loadEditForm(compId) {
   document.getElementById('e_msLink').value  = c.musescore_link || '';
   document.getElementById('e_notes').value       = c.composition_notes || '';
   document.getElementById('e_dedication').value  = c.dedication || '';
-  document.getElementById('e_msNotes').value = c.musescore_notes || '';
+  document.getElementById('e_msNotes').innerHTML = c.musescore_notes || '';
   document.getElementById('e_toInvestigate').checked = c.to_investigate || false;
 
   eComposers.length = 0;
