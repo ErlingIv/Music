@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Score — Norske Musikknoter</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=Source+Serif+4:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #f7f4ee;
+    --paper:   #fffef9;
+    --ink:     #1a1814;
+    --muted:   #7a7060;
+    --faint:   #e8e2d4;
+    --accent:  #8b3a1e;
+    --accent2: #2a5c45;
+    --border:  #d4cdc0;
+    --serif:   'Playfair Display', Georgia, serif;
+    --body:    'Source Serif 4', Georgia, serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--body); background: var(--bg); color: var(--ink); min-height: 100vh; }
+
+  .site-header {
+    background: var(--paper);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .back-link {
+    font-size: 0.82rem;
+    color: var(--muted);
+    text-decoration: none;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .back-link:hover { color: var(--accent); }
+  .site-name {
+    font-family: var(--serif);
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  main { max-width: 760px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  .score-card {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 2rem;
+  }
+  .title-row {
+    border-bottom: 1px solid var(--faint);
+    padding-bottom: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  .score-title {
+    font-family: var(--serif);
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .score-sub { font-size: 0.9rem; color: var(--muted); }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 2rem;
+    margin-bottom: 1.5rem;
+  }
+  .meta-label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 3px;
+  }
+  .meta-value { font-size: 0.95rem; color: var(--ink); }
+  .composer-link { color: var(--accent); text-decoration: none; }
+  .composer-link:hover { text-decoration: underline; }
+
+  .section-label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+  .media-section { margin-bottom: 1.5rem; }
+  audio { width: 100%; margin-bottom: 0.5rem; }
+
+  .pdf-frame {
+    width: 100%;
+    height: 500px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    display: block;
+    margin-bottom: 8px;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: var(--ink);
+    text-decoration: none;
+    background: var(--bg);
+    font-family: var(--body);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: var(--faint); }
+
+  .notes-section {
+    margin-bottom: 1.5rem;
+    border-left: 2px solid var(--faint);
+    padding-left: 1rem;
+  }
+  .notes-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .notes-text {
+    font-size: 0.93rem;
+    color: #444441;
+    line-height: 1.75;
+    white-space: pre-wrap;
+  }
+  .notes-text a { color: var(--accent); text-decoration: none; }
+  .notes-text a:hover { text-decoration: underline; }
+
+  .translate-btn {
+    font-size: 0.75rem;
+    font-family: var(--body);
+    padding: 3px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--muted);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .translate-btn:hover { background: var(--faint); color: var(--ink); }
+  .translate-btn:disabled { opacity: 0.5; cursor: default; }
+
+  .musescore-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--accent);
+    text-decoration: none;
+    margin-top: 1rem;
+    border: 1px solid var(--accent);
+    border-radius: 5px;
+    padding: 5px 12px;
+    transition: background 0.15s;
+  }
+  .musescore-link:hover { background: var(--accent); color: #fff; }
+
+  .loading-state { text-align: center; padding: 3rem; color: var(--muted); font-size: 0.9rem; }
+  .error-state { color: #a32d2d; font-size: 0.9rem; padding: 1rem 0; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a class="back-link" id="backLink" href="index.html">← Back</a>
+  <a class="site-name" href="index.html">Norske Musikknoter</a>
+</header>
+
+<main>
+  <div class="score-card">
+    <div id="content"><div class="loading-state">Loading…</div></div>
+  </div>
+</main>
+
+<script>
+const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
+const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
+
+const params = new URLSearchParams(window.location.search);
+const compId = params.get('id');
+
+// Set back link to return to composer page if we came from there
+const referrer = document.referrer;
+if (referrer && referrer.includes('composer.html')) {
+  document.getElementById('backLink').href = referrer;
+  document.getElementById('backLink').textContent = '← Composer';
+}
+
+function bbcodeToHtml(text) {
+  return text
+    .replace(/\[url=([^\]]+)\]([^\[]+)\[\/url\]/gi, '<a href="$1" target="_blank">$2</a>')
+    .replace(/\[b\](.+?)\[\/b\]/gi, '<strong>$1</strong>')
+    .replace(/\[i\](.+?)\[\/i\]/gi, '<em>$1</em>');
+}
+
+async function load() {
+  const el = document.getElementById('content');
+  if (!compId) {
+    el.innerHTML = '<p class="error-state">No score ID specified.</p>';
+    return;
+  }
+
+  try {
+    // Fetch composition, score, and composers in parallel
+    const [compR, scoreR, ccR] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${compId}&select=composition_id,title,year_composed,musescore_link,musescore_notes`, { headers: H }),
+      fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=eq.${compId}&select=pdf_url,mp3_url`, { headers: H }),
+      fetch(`${SUPABASE_URL}/rest/v1/composition_composer?composition_id=eq.${compId}&select=person_id`, { headers: H }),
+    ]);
+
+    const comp  = (await compR.json())[0];
+    const score = (await scoreR.json())[0];
+    const cc    = await ccR.json();
+    if (!comp) throw new Error('Score not found');
+
+    document.title = `${comp.title} — Norske Musikknoter`;
+
+    // Fetch composer details
+    let composerName   = '—';
+    let composerYears  = '';
+    let composerBioUrl = null;
+    let composerPersonId = null;
+
+    if (cc.length > 0) {
+      composerPersonId = cc[0].person_id;
+      const pR = await fetch(
+        `${SUPABASE_URL}/rest/v1/person?person_id=eq.${composerPersonId}&select=first_name,last_name,born,died,bio_url`,
+        { headers: H }
+      );
+      const p = (await pR.json())[0];
+      if (p) {
+        composerName   = `${p.first_name} ${p.last_name}`;
+        const parts    = [p.born, p.died].filter(Boolean);
+        composerYears  = parts.length ? `(${parts.join('–')})` : '';
+        composerBioUrl = p.bio_url || null;
+      }
+    }
+
+    const composerDisplay = composerPersonId
+      ? `<a class="composer-link" href="composer.html?id=${composerPersonId}">${composerName}</a> <span style="color:var(--muted);font-size:0.88rem">${composerYears}</span>`
+      : `${composerName} <span style="color:var(--muted);font-size:0.88rem">${composerYears}</span>`;
+
+    const notesRaw = (comp.musescore_notes || '').replace(/`/g, '\\`');
+
+    el.innerHTML = `
+      <div class="title-row">
+        <h1 class="score-title">${comp.title}</h1>
+        <p class="score-sub">${composerName}${composerYears ? ' ' + composerYears : ''}${comp.year_composed ? ' · ' + comp.year_composed : ''}</p>
+      </div>
+
+      <div class="meta-grid">
+        <div>
+          <p class="meta-label">Composer</p>
+          <p class="meta-value">${composerDisplay}</p>
+        </div>
+        <div>
+          <p class="meta-label">Year composed</p>
+          <p class="meta-value">${comp.year_composed || '—'}</p>
+        </div>
+      </div>
+
+      ${comp.musescore_notes ? `
+        <div class="notes-section">
+          <div class="notes-header">
+            <p class="section-label" style="margin-bottom:0">About the composition</p>
+            <button class="translate-btn" id="translateBtn"
+              onclick="translateNotes(this, \`${notesRaw}\`)">
+              Translate to Norwegian
+            </button>
+          </div>
+          <div class="notes-text" id="notesText">${comp.musescore_notes}</div>
+        </div>` : ''}
+
+      ${score?.mp3_url ? `
+        <div class="media-section">
+          <p class="section-label">Listen</p>
+          <audio controls src="${score.mp3_url}"></audio>
+        </div>` : ''}
+
+      ${score?.pdf_url ? `
+        <div class="media-section">
+          <p class="section-label">Score</p>
+          <iframe class="pdf-frame" src="${score.pdf_url}"></iframe>
+          <a class="btn" href="${score.pdf_url}" target="_blank">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+              <path d="M2 12h10M7 2v7M4 6l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Download PDF
+          </a>
+        </div>` : ''}
+
+      ${comp.musescore_link ? `
+        <a class="musescore-link" href="${comp.musescore_link}" target="_blank">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+            <path d="M5.5 2H3a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1V8.5M8 2h4m0 0v4m0-4L6 8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Link to MuseScore
+        </a>` : ''}
+    `;
+  } catch(e) {
+    document.getElementById('content').innerHTML =
+      `<p class="error-state">Error: ${e.message}</p>`;
+  }
+}
+
+load();
+
+let _translated = false;
+
+async function translateChunk(text) {
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=no&dt=t&q=${encodeURIComponent(text)}`;
+  const resp = await fetch(url);
+  const data = await resp.json();
+  return data[0].map(c => c[0]).join('');
+}
+
+async function translateNotes(btn, originalText) {
+  const el = document.getElementById('notesText');
+  if (_translated) {
+    el.innerHTML = originalText;
+    btn.textContent = 'Translate to Norwegian';
+    _translated = false;
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Translating…';
+  try {
+    const plainText = originalText.replace(/<a[^>]*>([^<]+)<\/a>/gi, '$1');
+    const sentences = plainText.match(/[^.!?]+[.!?]+/g) || [plainText];
+    let chunks = [], current = '';
+    for (const s of sentences) {
+      if ((current + s).length > 450) {
+        if (current) chunks.push(current.trim());
+        current = s;
+      } else {
+        current += s;
+      }
+    }
+    if (current.trim()) chunks.push(current.trim());
+    const parts = await Promise.all(chunks.map(translateChunk));
+    el.innerHTML = parts.join(' ');
+    btn.textContent = 'Show original';
+    btn.disabled = false;
+    _translated = true;
+  } catch(e) {
+    btn.textContent = 'Translation failed';
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>

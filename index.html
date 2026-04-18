@@ -1,212 +1,510 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Old scores: classic and popular music</title>
-<meta name="color-scheme" content="light dark">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Norske Musikknoter — Historical Nordic Scores</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Source+Serif+4:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg: #ffffff; --fg:#111213; --muted:#5f6770;
-    --card:#ffffff; --line:#e6e8eb;
-    --brand1:#7c3aed; /* purple */
-    --brand2:#06b6d4; /* cyan */
-    --brand3:#f97316; /* orange */
-    --link:#0b5fff;
+  :root {
+    --bg:        #f7f4ee;
+    --paper:     #fffef9;
+    --ink:       #1a1814;
+    --muted:     #7a7060;
+    --faint:     #e8e2d4;
+    --accent:    #8b3a1e;
+    --accent2:   #2a5c45;
+    --border:    #d4cdc0;
+    --no-color:  #c0392b;
+    --se-color:  #006aa7;
+    --dk-color:  #c60c30;
+    --fi-color:  #003580;
+    --serif:     'Playfair Display', Georgia, serif;
+    --body:      'Source Serif 4', Georgia, serif;
   }
-  @media (prefers-color-scheme: dark){
-    :root{
-      --bg:#0b0c0f; --fg:#e8e9ea; --muted:#a2a9b0;
-      --card:#111318; --line:#22252b;
-      --link:#6aa6ff;
-    }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--body);
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
   }
 
-  *{box-sizing:border-box}
-  body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--fg);}
-
-  /* HERO */
-  .hero{
-    position:relative;
-    padding: clamp(2rem, 6vw, 4rem) 1.25rem;
-    border-bottom:1px solid var(--line);
-    background:
-      radial-gradient(1200px 600px at 10% -20%, color-mix(in oklab, var(--brand1) 25%, transparent) 0, transparent 70%),
-      radial-gradient(1000px 600px at 100% 0%, color-mix(in oklab, var(--brand2) 25%, transparent) 0, transparent 70%),
-      linear-gradient(145deg, color-mix(in oklab, var(--brand1) 12%, transparent), color-mix(in oklab, var(--brand2) 10%, transparent) 60%, transparent);
-    overflow:hidden;
+  /* ── Header ── */
+  header {
+    background: var(--paper);
+    border-bottom: 1px solid var(--border);
+    padding: 2.5rem 2rem 2rem;
+    text-align: center;
+    position: relative;
   }
-  .brand{
-    max-width:1000px; margin:0 auto;
-    display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+  header::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 2px;
+    background: var(--accent);
+    margin: 1.2rem auto 0;
   }
-  h1{font-size:clamp(1.6rem, 2.6vw, 2.2rem); margin:0 0 .5rem}
-  .tagline{color:var(--muted); margin:.25rem 0 0}
-  .lang{display:flex; gap:.4rem; align-items:center; margin-top:.75rem}
-  .lang button{
-    border:1px solid var(--line); background:var(--card); color:inherit;
-    padding:.35rem .6rem; border-radius:10px; font-size:.95rem; cursor:pointer;
+  .site-title {
+    font-family: var(--serif);
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    line-height: 1.1;
   }
-  .lang button.active{ outline:2px solid var(--link); }
-  .hero-notes{
-    position:absolute; inset:0; pointer-events:none; opacity:.65;
-  }
-  .note{ position:absolute; font-size:clamp(18px,2.4vw,26px); opacity:.65 }
-  @keyframes floatUp{
-    from{ transform: translateY(20px); opacity:.0 }
-    20%{ opacity:.7 }
-    to{ transform: translateY(-60px); opacity:0 }
-  }
-  @media (prefers-reduced-motion: reduce){
-    .hero-notes{ display:none; }
+  .site-subtitle {
+    font-family: var(--body);
+    font-size: 0.95rem;
+    color: var(--muted);
+    margin-top: 0.5rem;
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
-  main{ max-width:1000px; margin:0 auto; padding:1.25rem }
-  .grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:1rem; }
-  .card{
-    border:1px solid var(--line); background:var(--card); border-radius:14px; padding:1rem;
-    box-shadow: 0 1px 0 rgba(0,0,0,.03);
+  /* ── Nav tabs ── */
+  nav {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    background: var(--paper);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
   }
-  .card h2{ margin:.2rem 0 .6rem; font-size:1.15rem }
-  .muted{ color:var(--muted); }
-  a{ color:var(--link); text-decoration:none }
-  a:hover{ text-decoration:underline }
+  .tab {
+    padding: 0.9rem 2rem;
+    font-family: var(--body);
+    font-size: 0.88rem;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-flag { margin-right: 0.4rem; font-size: 1rem; }
 
-  .cta{
-    margin-top:1rem; display:inline-flex; align-items:center; gap:.5rem;
-    border:1px solid var(--line); padding:.55rem .8rem; border-radius:10px;
-    background:linear-gradient(180deg, color-mix(in oklab, var(--brand3) 15%, transparent), transparent 60%);
+  /* ── Main layout ── */
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
   }
-  .badge{
-    display:inline-block; font-size:.85rem; padding:.2rem .5rem; border-radius:999px;
-    border:1px solid var(--line); background:var(--card); color:var(--muted); margin-left:.4rem;
+
+  /* ── Section panels ── */
+  .section-panel { display: none; }
+  .section-panel.active { display: block; }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
   }
-  footer{ padding:2rem 1.25rem; text-align:center; color:var(--muted) }
+  .section-flag { font-size: 1.8rem; line-height: 1; }
+  .section-title {
+    font-family: var(--serif);
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .section-count {
+    font-size: 0.82rem;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Alpha index bar ── */
+  .alpha-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin-bottom: 1.5rem;
+  }
+  .alpha-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    font-family: var(--body);
+    font-weight: 500;
+    color: var(--muted);
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+  .alpha-btn:hover { background: var(--faint); color: var(--ink); }
+  .alpha-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .alpha-btn.disabled { opacity: 0.3; cursor: default; pointer-events: none; }
+
+  /* ── Composer grid ── */
+  .composer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.6rem;
+  }
+  .composer-card {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.7rem 0.9rem;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    text-decoration: none;
+    display: block;
+  }
+  .composer-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(139,58,30,0.1);
+  }
+  .composer-name {
+    font-family: var(--serif);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--ink);
+    line-height: 1.3;
+  }
+  .composer-meta {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .female-badge {
+    font-size: 0.68rem;
+    background: #f0e6f0;
+    color: #7a3a7a;
+    border: 1px solid #d4b8d4;
+    border-radius: 3px;
+    padding: 1px 5px;
+    letter-spacing: 0.03em;
+  }
+  .score-count {
+    font-size: 0.75rem;
+    color: var(--accent2);
+  }
+
+  /* ── Letter group heading ── */
+  .letter-group { margin-bottom: 1.5rem; }
+  .letter-heading {
+    font-family: var(--serif);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--faint);
+    border-left: 3px solid var(--accent);
+    padding-left: 0.6rem;
+    margin-bottom: 0.6rem;
+    line-height: 1;
+    color: var(--accent);
+    opacity: 0.6;
+  }
+
+  /* ── Loading / empty states ── */
+  .loading-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+  }
+  .loading-dots::after {
+    content: '...';
+    animation: dots 1.2s steps(4, end) infinite;
+  }
+  @keyframes dots {
+    0%, 20% { content: '.'; }
+    40% { content: '..'; }
+    60%, 100% { content: '...'; }
+  }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    padding: 1.5rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    letter-spacing: 0.04em;
+  }
 </style>
 </head>
 <body>
 
-  <header class="hero">
-    <div class="brand">
-      <div>
-        <h1 id="title">Old scores: classic and popular music</h1>
-        <p class="tagline" id="tag">A personal collection of Scandinavian music and research links.</p>
-        <div class="lang">
-          <span class="muted">Language:</span>
-          <button id="enBtn" class="active">EN</button>
-          <button id="noBtn">NO</button>
-          <span class="badge">Light/Dark</span>
-        </div>
-      </div>
-      <a class="cta" href="composers.html">🎼 Composers (A–Å) →</a>
+<header>
+  <h1 class="site-title">Norske Musikknoter</h1>
+  <p class="site-subtitle">Historical Nordic Sheet Music — Public Domain</p>
+</header>
+
+<nav>
+  <div class="tab active" data-section="no" onclick="switchTab('no')">
+    <span class="tab-flag">🇳🇴</span>Norwegian
+  </div>
+  <div class="tab" data-section="nordic" onclick="switchTab('nordic')">
+    <span class="tab-flag">🏴</span>Nordic
+  </div>
+  <div class="tab" data-section="others" onclick="switchTab('others')">
+    <span class="tab-flag">🌍</span>Others
+  </div>
+  <div class="tab" data-section="unknown" onclick="switchTab('unknown')">
+    <span class="tab-flag">❓</span>Unknown
+  </div>
+</nav>
+
+<main>
+  <!-- Norwegian -->
+  <div class="section-panel active" id="panel-no">
+    <div class="section-header">
+      <span class="section-flag">🇳🇴</span>
+      <span class="section-title">Norwegian Composers</span>
+      <span class="section-count" id="count-no"></span>
     </div>
+    <div class="alpha-bar" id="alpha-no"></div>
+    <div id="composers-no"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
+  </div>
 
-    <!-- Floating music notes -->
-    <div class="hero-notes" id="notes"></div>
-  </header>
-
-  <main>
-    <div class="grid">
-      <section class="card">
-        <h2 id="h2a">Old classical music</h2>
-        <p class="muted" id="p1">Curated public-domain scores and references.</p>
-        <p><a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vSIWxwL1QqxwLOzDv_AIzXEwZ5-9v1G51cX2rWsnESZYBEtKaNr0ih_6YEHvkyILK_5ug8oycWz21aK/pubhtml" target="_blank" rel="noopener">Open sheet →</a></p>
-      </section>
-
-      <section class="card">
-        <h2 id="h2b">Old popular music (NO/SE)</h2>
-        <p class="muted" id="p2">Songs and light music; some items may be access-restricted.</p>
-        <p><a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vQqvBBaiFtSKobHuIllQA55CD5O5LIJR1JU_Cr-Z5X3AgpqnuhttVDA7GM0ms2nG8BgWF1ApYrZc-cw/pubhtml" target="_blank" rel="noopener">Open sheet →</a></p>
-      </section>
-
-      <section class="card">
-        <h2 id="h2c">Norges Melodier I–IV</h2>
-        <p class="muted" id="p3">~500 songs from Grieg, Alnæs, and others.</p>
-        <p><a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vRuhQrhQ68I16YdsYa1PcPepXNT_qAAeXaC3znelNccKBmLulUlu3JEBGFgd0h3zXbmCVxlR863pZpV/pubhtml" target="_blank" rel="noopener">Open sheet →</a></p>
-      </section>
-
-      <section class="card">
-        <h2>Composers</h2>
-        <p class="muted" id="p4">Browse A–Å by surname; works are clickable; per-letter pages.</p>
-        <p><a href="composers.html">Go to A–Å index →</a></p>
-      </section>
+  <!-- Nordic -->
+  <div class="section-panel" id="panel-nordic">
+    <div class="section-header">
+      <span class="section-flag">🇸🇪 🇩🇰 🇫🇮 🇮🇸</span>
+      <span class="section-title">Nordic Composers</span>
+      <span class="section-count" id="count-nordic"></span>
     </div>
-  </main>
+    <div class="alpha-bar" id="alpha-nordic"></div>
+    <div id="composers-nordic"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
+  </div>
 
-  <footer>
-    <span id="foot">Built for research & listening pleasure • Hosted on GitHub Pages</span>
-  </footer>
+  <!-- Others -->
+  <div class="section-panel" id="panel-others">
+    <div class="section-header">
+      <span class="section-flag">🌍</span>
+      <span class="section-title">Other Composers</span>
+      <span class="section-count" id="count-others"></span>
+    </div>
+    <div class="alpha-bar" id="alpha-others"></div>
+    <div id="composers-others"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
+  </div>
+
+  <!-- Unknown nationality -->
+  <div class="section-panel" id="panel-unknown">
+    <div class="section-header">
+      <span class="section-flag">❓</span>
+      <span class="section-title">Nationality Unknown</span>
+      <span class="section-count" id="count-unknown"></span>
+    </div>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;">These composers have no nationality set. Add a country code in the admin tool and they will move to the correct section.</p>
+    <div class="alpha-bar" id="alpha-unknown"></div>
+    <div id="composers-unknown"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
+  </div>
+</main>
+
+<footer>
+  Norske Musikknoter · Historical Nordic Sheet Music · Public Domain Scores
+</footer>
 
 <script>
-  /* --- Language toggle (EN/NO) --- */
-  const T = {
-    en: {
-      title: "Old scores: classic and popular music",
-      tag: "A personal collection of Scandinavian music and research links.",
-      h2a: "Old classical music",
-      p1: "Curated public-domain scores and references.",
-      h2b: "Old popular music (NO/SE)",
-      p2: "Songs and light music; some items may be access-restricted.",
-      h2c: "Norges Melodier I–IV",
-      p3: "~500 songs from Grieg, Alnæs, and others.",
-      p4: "Browse A–Å by surname; works are clickable; per-letter pages.",
-      foot: "Built for research & listening pleasure • Hosted on GitHub Pages",
-      lang: "Language:"
-    },
-    no: {
-      title: "Gamle noter: klassisk og populærmusikk",
-      tag: "En personlig samling av skandinavisk musikk og forskningslenker.",
-      h2a: "Gammel klassisk musikk",
-      p1: "Kuraterte noter i public domain og referanser.",
-      h2b: "Gammel populærmusikk (NO/SE)",
-      p2: "Sanger og underholdningsmusikk; enkelte kan være tilgangsbegrenset.",
-      h2c: "Norges Melodier I–IV",
-      p3: "~500 sanger fra Grieg, Alnæs m.fl.",
-      p4: "Bla A–Å etter etternavn; verk er klikkbare; egne bokstavsider.",
-      foot: "Laget for forskning og lytteglede • Driftet på GitHub Pages",
-      lang: "Språk:"
-    }
-  };
-  const $ = id => document.getElementById(id);
-  const enBtn = $("enBtn"), noBtn = $("noBtn");
-  function setLang(L){
-    const t = T[L];
-    $("title").textContent = t.title;
-    document.title = t.title; // tab title
-    $("tag").textContent = t.tag;
-    $("h2a").textContent = t.h2a; $("p1").textContent = t.p1;
-    $("h2b").textContent = t.h2b; $("p2").textContent = t.p2;
-    $("h2c").textContent = t.h2c; $("p3").textContent = t.p3;
-    $("p4").textContent = t.p4;   $("foot").textContent = t.foot;
-    document.querySelector(".lang span").textContent = (L==='no'? T.no.lang : T.en.lang);
-    enBtn.classList.toggle("active", L==='en');
-    noBtn.classList.toggle("active", L==='no');
-    localStorage.setItem("lang", L);
-  }
-  enBtn.onclick = ()=> setLang('en');
-  noBtn.onclick = ()=> setLang('no');
-  setLang(localStorage.getItem("lang") || (navigator.language||'en').toLowerCase().startsWith('no')?'no':'en');
+const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
+const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
-  /* --- Floating notes in hero --- */
-  const notesWrap = $("notes");
-  const notes = ["♪","♫","𝄞","♩","♬","𝄢","♭","♯","♮"];
-  function spawnNote(){
-    const n = document.createElement("div");
-    n.className = "note";
-    n.textContent = notes[Math.floor(Math.random()*notes.length)];
-    const x = Math.random()*90 + 5; // 5%..95%
-    const y = Math.random()*60 + 10; // 10%..70%
-    n.style.left = x + "%"; n.style.top = y + "%";
-    const dur = 4000 + Math.random()*3000;
-    n.style.animation = `floatUp ${dur}ms ease-out`;
-    notesWrap.appendChild(n);
-    setTimeout(()=> n.remove(), dur);
+const NORDIC = ['SE', 'DK', 'FI', 'IS'];
+const FLAGS  = { SE: '🇸🇪', DK: '🇩🇰', FI: '🇫🇮', IS: '🇮🇸',
+                 DE: '🇩🇪', US: '🇺🇸', FR: '🇫🇷', GB: '🇬🇧',
+                 IT: '🇮🇹', AT: '🇦🇹', BE: '🇧🇪', HU: '🇭🇺',
+                 AU: '🇦🇺', CZ: '🇨🇿', PL: '🇵🇱', VE: '🇻🇪' };
+
+let allComposers = { no: [], nordic: [], others: [], unknown: [] };
+let activeSection = 'no';
+let activeLetters = { no: 'ALL', nordic: 'ALL', others: 'ALL', unknown: 'ALL' };
+
+// ── Fetch all composers with at least one public domain score ─────────────────
+
+async function fetchAllComposers() {
+  // 1. Get all person_ids linked to public domain compositions
+  let pdIds = new Set();
+  let offset = 0;
+  while (true) {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/composition_composer?select=person_id,composition:composition_id(public_domain)&limit=1000&offset=${offset}`,
+      { headers: H }
+    );
+    const rows = await r.json();
+    if (!rows.length) break;
+    rows.forEach(row => {
+      if (row.composition?.public_domain === 'Yes') pdIds.add(row.person_id);
+    });
+    if (rows.length < 1000) break;
+    offset += 1000;
   }
-  if(!window.matchMedia("(prefers-reduced-motion: reduce)").matches){
-    // burst on load, then trickle
-    for(let i=0;i<10;i++) setTimeout(spawnNote, 120*i);
-    setInterval(spawnNote, 1200);
+
+  // 2. Get score counts per person for public domain compositions
+  const countMap = {};
+  offset = 0;
+  while (true) {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/composition_composer?select=person_id,composition:composition_id(public_domain)&limit=1000&offset=${offset}`,
+      { headers: H }
+    );
+    const rows = await r.json();
+    if (!rows.length) break;
+    rows.forEach(row => {
+      if (row.composition?.public_domain === 'Yes') {
+        countMap[row.person_id] = (countMap[row.person_id] || 0) + 1;
+      }
+    });
+    if (rows.length < 1000) break;
+    offset += 1000;
   }
+
+  // 3. Fetch persons — both with and without nationality
+  const pdIdsArr = [...pdIds];
+  let persons = [];
+  for (let i = 0; i < pdIdsArr.length; i += 200) {
+    const chunk = pdIdsArr.slice(i, i + 200).join(',');
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/person?person_id=in.(${chunk})&select=person_id,first_name,last_name,born,died,nationality,is_female_norwegian&order=last_name.asc`,
+      { headers: H }
+    );
+    const rows = await r.json();
+    persons = persons.concat(rows);
+  }
+
+  // 4. Sort into sections
+  persons.forEach(p => {
+    p.score_count = countMap[p.person_id] || 0;
+    if (!p.nationality) {
+      allComposers.unknown.push(p);
+    } else if (p.nationality === 'NO') {
+      allComposers.no.push(p);
+    } else if (NORDIC.includes(p.nationality)) {
+      allComposers.nordic.push(p);
+    } else {
+      allComposers.others.push(p);
+    }
+  });
+
+  // Sort each section by last_name
+  ['no', 'nordic', 'others', 'unknown'].forEach(sec => {
+    allComposers[sec].sort((a, b) => a.last_name.localeCompare(b.last_name, 'no'));
+  });
+
+  renderSection('no');
+  renderSection('nordic');
+  renderSection('others');
+  renderSection('unknown');
+}
+
+// ── Render a section ──────────────────────────────────────────────────────────
+
+function renderSection(sec) {
+  const composers = allComposers[sec];
+  const activeLetter = activeLetters[sec];
+
+  // Update count
+  document.getElementById(`count-no`);
+  document.getElementById(`count-${sec}`).textContent =
+    `${composers.length} composer${composers.length !== 1 ? 's' : ''}`;
+
+  // Build alphabet index from available first letters
+  const letters = [...new Set(composers.map(c => c.last_name[0].toUpperCase()))].sort();
+  const alphaBar = document.getElementById(`alpha-${sec}`);
+  const allLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ'.split('');
+
+  alphaBar.innerHTML = `
+    <div class="alpha-btn ${activeLetter === 'ALL' ? 'active' : ''}"
+         onclick="filterLetter('${sec}', 'ALL')">All</div>
+    ${allLetters.map(l => `
+      <div class="alpha-btn ${!letters.includes(l) ? 'disabled' : ''} ${activeLetter === l ? 'active' : ''}"
+           onclick="filterLetter('${sec}', '${l}')">
+        ${l}
+      </div>`).join('')}
+  `;
+
+  // Filter composers
+  const filtered = activeLetter === 'ALL'
+    ? composers
+    : composers.filter(c => c.last_name[0].toUpperCase() === activeLetter);
+
+  // Group by first letter
+  const groups = {};
+  filtered.forEach(c => {
+    const letter = c.last_name[0].toUpperCase();
+    if (!groups[letter]) groups[letter] = [];
+    groups[letter].push(c);
+  });
+
+  const container = document.getElementById(`composers-${sec}`);
+  if (!filtered.length) {
+    container.innerHTML = '<div class="loading-state">No composers found</div>';
+    return;
+  }
+
+  container.innerHTML = Object.entries(groups).map(([letter, list]) => `
+    <div class="letter-group" id="letter-${sec}-${letter}">
+      <div class="letter-heading">${letter}</div>
+      <div class="composer-grid">
+        ${list.map(c => composerCard(c)).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function composerCard(c) {
+  const years = [c.born, c.died].filter(Boolean).join('–');
+  const flag  = c.nationality !== 'NO' ? (FLAGS[c.nationality] || '') : '';
+  const female = c.is_female_norwegian === true || c.is_female_norwegian === 'K'
+    ? '<span class="female-badge">♀</span>' : '';
+  return `
+    <a class="composer-card" href="composer.html?id=${c.person_id}">
+      <div class="composer-name">${c.last_name}, ${c.first_name} ${flag}</div>
+      <div class="composer-meta">
+        ${years ? `<span>${years}</span>` : ''}
+        ${female}
+        <span class="score-count">${c.score_count} score${c.score_count !== 1 ? 's' : ''}</span>
+      </div>
+    </a>
+  `;
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+
+function switchTab(sec) {
+  activeSection = sec;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`[data-section="${sec}"]`).classList.add('active');
+  document.querySelectorAll('.section-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`panel-${sec}`).classList.add('active');
+}
+
+// ── Letter filter ─────────────────────────────────────────────────────────────
+
+function filterLetter(sec, letter) {
+  activeLetters[sec] = letter;
+  renderSection(sec);
+  // Scroll to top of section
+  document.getElementById(`panel-${sec}`).scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+fetchAllComposers();
 </script>
 </body>
 </html>
