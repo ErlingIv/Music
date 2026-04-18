@@ -100,10 +100,10 @@
   label {
     display: block;
     font-size: 0.75rem;
-    font-weight: 500;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.07em;
-    color: var(--muted);
+    color: #4a4035;
     margin-bottom: 0.3rem;
   }
 
@@ -114,9 +114,9 @@
     border-radius: var(--radius);
     font-family: 'Source Sans 3', sans-serif;
     font-size: 0.93rem;
-    font-weight: 300;
+    font-weight: 400;
     background: var(--paper);
-    color: var(--ink);
+    color: #1a1612;
     transition: border-color 0.15s, box-shadow 0.15s;
     outline: none;
   }
@@ -386,8 +386,16 @@
           <textarea id="n_notes" placeholder="Notater, merknader…"></textarea>
         </div>
         <div class="field">
+          <label>MuseScore-lenke</label>
+          <input type="text" id="n_msLink" placeholder="https://musescore.com/…">
+        </div>
+        <div class="field">
           <label>Dedikasjon</label>
           <input type="text" id="n_dedication" placeholder="Dedikert til…">
+        </div>
+        <div class="field" style="display:flex;align-items:center;gap:0.6rem;margin-top:0.25rem">
+          <input type="checkbox" id="n_toInvestigate" style="width:auto;margin:0;accent-color:var(--accent)">
+          <label for="n_toInvestigate" style="margin:0;text-transform:none;font-size:0.88rem;letter-spacing:0;font-weight:500;color:#4a4035;cursor:pointer">Merk som interessant å undersøke</label>
         </div>
       </div>
 
@@ -466,7 +474,7 @@
 
     <div class="card">
       <div class="card-title">Søk etter komposisjon</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
         <div class="field" style="margin-bottom:0">
           <select id="editSearchMode">
             <option value="composer">Søk på komponist</option>
@@ -486,6 +494,12 @@
             <option value="">Alle</option>
             <option value="with_link">Med MuseScore-lenke</option>
             <option value="without_link">Uten MuseScore-lenke</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <select id="editInvestigateFilter">
+            <option value="">Alle</option>
+            <option value="investigate">Til undersøkelse</option>
           </select>
         </div>
       </div>
@@ -538,6 +552,10 @@
         <div class="field">
           <label>MuseScore-info (automatisk hentet)</label>
           <textarea id="e_msNotes" style="background:#f9f6f0;color:var(--muted);font-size:0.85rem" readonly></textarea>
+        </div>
+        <div class="field" style="display:flex;align-items:center;gap:0.6rem;margin-top:0.25rem">
+          <input type="checkbox" id="e_toInvestigate" style="width:auto;margin:0;accent-color:var(--accent)">
+          <label for="e_toInvestigate" style="margin:0;text-transform:none;font-size:0.88rem;letter-spacing:0;font-weight:500;color:#4a4035;cursor:pointer">Merk som interessant å undersøke</label>
         </div>
       </div>
 
@@ -696,7 +714,7 @@
       <div id="personCompositions" style="margin-top:1rem"></div>
     </div>
 
-    <div class="card" style="margin-top:1.5rem">
+    <div class="card" id="newPersonCard" style="margin-top:1.5rem">
       <div class="card-title">Legg til ny komponist</div>
       <div class="row2">
         <div class="field">
@@ -1042,6 +1060,8 @@ document.getElementById('newForm').addEventListener('submit', async e => {
     const cat      = document.getElementById('n_category').value;
     const notes      = document.getElementById('n_notes').value.trim();
     const dedication = document.getElementById('n_dedication').value.trim();
+    const msLink   = document.getElementById('n_msLink').value.trim();
+    const toInvestigate = document.getElementById('n_toInvestigate').checked;
     const plate    = document.getElementById('n_plateNumber').value.trim();
     const pdfUrl   = document.getElementById('n_pdfUrl').value.trim();
     const mp3Url   = document.getElementById('n_mp3Url').value.trim();
@@ -1052,7 +1072,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
     const catName   = cat === 'pd' ? 'Eldre klassisk' : 'Eldre populærmusikk';
     const pubId     = await resolvePublisher('n_publisherSearch', nPubState, 'id');
 
-    const comp = await post('composition', { title, public_domain: pubDomain, year_composed: year||null, composition_notes: notes||null });
+    const comp = await post('composition', { title, public_domain: pubDomain, year_composed: year||null, composition_notes: notes||null, musescore_link: msLink||null, to_investigate: toInvestigate||null });
     const compId = comp.composition_id;
     if (!compId) throw new Error('Feil ved lagring.');
 
@@ -1072,6 +1092,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
 
 function resetNewForm() {
   document.getElementById('newForm').reset();
+  document.getElementById('n_toInvestigate').checked = false;
   nComposers.length = 0; nLyricists.length = 0; nPubState.id = null;
   ['n_composerTags','n_lyricistTags'].forEach(id => document.getElementById(id).innerHTML = '');
   ['n_composerSearch','n_lyricistSearch','n_publisherSearch'].forEach(id => document.getElementById(id).value = '');
@@ -1098,6 +1119,11 @@ document.getElementById('editMusescoreFilter').addEventListener('change', () => 
   if (q.length >= 2) searchCompositions(q);
 });
 
+document.getElementById('editInvestigateFilter').addEventListener('change', () => {
+  const q = document.getElementById('editSearch').value.trim();
+  if (q.length >= 2) searchCompositions(q);
+});
+
 document.getElementById('editSearchMode').addEventListener('change', () => {
   const mode = document.getElementById('editSearchMode').value;
   document.getElementById('editSearch').placeholder = mode === 'composer' ? 'Søk på komponist…' : 'Søk på tittel…';
@@ -1113,24 +1139,26 @@ document.getElementById('editSearch').addEventListener('input', () => {
 });
 
 async function searchCompositions(q) {
-  const approvalFilter = document.getElementById('editApprovalFilter').value;
-  const mode = document.getElementById('editSearchMode').value;
-  const container = document.getElementById('editSearchResults');
+  const approvalFilter    = document.getElementById('editApprovalFilter').value;
+  const mode              = document.getElementById('editSearchMode').value;
+  const container         = document.getElementById('editSearchResults');
   container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">Søker…</div>';
 
-  const msFilter = document.getElementById('editMusescoreFilter').value;
+  const msFilter          = document.getElementById('editMusescoreFilter').value;
+  const investigateFilter = document.getElementById('editInvestigateFilter').value;
   const approvalQ = approvalFilter === 'approved' ? '&approved=eq.true' : (approvalFilter === 'unapproved' || approvalFilter === 'hide_approved') ? '&approved=eq.false' : '';
-  const msQ = msFilter === 'with_link' ? '&musescore_link=not.is.null' : msFilter === 'without_link' ? '&musescore_link=is.null' : '';
+  const msQ       = msFilter === 'with_link' ? '&musescore_link=not.is.null' : msFilter === 'without_link' ? '&musescore_link=is.null' : '';
+  const invQ      = investigateFilter === 'investigate' ? '&to_investigate=eq.true' : '';
   let results = [];
 
   if (mode === 'title') {
-    results = await get(`/composition?title=ilike.*${encodeURIComponent(q)}*&select=composition_id,title,year_composed,public_domain,approved,musescore_link${approvalQ}${msQ}&limit=30&order=title`);
+    results = await get(`/composition?title=ilike.*${encodeURIComponent(q)}*&select=composition_id,title,year_composed,public_domain,approved,musescore_link,to_investigate${approvalQ}${msQ}${invQ}&limit=30&order=title`);
 
   } else {
     // Composer mode only — find persons, then their compositions
     const persons = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name&limit=10&order=last_name`);
     for (const p of persons) {
-      const cc = await get(`/composition_composer?person_id=eq.${p.person_id}&select=composition_id,composition(composition_id,title,year_composed,public_domain,approved,musescore_link)`);
+      const cc = await get(`/composition_composer?person_id=eq.${p.person_id}&select=composition_id,composition(composition_id,title,year_composed,public_domain,approved,musescore_link,to_investigate)`);
       cc.forEach(row => {
         if (row.composition && !results.find(r => r.composition_id === row.composition.composition_id)) {
           row.composition._composer = [p.first_name, p.last_name].filter(Boolean).join(' ');
@@ -1139,10 +1167,11 @@ async function searchCompositions(q) {
         }
       });
     }
-    if (approvalFilter === 'approved')                          results = results.filter(r => r.approved);
-    if (approvalFilter === 'unapproved' || approvalFilter === 'hide_approved') results = results.filter(r => !r.approved);
+    if (approvalFilter === 'approved')                                           results = results.filter(r => r.approved);
+    if (approvalFilter === 'unapproved' || approvalFilter === 'hide_approved')   results = results.filter(r => !r.approved);
     if (msFilter === 'with_link')    results = results.filter(r => r.musescore_link);
     if (msFilter === 'without_link') results = results.filter(r => !r.musescore_link);
+    if (investigateFilter === 'investigate') results = results.filter(r => r.to_investigate);
     results.sort((a,b) => a.title.localeCompare(b.title));
   }
 
@@ -1155,11 +1184,12 @@ async function searchCompositions(q) {
   results.slice(0, 30).forEach(c => {
     const d = document.createElement('div');
     d.className = 'result-row';
-    const approvedBadge = c.approved ? ' <span class="approved-badge">✓</span>' : '';
+    const approvedBadge    = c.approved      ? ' <span class="approved-badge">✓</span>' : '';
+    const investigateBadge = c.to_investigate ? ' <span style="font-size:0.75rem;background:#fff3cd;border:1px solid #f0c040;border-radius:2px;padding:0.1rem 0.4rem;color:#7a5c00;font-weight:500;vertical-align:middle">🔍 Undersøke</span>' : '';
     const composerMeta = c._composer
       ? ` · <span style="cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();openComposerScores(${c._composer_id||'null'},'${(c._composer||'').replace(/'/g,"\\'")}')">🎵 ${c._composer}</span>`
       : '';
-    d.innerHTML = `<div class="result-title">${c.title}${approvedBadge}</div>
+    d.innerHTML = `<div class="result-title">${c.title}${approvedBadge}${investigateBadge}</div>
                    <div class="result-meta">${c.year_composed || '—'} · ${c.public_domain === 'Yes' ? 'PD' : 'Opphavsrett'}${composerMeta}</div>`;
     if (c.approved) d.classList.add('is-approved');
     d.onclick = () => loadEditForm(c.composition_id);
@@ -1171,11 +1201,12 @@ async function loadEditForm(compId) {
   showMsg('editMsg', '', '');
   // Save search state so we can restore it on Back
   window._savedSearch = {
-    query:          document.getElementById('editSearch').value,
-    mode:           document.getElementById('editSearchMode').value,
-    approvalFilter: document.getElementById('editApprovalFilter').value,
-    msFilter:       document.getElementById('editMusescoreFilter').value,
-    results:        document.getElementById('editSearchResults').innerHTML
+    query:             document.getElementById('editSearch').value,
+    mode:              document.getElementById('editSearchMode').value,
+    approvalFilter:    document.getElementById('editApprovalFilter').value,
+    msFilter:          document.getElementById('editMusescoreFilter').value,
+    investigateFilter: document.getElementById('editInvestigateFilter').value,
+    results:           document.getElementById('editSearchResults').innerHTML
   };
   document.getElementById('editSearchResults').innerHTML = '';
   document.getElementById('editSearch').value = '';
@@ -1196,6 +1227,7 @@ async function loadEditForm(compId) {
   document.getElementById('e_notes').value       = c.composition_notes || '';
   document.getElementById('e_dedication').value  = c.dedication || '';
   document.getElementById('e_msNotes').value = c.musescore_notes || '';
+  document.getElementById('e_toInvestigate').checked = c.to_investigate || false;
 
   eComposers.length = 0;
   cc.forEach(row => eComposers.push({ person_id: row.person.person_id, name: [row.person.first_name, row.person.last_name].filter(Boolean).join(' ') }));
@@ -1297,6 +1329,7 @@ async function saveEdit() {
       musescore_link:    document.getElementById('e_msLink').value.trim() || null,
       composition_notes: document.getElementById('e_notes').value.trim() || null,
       dedication:        document.getElementById('e_dedication').value.trim() || null,
+      to_investigate:    document.getElementById('e_toInvestigate').checked,
     });
 
     // Update composers
@@ -1352,10 +1385,11 @@ function closeEditPanel() {
   // Restore previous search state
   if (window._savedSearch) {
     const s = window._savedSearch;
-    document.getElementById('editSearchMode').value       = s.mode;
-    document.getElementById('editApprovalFilter').value   = s.approvalFilter;
-    document.getElementById('editMusescoreFilter').value  = s.msFilter;
-    document.getElementById('editSearch').value           = s.query;
+    document.getElementById('editSearchMode').value        = s.mode;
+    document.getElementById('editApprovalFilter').value    = s.approvalFilter;
+    document.getElementById('editMusescoreFilter').value   = s.msFilter;
+    document.getElementById('editInvestigateFilter').value = s.investigateFilter || '';
+    document.getElementById('editSearch').value            = s.query;
     // Re-run search to reflect any approval changes
     if (s.query.length >= 2) {
       searchCompositions(s.query);
@@ -1492,6 +1526,7 @@ async function loadPersonForm(personId) {
   if (p.bio_url) { link.href = p.bio_url; link.style.display = 'block'; }
   else link.style.display = 'none';
   document.getElementById('personPanel').style.display = 'block';
+  document.getElementById('newPersonCard').style.display = 'none';
   document.getElementById('personSearchResults').innerHTML = '';
   document.getElementById('personSearch').value = '';
   document.getElementById('personCompositions').innerHTML = '';
@@ -1549,6 +1584,7 @@ async function loadPersonCompositions(personId) {
 
 function closePerson() {
   document.getElementById('personPanel').style.display = 'none';
+  document.getElementById('newPersonCard').style.display = 'block';
 }
 
 async function addNewPerson() {
