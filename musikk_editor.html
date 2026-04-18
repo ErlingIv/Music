@@ -910,9 +910,9 @@ function makeLookup(searchId, resultsId, tagsId, list, modalTarget) {
   });
 }
 
-function addTag(pid, name, tagsId, list) {
+function addTag(pid, name, tagsId, list, creditedAs) {
   if (list.find(x => x.person_id === pid)) return;
-  list.push({ person_id: pid, name });
+  list.push({ person_id: pid, name, credited_as: creditedAs || '' });
   renderTags(tagsId, list);
 }
 
@@ -922,17 +922,29 @@ function renderTags(tagsId, list) {
   list.forEach((p, i) => {
     const t = document.createElement('div');
     t.className = 'tag';
-    t.style.cssText = 'display:inline-flex;align-items:center;gap:0.3rem';
+    t.style.cssText = 'display:inline-flex;align-items:center;gap:0.35rem;padding:0.25rem 0.5rem;flex-wrap:wrap';
+
     const nameSpan = document.createElement('span');
     nameSpan.textContent = p.name;
     nameSpan.style.cursor = 'pointer';
     nameSpan.title = 'Vis komposisjoner';
     nameSpan.onclick = () => openComposerScores(p.person_id, p.name);
+
+    const creditedInput = document.createElement('input');
+    creditedInput.type = 'text';
+    creditedInput.value = p.credited_as || '';
+    creditedInput.placeholder = 'Kreditert som…';
+    creditedInput.title = 'Fyll inn hvis et annet navn er brukt på dette notebladet';
+    creditedInput.style.cssText = 'width:130px;font-size:0.78rem;padding:0.15rem 0.35rem;border:1px dashed var(--border);border-radius:3px;background:white;color:var(--ink);font-family:inherit;font-weight:400';
+    creditedInput.oninput = () => { list[i].credited_as = creditedInput.value.trim(); };
+
     const delBtn = document.createElement('button');
     delBtn.type = 'button';
     delBtn.textContent = '×';
     delBtn.onclick = () => { list.splice(i,1); renderTags(tagsId, list); };
+
     t.appendChild(nameSpan);
+    t.appendChild(creditedInput);
     t.appendChild(delBtn);
     c.appendChild(t);
   });
@@ -1076,8 +1088,8 @@ document.getElementById('newForm').addEventListener('submit', async e => {
     const compId = comp.composition_id;
     if (!compId) throw new Error('Feil ved lagring.');
 
-    for (const c of nComposers) await post('composition_composer', { composition_id: compId, person_id: c.person_id });
-    for (const l of nLyricists) await post('composition_lyricist', { composition_id: compId, person_id: l.person_id });
+    for (const c of nComposers) await post('composition_composer', { composition_id: compId, person_id: c.person_id, credited_as: c.credited_as || null });
+    for (const l of nLyricists) await post('composition_lyricist', { composition_id: compId, person_id: l.person_id, credited_as: l.credited_as || null });
 
     const source   = document.getElementById('n_source').value;
     await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, pdf_url: pdfUrl||null, mp3_url: mp3Url||null, source: source||null });
@@ -1212,9 +1224,9 @@ async function loadEditForm(compId) {
   document.getElementById('editSearch').value = '';
 
   const [comp, cc, cl, scores] = await Promise.all([
-    get(`/composition?composition_id=eq.${compId}&select=*`),  // includes approved and musescore_notes
-    get(`/composition_composer?composition_id=eq.${compId}&select=person_id,person(person_id,first_name,last_name,bio_url)`),  // bio_url for check links
-    get(`/composition_lyricist?composition_id=eq.${compId}&select=person_id,person(person_id,first_name,last_name)`),
+    get(`/composition?composition_id=eq.${compId}&select=*`),
+    get(`/composition_composer?composition_id=eq.${compId}&select=person_id,credited_as,person(person_id,first_name,last_name,bio_url)`),
+    get(`/composition_lyricist?composition_id=eq.${compId}&select=person_id,credited_as,person(person_id,first_name,last_name)`),
     get(`/score?composition_id=eq.${compId}&select=*,publisher(publisher_id,publisher_name)`)
   ]);
 
@@ -1230,11 +1242,11 @@ async function loadEditForm(compId) {
   document.getElementById('e_toInvestigate').checked = c.to_investigate || false;
 
   eComposers.length = 0;
-  cc.forEach(row => eComposers.push({ person_id: row.person.person_id, name: [row.person.first_name, row.person.last_name].filter(Boolean).join(' ') }));
+  cc.forEach(row => eComposers.push({ person_id: row.person.person_id, name: [row.person.first_name, row.person.last_name].filter(Boolean).join(' '), credited_as: row.credited_as || '' }));
   renderTags('e_composerTags', eComposers);
 
   eLyricists.length = 0;
-  cl.forEach(row => eLyricists.push({ person_id: row.person.person_id, name: [row.person.first_name, row.person.last_name].filter(Boolean).join(' ') }));
+  cl.forEach(row => eLyricists.push({ person_id: row.person.person_id, name: [row.person.first_name, row.person.last_name].filter(Boolean).join(' '), credited_as: row.credited_as || '' }));
   renderTags('e_lyricistTags', eLyricists);
 
   const score = scores[0];
@@ -1334,11 +1346,11 @@ async function saveEdit() {
 
     // Update composers
     await del('composition_composer', `composition_id=eq.${compId}`);
-    for (const c of eComposers) await post('composition_composer', { composition_id: parseInt(compId), person_id: c.person_id });
+    for (const c of eComposers) await post('composition_composer', { composition_id: parseInt(compId), person_id: c.person_id, credited_as: c.credited_as || null });
 
     // Update lyricists
     await del('composition_lyricist', `composition_id=eq.${compId}`);
-    for (const l of eLyricists) await post('composition_lyricist', { composition_id: parseInt(compId), person_id: l.person_id });
+    for (const l of eLyricists) await post('composition_lyricist', { composition_id: parseInt(compId), person_id: l.person_id, credited_as: l.credited_as || null });
 
     // Update score
     const pubId   = await resolvePublisher('e_publisherSearch', ePubState, 'id');
