@@ -691,8 +691,9 @@
             </div>
           </div>
           <div class="field">
-            <label>Pseudonym</label>
-            <input type="text" id="p_pseudonym">
+            <label>Pseudonymer</label>
+            <input type="text" id="p_pseudonym" placeholder="Kommaseparert, f.eks. J. Kunkel, Karl Kunkel">
+            <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem">Kommaseparert liste — brukes som nedtrekksliste ved komposisjonsskjemaet</div>
           </div>
         </div>
         <div class="field" style="display:flex;align-items:center;gap:0.6rem;margin-top:0.25rem">
@@ -889,7 +890,7 @@ function makeLookup(searchId, resultsId, tagsId, list, modalTarget) {
     const q = inp.value.trim();
     if (q.length < 2) { res.classList.remove('open'); return; }
     t = setTimeout(async () => {
-      const rows = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name,nationality,born,died&limit=12&order=last_name`);
+      const rows = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name,nationality,born,died,pseudonym&limit=12&order=last_name`);
       res.innerHTML = '';
       rows.forEach(p => {
         const name = [p.first_name, p.last_name].filter(Boolean).join(' ');
@@ -901,7 +902,7 @@ function makeLookup(searchId, resultsId, tagsId, list, modalTarget) {
         const left = document.createElement('span');
         left.innerHTML = `${flag} ${name}<span style="color:var(--muted);font-size:0.8rem">${years}</span>`;
         left.style.cursor = 'pointer';
-        left.onclick = () => { addTag(p.person_id, name, tagsId, list); inp.value = ''; res.classList.remove('open'); };
+        left.onclick = () => { addTag(p.person_id, name, tagsId, list, '', p.pseudonym || ''); inp.value = ''; res.classList.remove('open'); };
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.textContent = '🎵';
@@ -926,9 +927,9 @@ function makeLookup(searchId, resultsId, tagsId, list, modalTarget) {
   });
 }
 
-function addTag(pid, name, tagsId, list, creditedAs) {
+function addTag(pid, name, tagsId, list, creditedAs, pseudonyms) {
   if (list.find(x => x.person_id === pid)) return;
-  list.push({ person_id: pid, name, credited_as: creditedAs || '' });
+  list.push({ person_id: pid, name, credited_as: creditedAs || '', pseudonyms: pseudonyms || '' });
   renderTags(tagsId, list);
 }
 
@@ -946,13 +947,42 @@ function renderTags(tagsId, list) {
     nameSpan.title = 'Vis komposisjoner';
     nameSpan.onclick = () => openComposerScores(p.person_id, p.name);
 
-    const creditedInput = document.createElement('input');
-    creditedInput.type = 'text';
-    creditedInput.value = p.credited_as || '';
-    creditedInput.placeholder = 'Kreditert som…';
-    creditedInput.title = 'Fyll inn hvis et annet navn er brukt på dette notebladet';
-    creditedInput.style.cssText = 'width:130px;font-size:0.78rem;padding:0.15rem 0.35rem;border:1px dashed var(--border);border-radius:3px;background:white;color:var(--ink);font-family:inherit;font-weight:400';
-    creditedInput.oninput = () => { list[i].credited_as = creditedInput.value.trim(); };
+    // Build pseudonym dropdown
+    const pseudoList = (p.pseudonyms || '').split(',').map(s => s.trim()).filter(Boolean);
+    let creditedEl;
+    if (pseudoList.length > 0) {
+      creditedEl = document.createElement('select');
+      creditedEl.title = 'Velg pseudonym brukt på dette noteeksemplaret';
+      creditedEl.style.cssText = 'font-size:0.78rem;padding:0.15rem 0.35rem;border:1px dashed var(--border);border-radius:3px;background:white;color:var(--ink);font-family:inherit;font-weight:400;max-width:150px';
+      const blank = document.createElement('option');
+      blank.value = '';
+      blank.textContent = 'Brukt pseudonym…';
+      creditedEl.appendChild(blank);
+      pseudoList.forEach(ps => {
+        const opt = document.createElement('option');
+        opt.value = ps;
+        opt.textContent = ps;
+        if (ps === p.credited_as) opt.selected = true;
+        creditedEl.appendChild(opt);
+      });
+      if (p.credited_as && !pseudoList.includes(p.credited_as)) {
+        // credited_as was saved but not in pseudonym list — show it anyway
+        const opt = document.createElement('option');
+        opt.value = p.credited_as;
+        opt.textContent = p.credited_as;
+        opt.selected = true;
+        creditedEl.appendChild(opt);
+      }
+      creditedEl.onchange = () => { list[i].credited_as = creditedEl.value; };
+    } else {
+      creditedEl = document.createElement('input');
+      creditedEl.type = 'text';
+      creditedEl.value = p.credited_as || '';
+      creditedEl.placeholder = 'Brukt pseudonym…';
+      creditedEl.title = 'Fyll inn hvis et pseudonym er brukt på dette noteeksemplaret';
+      creditedEl.style.cssText = 'width:130px;font-size:0.78rem;padding:0.15rem 0.35rem;border:1px dashed var(--border);border-radius:3px;background:white;color:var(--ink);font-family:inherit;font-weight:400';
+      creditedEl.oninput = () => { list[i].credited_as = creditedEl.value.trim(); };
+    }
 
     const delBtn = document.createElement('button');
     delBtn.type = 'button';
@@ -960,7 +990,7 @@ function renderTags(tagsId, list) {
     delBtn.onclick = () => { list.splice(i,1); renderTags(tagsId, list); };
 
     t.appendChild(nameSpan);
-    t.appendChild(creditedInput);
+    t.appendChild(creditedEl);
     t.appendChild(delBtn);
     c.appendChild(t);
   });
@@ -1241,8 +1271,8 @@ async function loadEditForm(compId) {
 
   const [comp, cc, cl, scores] = await Promise.all([
     get(`/composition?composition_id=eq.${compId}&select=*`),
-    get(`/composition_composer?composition_id=eq.${compId}&select=person_id,credited_as,person(person_id,first_name,last_name,bio_url)`),
-    get(`/composition_lyricist?composition_id=eq.${compId}&select=person_id,credited_as,person(person_id,first_name,last_name)`),
+    get(`/composition_composer?composition_id=eq.${compId}&select=person_id,credited_as,person(person_id,first_name,last_name,bio_url,pseudonym)`),
+    get(`/composition_lyricist?composition_id=eq.${compId}&select=person_id,credited_as,person(person_id,first_name,last_name,pseudonym)`),
     get(`/score?composition_id=eq.${compId}&select=*,publisher(publisher_id,publisher_name)`)
   ]);
 
@@ -1258,11 +1288,11 @@ async function loadEditForm(compId) {
   document.getElementById('e_toInvestigate').checked = c.to_investigate || false;
 
   eComposers.length = 0;
-  cc.forEach(row => eComposers.push({ person_id: row.person.person_id, name: [row.person.first_name, row.person.last_name].filter(Boolean).join(' '), credited_as: row.credited_as || '' }));
+  cc.forEach(row => eComposers.push({ person_id: row.person.person_id, name: [row.person.first_name, row.person.last_name].filter(Boolean).join(' '), credited_as: row.credited_as || '', pseudonyms: row.person.pseudonym || '' }));
   renderTags('e_composerTags', eComposers);
 
   eLyricists.length = 0;
-  cl.forEach(row => eLyricists.push({ person_id: row.person.person_id, name: [row.person.first_name, row.person.last_name].filter(Boolean).join(' '), credited_as: row.credited_as || '' }));
+  cl.forEach(row => eLyricists.push({ person_id: row.person.person_id, name: [row.person.first_name, row.person.last_name].filter(Boolean).join(' '), credited_as: row.credited_as || '', pseudonyms: row.person.pseudonym || '' }));
   renderTags('e_lyricistTags', eLyricists);
 
   const score = scores[0];
