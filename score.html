@@ -95,42 +95,6 @@
   .media-section { margin-bottom: 1.5rem; }
   audio { width: 100%; margin-bottom: 0.5rem; }
 
-  .pdf-container {
-    width: 100%;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    overflow: hidden;
-    margin-bottom: 8px;
-    background: #525659;
-  }
-  .pdf-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    background: #383838;
-    color: #fff;
-    font-size: 0.82rem;
-    font-family: var(--body);
-  }
-  .pdf-toolbar button {
-    background: #555;
-    border: none;
-    color: #fff;
-    padding: 3px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.82rem;
-    font-family: var(--body);
-  }
-  .pdf-toolbar button:hover { background: #777; }
-  .pdf-toolbar button:disabled { opacity: 0.4; cursor: default; }
-  #pdfCanvas {
-    display: block;
-    margin: 0 auto;
-    max-width: 100%;
-  }
-  .pdf-loading { color: #ccc; text-align: center; padding: 2rem; font-size: 0.85rem; }
   .btn {
     display: inline-flex;
     align-items: center;
@@ -323,21 +287,9 @@ async function load() {
       ${score?.pdf_url ? `
         <div class="media-section">
           <p class="section-label">Score</p>
-          <div class="pdf-container">
-            <div class="pdf-toolbar">
-              <button onclick="prevPage()" id="prevBtn" disabled>◀ Prev</button>
-              <span id="pageInfo">Loading…</span>
-              <button onclick="nextPage()" id="nextBtn" disabled>Next ▶</button>
-              <span style="flex:1"></span>
-              <button onclick="zoomOut()">−</button>
-              <span id="zoomInfo">100%</span>
-              <button onclick="zoomIn()">+</button>
-            </div>
-            <div id="pdfViewer" style="overflow:auto;max-height:80vh;">
-              <div class="pdf-loading" id="pdfLoading">Loading score…</div>
-              <canvas id="pdfCanvas"></canvas>
-            </div>
-          </div>
+          <iframe src="${score.pdf_url}#toolbar=1&navpanes=1"
+            style="width:100%;height:85vh;min-height:500px;border:1px solid var(--border);border-radius:6px;display:block;margin-bottom:8px;">
+          </iframe>
           <a class="btn" href="${score.pdf_url}" target="_blank">
             <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
               <path d="M2 12h10M7 2v7M4 6l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -354,6 +306,7 @@ async function load() {
           Link to MuseScore
         </a>` : ''}
     `;
+
   } catch(e) {
     document.getElementById('content').innerHTML =
       `<p class="error-state">Error: ${e.message}</p>`;
@@ -361,6 +314,7 @@ async function load() {
 }
 
 load();
+
 
 let _translated = false;
 
@@ -403,62 +357,6 @@ async function translateNotes(btn, originalText) {
     btn.textContent = 'Translation failed';
     btn.disabled = false;
   }
-}
-</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script>
-let _pdfDoc    = null;
-let _pageNum   = 1;
-let _scale     = 1.5;
-let _pdfUrl    = null;
-
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-function initPdfViewer(url) {
-  _pdfUrl = url;
-  pdfjsLib.getDocument(url).promise.then(doc => {
-    _pdfDoc = doc;
-    document.getElementById('pdfLoading').style.display = 'none';
-    document.getElementById('prevBtn').disabled = true;
-    document.getElementById('nextBtn').disabled = doc.numPages <= 1;
-    renderPage(_pageNum);
-  }).catch(err => {
-    document.getElementById('pdfLoading').textContent = 'Could not load PDF: ' + err.message;
-  });
-}
-
-function renderPage(num) {
-  _pdfDoc.getPage(num).then(page => {
-    const canvas  = document.getElementById('pdfCanvas');
-    const ctx     = canvas.getContext('2d');
-    const viewport = page.getViewport({ scale: _scale });
-    canvas.width  = viewport.width;
-    canvas.height = viewport.height;
-    page.render({ canvasContext: ctx, viewport }).promise.then(() => {
-      document.getElementById('pageInfo').textContent =
-        `Page ${num} of ${_pdfDoc.numPages}`;
-      document.getElementById('prevBtn').disabled = num <= 1;
-      document.getElementById('nextBtn').disabled = num >= _pdfDoc.numPages;
-      document.getElementById('zoomInfo').textContent =
-        Math.round(_scale * 100 / 1.5) + '%';
-    });
-  });
-}
-
-function prevPage() {
-  if (_pageNum > 1) { _pageNum--; renderPage(_pageNum); }
-}
-function nextPage() {
-  if (_pageNum < _pdfDoc.numPages) { _pageNum++; renderPage(_pageNum); }
-}
-function zoomIn() {
-  _scale = Math.min(_scale + 0.3, 4.5);
-  renderPage(_pageNum);
-}
-function zoomOut() {
-  _scale = Math.max(_scale - 0.3, 0.6);
-  renderPage(_pageNum);
 }
 </script>
 </body>
