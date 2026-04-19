@@ -15,22 +15,12 @@
     --accent:    #8b3a1e;
     --accent2:   #2a5c45;
     --border:    #d4cdc0;
-    --no-color:  #c0392b;
-    --se-color:  #006aa7;
-    --dk-color:  #c60c30;
-    --fi-color:  #003580;
     --serif:     'Playfair Display', Georgia, serif;
     --body:      'Source Serif 4', Georgia, serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
-
-  body {
-    font-family: var(--body);
-    background: var(--bg);
-    color: var(--ink);
-    min-height: 100vh;
-  }
+  body { font-family: var(--body); background: var(--bg); color: var(--ink); min-height: 100vh; }
 
   /* ── Header ── */
   header {
@@ -93,17 +83,49 @@
   .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
   .tab-flag { margin-right: 0.4rem; font-size: 1rem; }
 
-  /* ── Main layout ── */
-  main {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 2rem 1.5rem 4rem;
+  /* ── Filters bar ── */
+  .filters-bar {
+    display: flex;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
   }
+  .filter-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 5px 14px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-family: var(--body);
+    color: var(--muted);
+    background: var(--paper);
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .filter-toggle:hover { border-color: var(--accent); color: var(--ink); }
+  .filter-toggle.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .filter-toggle.active-female {
+    background: #7a3a7a;
+    border-color: #7a3a7a;
+    color: #fff;
+  }
+
+  /* ── Main layout ── */
+  main { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
 
   /* ── Section panels ── */
   .section-panel { display: none; }
   .section-panel.active { display: block; }
-
   .section-header {
     display: flex;
     align-items: baseline;
@@ -113,137 +135,54 @@
     border-bottom: 1px solid var(--border);
   }
   .section-flag { font-size: 1.8rem; line-height: 1; }
-  .section-title {
-    font-family: var(--serif);
-    font-size: 1.5rem;
-    font-weight: 500;
-    color: var(--ink);
-  }
-  .section-count {
-    font-size: 0.82rem;
-    color: var(--muted);
-    letter-spacing: 0.04em;
-  }
+  .section-title { font-family: var(--serif); font-size: 1.5rem; font-weight: 500; color: var(--ink); }
+  .section-count { font-size: 0.82rem; color: var(--muted); letter-spacing: 0.04em; }
 
   /* ── Alpha index bar ── */
-  .alpha-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px;
-    margin-bottom: 1.5rem;
-  }
+  .alpha-bar { display: flex; flex-wrap: wrap; gap: 2px; margin-bottom: 1.5rem; }
   .alpha-btn {
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.78rem;
-    font-family: var(--body);
-    font-weight: 500;
-    color: var(--muted);
-    background: var(--paper);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.15s;
-    text-transform: uppercase;
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.78rem; font-family: var(--body); font-weight: 500;
+    color: var(--muted); background: var(--paper);
+    border: 1px solid var(--border); border-radius: 4px;
+    cursor: pointer; transition: all 0.15s; text-transform: uppercase;
   }
   .alpha-btn:hover { background: var(--faint); color: var(--ink); }
   .alpha-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
   .alpha-btn.disabled { opacity: 0.3; cursor: default; pointer-events: none; }
 
   /* ── Composer grid ── */
-  .composer-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 0.6rem;
-  }
+  .composer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.6rem; }
   .composer-card {
-    background: var(--paper);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 0.7rem 0.9rem;
-    cursor: pointer;
-    transition: border-color 0.15s, box-shadow 0.15s;
-    text-decoration: none;
-    display: block;
+    background: var(--paper); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.7rem 0.9rem; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s;
+    text-decoration: none; display: block;
   }
-  .composer-card:hover {
-    border-color: var(--accent);
-    box-shadow: 0 2px 8px rgba(139,58,30,0.1);
-  }
-  .composer-name {
-    font-family: var(--serif);
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: var(--ink);
-    line-height: 1.3;
-  }
-  .composer-meta {
-    font-size: 0.78rem;
-    color: var(--muted);
-    margin-top: 2px;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-  }
-  .female-badge {
-    font-size: 0.68rem;
-    background: #f0e6f0;
-    color: #7a3a7a;
-    border: 1px solid #d4b8d4;
-    border-radius: 3px;
-    padding: 1px 5px;
-    letter-spacing: 0.03em;
-  }
-  .score-count {
-    font-size: 0.75rem;
-    color: var(--accent2);
-  }
+  .composer-card:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(139,58,30,0.1); }
+  .composer-name { font-family: var(--serif); font-size: 0.95rem; font-weight: 500; color: var(--ink); line-height: 1.3; }
+  .composer-meta { font-size: 0.78rem; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+  .female-badge { font-size: 0.68rem; background: #f0e6f0; color: #7a3a7a; border: 1px solid #d4b8d4; border-radius: 3px; padding: 1px 5px; }
+  .media-badge { font-size: 0.68rem; background: #e6f0ea; color: #2a5c45; border: 1px solid #b8d4be; border-radius: 3px; padding: 1px 5px; }
+  .score-count { font-size: 0.75rem; color: var(--accent2); }
 
-  /* ── Letter group heading ── */
+  /* ── Letter group ── */
   .letter-group { margin-bottom: 1.5rem; }
   .letter-heading {
-    font-family: var(--serif);
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--faint);
-    border-left: 3px solid var(--accent);
-    padding-left: 0.6rem;
-    margin-bottom: 0.6rem;
-    line-height: 1;
-    color: var(--accent);
-    opacity: 0.6;
+    font-family: var(--serif); font-size: 1.6rem; font-weight: 700;
+    border-left: 3px solid var(--accent); padding-left: 0.6rem;
+    margin-bottom: 0.6rem; line-height: 1; color: var(--accent); opacity: 0.6;
   }
 
-  /* ── Loading / empty states ── */
-  .loading-state {
-    text-align: center;
-    padding: 3rem;
-    color: var(--muted);
-    font-size: 0.9rem;
-    letter-spacing: 0.05em;
-  }
-  .loading-dots::after {
-    content: '...';
-    animation: dots 1.2s steps(4, end) infinite;
-  }
+  /* ── Loading / empty ── */
+  .loading-state { text-align: center; padding: 3rem; color: var(--muted); font-size: 0.9rem; letter-spacing: 0.05em; }
+  .loading-dots::after { content: '...'; animation: dots 1.2s steps(4, end) infinite; }
   @keyframes dots {
-    0%, 20% { content: '.'; }
-    40% { content: '..'; }
-    60%, 100% { content: '...'; }
+    0%, 20% { content: '.'; } 40% { content: '..'; } 60%, 100% { content: '...'; }
   }
 
   /* ── Footer ── */
-  footer {
-    text-align: center;
-    padding: 1.5rem;
-    font-size: 0.78rem;
-    color: var(--muted);
-    border-top: 1px solid var(--border);
-    letter-spacing: 0.04em;
-  }
+  footer { text-align: center; padding: 1.5rem; font-size: 0.78rem; color: var(--muted); border-top: 1px solid var(--border); letter-spacing: 0.04em; }
 </style>
 </head>
 <body>
@@ -254,19 +193,16 @@
 </header>
 
 <nav>
-  <div class="tab active" data-section="no" onclick="switchTab('no')">
-    <span class="tab-flag">🇳🇴</span>Norwegian
-  </div>
-  <div class="tab" data-section="nordic" onclick="switchTab('nordic')">
-    <span class="tab-flag">🏴</span>Nordic
-  </div>
-  <div class="tab" data-section="others" onclick="switchTab('others')">
-    <span class="tab-flag">🌍</span>Others
-  </div>
-  <div class="tab" data-section="unknown" onclick="switchTab('unknown')">
-    <span class="tab-flag">❓</span>Unknown
-  </div>
+  <div class="tab active" data-section="no" onclick="switchTab('no')"><span class="tab-flag">🇳🇴</span>Norwegian</div>
+  <div class="tab" data-section="nordic" onclick="switchTab('nordic')"><span class="tab-flag">🏴</span>Nordic</div>
+  <div class="tab" data-section="others" onclick="switchTab('others')"><span class="tab-flag">🌍</span>Others</div>
+  <div class="tab" data-section="unknown" onclick="switchTab('unknown')"><span class="tab-flag">❓</span>Unknown</div>
 </nav>
+
+<div class="filters-bar">
+  <button class="filter-toggle" id="toggle-female" onclick="toggleFilter('female')">♀ Female composers</button>
+  <button class="filter-toggle" id="toggle-media" onclick="toggleFilter('media')">🎵 Has PDF / MP3</button>
+</div>
 
 <main>
   <!-- Norwegian -->
@@ -279,7 +215,6 @@
     <div class="alpha-bar" id="alpha-no"></div>
     <div id="composers-no"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
   </div>
-
   <!-- Nordic -->
   <div class="section-panel" id="panel-nordic">
     <div class="section-header">
@@ -290,7 +225,6 @@
     <div class="alpha-bar" id="alpha-nordic"></div>
     <div id="composers-nordic"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
   </div>
-
   <!-- Others -->
   <div class="section-panel" id="panel-others">
     <div class="section-header">
@@ -301,23 +235,20 @@
     <div class="alpha-bar" id="alpha-others"></div>
     <div id="composers-others"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
   </div>
-
-  <!-- Unknown nationality -->
+  <!-- Unknown -->
   <div class="section-panel" id="panel-unknown">
     <div class="section-header">
       <span class="section-flag">❓</span>
       <span class="section-title">Nationality Unknown</span>
       <span class="section-count" id="count-unknown"></span>
     </div>
-    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;">These composers have no nationality set. Add a country code in the admin tool and they will move to the correct section.</p>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;">These composers have no nationality set.</p>
     <div class="alpha-bar" id="alpha-unknown"></div>
     <div id="composers-unknown"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
   </div>
 </main>
 
-<footer>
-  Music Scores from My Collection · Historical Nordic Sheet Music · Public Domain
-</footer>
+<footer>Music Scores from My Collection · Historical Nordic Sheet Music · Public Domain</footer>
 
 <script>
 const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
@@ -325,20 +256,23 @@ const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
 const NORDIC = ['SE', 'DK', 'FI', 'IS'];
-const FLAGS  = { SE: '🇸🇪', DK: '🇩🇰', FI: '🇫🇮', IS: '🇮🇸',
-                 DE: '🇩🇪', US: '🇺🇸', FR: '🇫🇷', GB: '🇬🇧',
-                 IT: '🇮🇹', AT: '🇦🇹', BE: '🇧🇪', HU: '🇭🇺',
-                 AU: '🇦🇺', CZ: '🇨🇿', PL: '🇵🇱', VE: '🇻🇪' };
+const FLAGS  = { SE:'🇸🇪', DK:'🇩🇰', FI:'🇫🇮', IS:'🇮🇸', DE:'🇩🇪', US:'🇺🇸',
+                 FR:'🇫🇷', GB:'🇬🇧', IT:'🇮🇹', AT:'🇦🇹', BE:'🇧🇪', HU:'🇭🇺',
+                 AU:'🇦🇺', CZ:'🇨🇿', PL:'🇵🇱', VE:'🇻🇪' };
 
-let allComposers = { no: [], nordic: [], others: [], unknown: [] };
-let activeSection = 'no';
-let activeLetters = { no: 'ALL', nordic: 'ALL', others: 'ALL', unknown: 'ALL' };
+let allComposers   = { no: [], nordic: [], others: [], unknown: [] };
+let activeSection  = 'no';
+let activeLetters  = { no: 'ALL', nordic: 'ALL', others: 'ALL', unknown: 'ALL' };
+let filterFemale   = false;
+let filterMedia    = false;
+let mediaPersonIds = new Set(); // persons with at least one pdf/mp3
 
-// ── Fetch all composers with at least one public domain score ─────────────────
+// ── Fetch ─────────────────────────────────────────────────────────────────────
 
 async function fetchAllComposers() {
-  // 1. Get all person_ids linked to public domain compositions
+  // 1. Get person_ids linked to public domain + musescore compositions
   let pdIds = new Set();
+  const countMap = {};
   let offset = 0;
   while (true) {
     const r = await fetch(
@@ -348,24 +282,8 @@ async function fetchAllComposers() {
     const rows = await r.json();
     if (!rows.length) break;
     rows.forEach(row => {
-      if (row.composition?.public_domain === 'Yes' && row.composition?.musescore_link) pdIds.add(row.person_id);
-    });
-    if (rows.length < 1000) break;
-    offset += 1000;
-  }
-
-  // 2. Get score counts per person for public domain compositions
-  const countMap = {};
-  offset = 0;
-  while (true) {
-    const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition_composer?select=person_id,composition:composition_id(public_domain,musescore_link)&limit=1000&offset=${offset}`,
-      { headers: H }
-    );
-    const rows = await r.json();
-    if (!rows.length) break;
-    rows.forEach(row => {
       if (row.composition?.public_domain === 'Yes' && row.composition?.musescore_link) {
+        pdIds.add(row.person_id);
         countMap[row.person_id] = (countMap[row.person_id] || 0) + 1;
       }
     });
@@ -373,7 +291,31 @@ async function fetchAllComposers() {
     offset += 1000;
   }
 
-  // 3. Fetch persons — both with and without nationality
+  // 2. Get person_ids who have scores with pdf_url or mp3_url
+  offset = 0;
+  while (true) {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/score?select=composition_id,pdf_url,mp3_url&or=(pdf_url.not.is.null,mp3_url.not.is.null)&limit=1000&offset=${offset}`,
+      { headers: H }
+    );
+    const rows = await r.json();
+    if (!rows.length) break;
+    // get composers for these composition_ids
+    const compIds = [...new Set(rows.map(r => r.composition_id))];
+    for (let i = 0; i < compIds.length; i += 200) {
+      const chunk = compIds.slice(i, i + 200).join(',');
+      const cr = await fetch(
+        `${SUPABASE_URL}/rest/v1/composition_composer?composition_id=in.(${chunk})&select=person_id`,
+        { headers: H }
+      );
+      const ccRows = await cr.json();
+      ccRows.forEach(row => mediaPersonIds.add(row.person_id));
+    }
+    if (rows.length < 1000) break;
+    offset += 1000;
+  }
+
+  // 3. Fetch persons
   const pdIdsArr = [...pdIds];
   let persons = [];
   for (let i = 0; i < pdIdsArr.length; i += 200) {
@@ -382,72 +324,67 @@ async function fetchAllComposers() {
       `${SUPABASE_URL}/rest/v1/person?person_id=in.(${chunk})&select=person_id,first_name,last_name,born,died,nationality,is_female_norwegian&order=last_name.asc`,
       { headers: H }
     );
-    const rows = await r.json();
-    persons = persons.concat(rows);
+    persons = persons.concat(await r.json());
   }
 
   // 4. Sort into sections
   persons.forEach(p => {
-    p.score_count = countMap[p.person_id] || 0;
-    if (!p.nationality) {
-      allComposers.unknown.push(p);
-    } else if (p.nationality === 'NO') {
-      allComposers.no.push(p);
-    } else if (NORDIC.includes(p.nationality)) {
-      allComposers.nordic.push(p);
-    } else {
-      allComposers.others.push(p);
-    }
+    p.score_count  = countMap[p.person_id] || 0;
+    p.has_media    = mediaPersonIds.has(p.person_id);
+    p.is_female    = p.is_female_norwegian === true || p.is_female_norwegian === 'K';
+    if (!p.nationality)              allComposers.unknown.push(p);
+    else if (p.nationality === 'NO') allComposers.no.push(p);
+    else if (NORDIC.includes(p.nationality)) allComposers.nordic.push(p);
+    else                             allComposers.others.push(p);
   });
 
-  // Sort each section by last_name
-  ['no', 'nordic', 'others', 'unknown'].forEach(sec => {
+  ['no','nordic','others','unknown'].forEach(sec => {
     allComposers[sec].sort((a, b) => a.last_name.localeCompare(b.last_name, 'no'));
   });
 
-  renderSection('no');
-  renderSection('nordic');
-  renderSection('others');
-  renderSection('unknown');
+  renderAll();
 }
 
-// ── Render a section ──────────────────────────────────────────────────────────
+// ── Render ────────────────────────────────────────────────────────────────────
+
+function renderAll() {
+  ['no','nordic','others','unknown'].forEach(renderSection);
+}
 
 function renderSection(sec) {
-  const composers = allComposers[sec];
+  let composers = allComposers[sec];
+
+  // Apply filters
+  if (filterFemale) composers = composers.filter(c => c.is_female);
+  if (filterMedia)  composers = composers.filter(c => c.has_media);
+
   const activeLetter = activeLetters[sec];
 
   // Update count
-  document.getElementById(`count-no`);
   document.getElementById(`count-${sec}`).textContent =
     `${composers.length} composer${composers.length !== 1 ? 's' : ''}`;
 
-  // Build alphabet index from available first letters
-  const letters = [...new Set(composers.map(c => c.last_name[0].toUpperCase()))].sort();
-  const alphaBar = document.getElementById(`alpha-${sec}`);
+  // Build alpha bar from filtered list
+  const letters   = [...new Set(composers.map(c => c.last_name[0]?.toUpperCase()).filter(Boolean))].sort();
+  const alphaBar  = document.getElementById(`alpha-${sec}`);
   const allLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ'.split('');
-
   alphaBar.innerHTML = `
-    <div class="alpha-btn ${activeLetter === 'ALL' ? 'active' : ''}"
-         onclick="filterLetter('${sec}', 'ALL')">All</div>
+    <div class="alpha-btn ${activeLetter === 'ALL' ? 'active' : ''}" onclick="filterLetter('${sec}','ALL')">All</div>
     ${allLetters.map(l => `
       <div class="alpha-btn ${!letters.includes(l) ? 'disabled' : ''} ${activeLetter === l ? 'active' : ''}"
-           onclick="filterLetter('${sec}', '${l}')">
-        ${l}
-      </div>`).join('')}
-  `;
+           onclick="filterLetter('${sec}','${l}')">${l}</div>`).join('')}`;
 
-  // Filter composers
+  // Letter filter
   const filtered = activeLetter === 'ALL'
     ? composers
-    : composers.filter(c => c.last_name[0].toUpperCase() === activeLetter);
+    : composers.filter(c => c.last_name[0]?.toUpperCase() === activeLetter);
 
-  // Group by first letter
+  // Group by letter
   const groups = {};
   filtered.forEach(c => {
-    const letter = c.last_name[0].toUpperCase();
-    if (!groups[letter]) groups[letter] = [];
-    groups[letter].push(c);
+    const l = c.last_name[0]?.toUpperCase() || '?';
+    if (!groups[l]) groups[l] = [];
+    groups[l].push(c);
   });
 
   const container = document.getElementById(`composers-${sec}`);
@@ -457,33 +394,46 @@ function renderSection(sec) {
   }
 
   container.innerHTML = Object.entries(groups).map(([letter, list]) => `
-    <div class="letter-group" id="letter-${sec}-${letter}">
+    <div class="letter-group">
       <div class="letter-heading">${letter}</div>
-      <div class="composer-grid">
-        ${list.map(c => composerCard(c)).join('')}
-      </div>
-    </div>
-  `).join('');
+      <div class="composer-grid">${list.map(composerCard).join('')}</div>
+    </div>`).join('');
 }
 
 function composerCard(c) {
-  const years = [c.born, c.died].filter(Boolean).join('–');
-  const flag  = c.nationality !== 'NO' ? (FLAGS[c.nationality] || '') : '';
-  const female = c.is_female_norwegian === true || c.is_female_norwegian === 'K'
-    ? '<span class="female-badge">♀</span>' : '';
+  const years  = [c.born, c.died].filter(Boolean).join('–');
+  const flag   = c.nationality !== 'NO' ? (FLAGS[c.nationality] || '') : '';
+  const female = c.is_female ? '<span class="female-badge">♀</span>' : '';
+  const media  = c.has_media ? '<span class="media-badge">🎵</span>' : '';
   return `
     <a class="composer-card" href="composer.html?id=${c.person_id}">
       <div class="composer-name">${c.last_name}, ${c.first_name} ${flag}</div>
       <div class="composer-meta">
         ${years ? `<span>${years}</span>` : ''}
-        ${female}
+        ${female}${media}
         <span class="score-count">${c.score_count} score${c.score_count !== 1 ? 's' : ''}</span>
       </div>
-    </a>
-  `;
+    </a>`;
 }
 
-// ── Tab switching ─────────────────────────────────────────────────────────────
+// ── Filters ───────────────────────────────────────────────────────────────────
+
+function toggleFilter(type) {
+  if (type === 'female') {
+    filterFemale = !filterFemale;
+    const btn = document.getElementById('toggle-female');
+    btn.classList.toggle('active-female', filterFemale);
+  } else {
+    filterMedia = !filterMedia;
+    const btn = document.getElementById('toggle-media');
+    btn.classList.toggle('active', filterMedia);
+  }
+  // Reset letter filters when toggling
+  ['no','nordic','others','unknown'].forEach(s => activeLetters[s] = 'ALL');
+  renderAll();
+}
+
+// ── Tab / letter ──────────────────────────────────────────────────────────────
 
 function switchTab(sec) {
   activeSection = sec;
@@ -493,12 +443,9 @@ function switchTab(sec) {
   document.getElementById(`panel-${sec}`).classList.add('active');
 }
 
-// ── Letter filter ─────────────────────────────────────────────────────────────
-
 function filterLetter(sec, letter) {
   activeLetters[sec] = letter;
   renderSection(sec);
-  // Scroll to top of section
   document.getElementById(`panel-${sec}`).scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
