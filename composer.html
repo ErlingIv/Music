@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Composer — Music Scores from My Collection</title>
+<title>Composer — Norske Musikknoter</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=Source+Serif+4:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -189,7 +189,7 @@
 
 <header class="site-header">
   <a class="back-link" href="index.html">← Back</a>
-  <a class="site-name" href="index.html">Music Scores from My Collection</a>
+  <a class="site-name" href="index.html">Norske Musikknoter</a>
 </header>
 
 <main>
@@ -224,7 +224,7 @@ async function load() {
     );
     const person = (await pR.json())[0];
     if (!person) throw new Error('Composer not found');
-    document.title = `${person.first_name} ${person.last_name} — Music Scores from My Collection`;
+    document.title = `${person.first_name} ${person.last_name} — Norske Musikknoter`;
 
     // 2. Fetch composition_ids for this composer
     const ccR = await fetch(
@@ -285,15 +285,20 @@ async function load() {
       <div class="scores-heading">
         Public Domain Scores
         <span class="scores-heading-count">${compositions.length} work${compositions.length !== 1 ? 's' : ''}</span>
+        <label style="margin-left:auto;font-size:0.78rem;color:var(--muted);display:flex;align-items:center;gap:0.4rem;font-weight:400;cursor:pointer;">
+          <input type="checkbox" id="filterMedia" onchange="filterScores()" style="width:auto;margin:0;accent-color:var(--accent);">
+          With PDF / MP3 only
+        </label>
       </div>
 
       ${compositions.length === 0
         ? '<div class="loading-state">No public domain scores found.</div>'
-        : `<div class="score-list">
+        : `<div class="score-list" id="scoreList">
             ${compositions.map(c => {
               const s = scoreMap[c.composition_id];
+              const hasMedia = !!(s?.pdf_url || s?.mp3_url);
               return `
-                <a class="score-row" href="score.html?id=${c.composition_id}">
+                <a class="score-row" href="score.html?id=${c.composition_id}" data-has-media="${hasMedia}">
                   <div>
                     <div class="score-title">${c.title}</div>
                     <div class="score-meta">
@@ -314,6 +319,13 @@ async function load() {
     document.getElementById('content').innerHTML =
       `<p class="error-state">Error: ${e.message}</p>`;
   }
+}
+
+function filterScores() {
+  const checked = document.getElementById('filterMedia').checked;
+  document.querySelectorAll('#scoreList .score-row').forEach(row => {
+    row.style.display = (!checked || row.dataset.hasMedia === 'true') ? '' : 'none';
+  });
 }
 
 load();

@@ -235,6 +235,28 @@
     60%, 100% { content: '...'; }
   }
 
+  /* ── Toggle buttons ── */
+  .filter-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  .toggle-btn {
+    padding: 5px 14px;
+    font-size: 0.8rem;
+    font-family: var(--body);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--paper);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.03em;
+  }
+  .toggle-btn:hover { border-color: var(--accent); color: var(--ink); }
+  .toggle-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
   /* ── Footer ── */
   footer {
     text-align: center;
@@ -277,6 +299,10 @@
       <span class="section-title">Norwegian Composers</span>
       <span class="section-count" id="count-no"></span>
     </div>
+    <div class="filter-bar">
+      <button class="toggle-btn" id="toggle-media-no" onclick="toggleFilter('no','media')">🎵 With PDF / MP3</button>
+      <button class="toggle-btn" id="toggle-female-no" onclick="toggleFilter('no','female')">♀ Female composers</button>
+    </div>
     <div class="alpha-bar" id="alpha-no"></div>
     <div id="composers-no"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
   </div>
@@ -288,6 +314,10 @@
       <span class="section-title">Nordic Composers</span>
       <span class="section-count" id="count-nordic"></span>
     </div>
+    <div class="filter-bar">
+      <button class="toggle-btn" id="toggle-media-nordic" onclick="toggleFilter('nordic','media')">🎵 With PDF / MP3</button>
+      <button class="toggle-btn" id="toggle-female-nordic" onclick="toggleFilter('nordic','female')">♀ Female composers</button>
+    </div>
     <div class="alpha-bar" id="alpha-nordic"></div>
     <div id="composers-nordic"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
   </div>
@@ -298,6 +328,10 @@
       <span class="section-flag">🌍</span>
       <span class="section-title">Other Composers</span>
       <span class="section-count" id="count-others"></span>
+    </div>
+    <div class="filter-bar">
+      <button class="toggle-btn" id="toggle-media-others" onclick="toggleFilter('others','media')">🎵 With PDF / MP3</button>
+      <button class="toggle-btn" id="toggle-female-others" onclick="toggleFilter('others','female')">♀ Female composers</button>
     </div>
     <div class="alpha-bar" id="alpha-others"></div>
     <div id="composers-others"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
@@ -334,6 +368,12 @@ const FLAGS  = { SE: '🇸🇪', DK: '🇩🇰', FI: '🇫🇮', IS: '🇮🇸',
 let allComposers = { no: [], nordic: [], others: [], unknown: [] };
 let activeSection = 'no';
 let activeLetters = { no: 'ALL', nordic: 'ALL', others: 'ALL', unknown: 'ALL' };
+let activeFilters = {
+  no:      { media: false, female: false },
+  nordic:  { media: false, female: false },
+  others:  { media: false, female: false },
+  unknown: { media: false, female: false },
+};
 
 // ── Fetch all composers with at least one public domain score ─────────────────
 
@@ -387,9 +427,45 @@ async function fetchAllComposers() {
     persons = persons.concat(rows);
   }
 
-  // 4. Sort into sections
+  // 4. Build a set of composition_ids that have pdf or mp3
+  const mediaCompIds = new Set();
+  let mOffset = 0;
+  while (true) {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/score?select=composition_id,pdf_url,mp3_url&limit=1000&offset=${mOffset}`,
+      { headers: H }
+    );
+    const rows = await r.json();
+    if (!rows.length) break;
+    rows.forEach(s => {
+      if (s.pdf_url || s.mp3_url) mediaCompIds.add(s.composition_id);
+    });
+    if (rows.length < 1000) break;
+    mOffset += 1000;
+  }
+
+  // 5. Build set of person_ids who have at least one media composition
+  const mediaPersonIds = new Set();
+  let ccOffset = 0;
+  while (true) {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/composition_composer?select=person_id,composition_id&limit=1000&offset=${ccOffset}`,
+      { headers: H }
+    );
+    const rows = await r.json();
+    if (!rows.length) break;
+    rows.forEach(row => {
+      if (mediaCompIds.has(row.composition_id)) mediaPersonIds.add(row.person_id);
+    });
+    if (rows.length < 1000) break;
+    ccOffset += 1000;
+  }
+
+  // 6. Sort into sections
   persons.forEach(p => {
     p.score_count = countMap[p.person_id] || 0;
+    p.has_media   = mediaPersonIds.has(p.person_id);
+    p.is_female   = p.is_female_norwegian === true || p.is_female_norwegian === 'K';
     if (!p.nationality) {
       allComposers.unknown.push(p);
     } else if (p.nationality === 'NO') {
@@ -439,9 +515,13 @@ function renderSection(sec) {
   `;
 
   // Filter composers
-  const filtered = activeLetter === 'ALL'
+  let filtered = activeLetter === 'ALL'
     ? composers
     : composers.filter(c => c.last_name[0].toUpperCase() === activeLetter);
+
+  // Apply toggles
+  if (activeFilters[sec].media)  filtered = filtered.filter(c => c.has_media);
+  if (activeFilters[sec].female) filtered = filtered.filter(c => c.is_female);
 
   // Group by first letter
   const groups = {};
@@ -468,20 +548,29 @@ function renderSection(sec) {
 }
 
 function composerCard(c) {
-  const years = [c.born, c.died].filter(Boolean).join('–');
-  const flag  = c.nationality !== 'NO' ? (FLAGS[c.nationality] || '') : '';
-  const female = c.is_female_norwegian === true || c.is_female_norwegian === 'K'
-    ? '<span class="female-badge">♀</span>' : '';
+  const years  = [c.born, c.died].filter(Boolean).join('–');
+  const flag   = c.nationality !== 'NO' ? (FLAGS[c.nationality] || '') : '';
+  const female = c.is_female ? '<span class="female-badge">♀</span>' : '';
+  const media  = c.has_media ? '<span class="female-badge" style="background:#e6f0ea;color:#2a5c45;border-color:#b8d4c0;">🎵</span>' : '';
   return `
     <a class="composer-card" href="composer.html?id=${c.person_id}">
       <div class="composer-name">${c.last_name}, ${c.first_name} ${flag}</div>
       <div class="composer-meta">
         ${years ? `<span>${years}</span>` : ''}
-        ${female}
+        ${female}${media}
         <span class="score-count">${c.score_count} score${c.score_count !== 1 ? 's' : ''}</span>
       </div>
     </a>
   `;
+}
+
+// ── Toggle filters ────────────────────────────────────────────────────────────
+
+function toggleFilter(sec, type) {
+  activeFilters[sec][type] = !activeFilters[sec][type];
+  const btn = document.getElementById(`toggle-${type}-${sec}`);
+  btn.classList.toggle('active', activeFilters[sec][type]);
+  renderSection(sec);
 }
 
 // ── Tab switching ─────────────────────────────────────────────────────────────
