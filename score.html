@@ -287,12 +287,21 @@ async function load() {
       ${score?.pdf_url ? `
         <div class="media-section">
           <p class="section-label">Score</p>
-          <a class="btn" href="${score.pdf_url}" target="_blank"
-            style="display:flex;justify-content:center;padding:0.9rem;font-size:0.95rem;border-radius:8px;margin-bottom:0.5rem;background:var(--bg);">
-            <svg width="16" height="16" viewBox="0 0 14 14" fill="none" style="margin-right:8px">
+          <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:8px;">
+            <div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:var(--bg);border-bottom:1px solid var(--border);">
+              <button class="btn" style="padding:4px 12px;" onclick="prevPage()">◀ Prev</button>
+              <span id="pageInfo" style="font-size:0.82rem;color:var(--muted);flex:1;text-align:center;">Loading…</span>
+              <button class="btn" style="padding:4px 12px;" onclick="nextPage()">Next ▶</button>
+            </div>
+            <div style="overflow:auto;max-height:80vh;background:#525659;text-align:center;">
+              <canvas id="pdf-canvas" style="display:block;margin:0 auto;max-width:100%;"></canvas>
+            </div>
+          </div>
+          <a class="btn" href="${score.pdf_url}" target="_blank">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
               <path d="M2 12h10M7 2v7M4 6l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Open Score (PDF)
+            Download PDF
           </a>
         </div>` : ''}
 
@@ -304,6 +313,8 @@ async function load() {
           Link to MuseScore
         </a>` : ''}
     `;
+
+    if (score?.pdf_url) setTimeout(() => initPdf(score.pdf_url), 0);
 
   } catch(e) {
     document.getElementById('content').innerHTML =
@@ -356,6 +367,41 @@ async function translateNotes(btn, originalText) {
     btn.disabled = false;
   }
 }
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let pdfDoc = null, pageNum = 1;
+
+function initPdf(url) {
+  pdfjsLib.getDocument(url).promise.then(pdf => {
+    pdfDoc = pdf;
+    renderPage(1);
+  }).catch(err => {
+    document.getElementById('pageInfo').textContent = 'Could not load PDF';
+    console.error(err);
+  });
+}
+
+function renderPage(num) {
+  pdfDoc.getPage(num).then(page => {
+    const canvas   = document.getElementById('pdf-canvas');
+    const ctx      = canvas.getContext('2d');
+    const scale    = Math.min(1.5, (window.innerWidth - 40) / page.getViewport({scale:1}).width);
+    const viewport = page.getViewport({ scale });
+    canvas.height  = viewport.height;
+    canvas.width   = viewport.width;
+    page.render({ canvasContext: ctx, viewport });
+    document.getElementById('pageInfo').textContent =
+      `Page ${num} of ${pdfDoc.numPages}`;
+    pageNum = num;
+  });
+}
+
+function prevPage() { if (pdfDoc && pageNum > 1) renderPage(pageNum - 1); }
+function nextPage() { if (pdfDoc && pageNum < pdfDoc.numPages) renderPage(pageNum + 1); }
 </script>
 </body>
 </html>
