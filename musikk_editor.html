@@ -348,6 +348,7 @@
 <div class="container">
   <header>
     <h1>Musikk — Administrasjon</h1>
+    <button onclick="downloadSelf()" style="margin-top:0.75rem;padding:0.4rem 1rem;background:var(--warm);border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:0.8rem;cursor:pointer;color:var(--ink)">⬇ Last ned denne siden</button>
   </header>
 
   <div class="tabs">
@@ -694,6 +695,10 @@
             <input type="text" id="p_pseudonym">
           </div>
         </div>
+        <div class="field" style="display:flex;align-items:center;gap:0.6rem;margin-top:0.25rem">
+          <input type="checkbox" id="p_isFemaleNorwegian" style="width:auto;margin:0;accent-color:var(--accent)">
+          <label for="p_isFemaleNorwegian" style="margin:0;text-transform:none;font-size:0.88rem;letter-spacing:0;font-weight:500;color:#4a4035;cursor:pointer">Norsk kvinnelig komponist (K-flagg)</label>
+        </div>
         <div class="field">
           <label>Bio-lenke (Wikipedia e.l.)</label>
           <div style="display:flex;gap:0.5rem;align-items:center">
@@ -749,6 +754,10 @@
           <input type="text" id="np_bioUrl" placeholder="https://…">
         </div>
       </div>
+      <div class="field" style="display:flex;align-items:center;gap:0.6rem;margin-top:0.25rem">
+        <input type="checkbox" id="np_isFemaleNorwegian" style="width:auto;margin:0;accent-color:var(--accent)">
+        <label for="np_isFemaleNorwegian" style="margin:0;text-transform:none;font-size:0.88rem;letter-spacing:0;font-weight:500;color:#4a4035;cursor:pointer">Norsk kvinnelig komponist (K-flagg)</label>
+      </div>
       <div class="actions">
         <button class="btn btn-primary" onclick="addNewPerson()">Legg til komponist</button>
       </div>
@@ -797,6 +806,13 @@ const SB   = 'https://tfqnzszyjsdgdeksizel.supabase.co/rest/v1';
 const KEY  = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H    = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`,
                'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+
+function downloadSelf() {
+  const html = document.documentElement.outerHTML;
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+}
 
 // ── API ───────────────────────────────────────────────────────────────────────
 
@@ -1494,7 +1510,7 @@ document.getElementById('personSearch').addEventListener('input', () => {
   const q = document.getElementById('personSearch').value.trim();
   if (q.length < 2) { document.getElementById('personSearchResults').innerHTML = ''; return; }
   personSearchTimeout = setTimeout(async () => {
-    const rows = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name,born,died,nationality&limit=20&order=last_name`);
+    const rows = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name,born,died,nationality,is_female_norwegian&limit=20&order=last_name`);
     const container = document.getElementById('personSearchResults');
     container.innerHTML = '';
     if (!rows.length) { container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">Ingen treff.</div>'; return; }
@@ -1503,10 +1519,11 @@ document.getElementById('personSearch').addEventListener('input', () => {
       d.className = 'result-row';
       const flag = countryCodeToFlag(p.nationality || '');
       const years = p.born ? `${p.born}${p.died ? ' – ' + p.died : ''}` : '';
+      const femBadge = p.is_female_norwegian === 'Yes' ? ' <span title="Norsk kvinnelig komponist" style="color:var(--accent);font-size:0.8rem;font-weight:600">♀</span>' : '';
       d.style.cssText = 'display:flex;justify-content:space-between;align-items:center;cursor:pointer';
       d.onclick = () => loadPersonForm(p.person_id);
       const personLeft = document.createElement('div');
-      personLeft.innerHTML = `<div class="result-title">${flag} ${p.first_name || ''} ${p.last_name}</div>
+      personLeft.innerHTML = `<div class="result-title">${flag} ${p.first_name || ''} ${p.last_name}${femBadge}</div>
                      <div class="result-meta">${years}</div>`;
       const scoreBtn = document.createElement('button');
       scoreBtn.type = 'button';
@@ -1533,6 +1550,7 @@ async function loadPersonForm(personId) {
   document.getElementById('p_pseudonym').value  = p.pseudonym  || '';
   document.getElementById('p_bioUrl').value     = p.bio_url    || '';
   document.getElementById('p_bioText').value    = p.bio_text   || '';
+  document.getElementById('p_isFemaleNorwegian').checked = (p.is_female_norwegian === 'Yes');
   document.getElementById('p_flag').textContent = countryCodeToFlag(p.nationality || '');
   const link = document.getElementById('p_bioLink');
   if (p.bio_url) { link.href = p.bio_url; link.style.display = 'block'; }
@@ -1550,14 +1568,15 @@ async function savePerson() {
   if (!last) { alert('Etternavn er påkrevd.'); return; }
   try {
     await patch('person', `person_id=eq.${personId}`, {
-      first_name:  document.getElementById('p_firstName').value.trim() || null,
-      last_name:   last,
-      born:        parseInt(document.getElementById('p_born').value) || null,
-      died:        parseInt(document.getElementById('p_died').value) || null,
-      nationality: document.getElementById('p_nationality').value.trim() || null,
-      pseudonym:   document.getElementById('p_pseudonym').value.trim() || null,
-      bio_url:     document.getElementById('p_bioUrl').value.trim() || null,
-      bio_text:    document.getElementById('p_bioText').value.trim() || null,
+      first_name:           document.getElementById('p_firstName').value.trim() || null,
+      last_name:            last,
+      born:                 parseInt(document.getElementById('p_born').value) || null,
+      died:                 parseInt(document.getElementById('p_died').value) || null,
+      nationality:          document.getElementById('p_nationality').value.trim() || null,
+      pseudonym:            document.getElementById('p_pseudonym').value.trim() || null,
+      bio_url:              document.getElementById('p_bioUrl').value.trim() || null,
+      bio_text:             document.getElementById('p_bioText').value.trim() || null,
+      is_female_norwegian:  document.getElementById('p_isFemaleNorwegian').checked ? 'Yes' : 'No',
     });
     showMsg('personMsg', '✓ Komponist oppdatert', 'success');
     closePerson();
@@ -1604,15 +1623,17 @@ async function addNewPerson() {
   if (!last) { alert('Etternavn er påkrevd.'); return; }
   try {
     const p = await post('person', {
-      first_name:  document.getElementById('np_firstName').value.trim() || null,
-      last_name:   last,
-      born:        parseInt(document.getElementById('np_born').value) || null,
-      died:        parseInt(document.getElementById('np_died').value) || null,
-      nationality: document.getElementById('np_nationality').value.trim() || null,
-      bio_url:     document.getElementById('np_bioUrl').value.trim() || null,
+      first_name:          document.getElementById('np_firstName').value.trim() || null,
+      last_name:           last,
+      born:                parseInt(document.getElementById('np_born').value) || null,
+      died:                parseInt(document.getElementById('np_died').value) || null,
+      nationality:         document.getElementById('np_nationality').value.trim() || null,
+      bio_url:             document.getElementById('np_bioUrl').value.trim() || null,
+      is_female_norwegian: document.getElementById('np_isFemaleNorwegian').checked ? 'Yes' : 'No',
     });
     showMsg('personMsg', `✓ ${document.getElementById('np_firstName').value} ${last} lagt til (id=${p.person_id})`, 'success');
     ['np_firstName','np_lastName','np_born','np_died','np_nationality','np_bioUrl'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('np_isFemaleNorwegian').checked = false;
     document.getElementById('np_flag').textContent = '';
   } catch(err) {
     showMsg('personMsg', 'Feil: ' + err.message, 'error');
