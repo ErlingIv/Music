@@ -875,12 +875,14 @@ async function del(table, filter) {
 
 function switchTab(name) {
   if (name === 'biolinks' && !bioLoaded) loadBioPersons();
-  const tabs = document.querySelectorAll('.tab');
-  tabs.forEach(t => t.classList.remove('active'));
-  const idx = {'new': 0, 'edit': 1, 'person': 2}[name];
-  tabs[idx].classList.add('active');
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  document.getElementById(`tab-${name}`).classList.add('active');
+  // Activate the clicked tab button
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.getAttribute('onclick') === `switchTab('${name}')`);
+  });
+  // Show matching tab content
+  document.querySelectorAll('.tab-content').forEach(el => {
+    el.classList.toggle('active', el.id === `tab-${name}`);
+  });
 }
 
 // ── Person lookup factory ─────────────────────────────────────────────────────
@@ -1722,7 +1724,7 @@ async function loadBioPersons() {
   // Fetch unverified
   let unverified = [], offset = 0;
   while (true) {
-    const r = await get(`/person?bio_url=not.is.null&bio_url_verified=eq.false&select=person_id,first_name,last_name,born,died,nationality,bio_url&order=last_name.asc&limit=1000&offset=${offset}`);
+    const r = await get(`/person?bio_url=not.is.null&bio_url_verified=eq.false&select=person_id,first_name,last_name,born,died,nationality,bio_url&order=last_name.asc&offset=${offset}`);
     unverified = unverified.concat(r);
     if (r.length < 1000) break;
     offset += 1000;
@@ -1731,7 +1733,7 @@ async function loadBioPersons() {
   // Fetch missing
   let missing = [], offset2 = 0;
   while (true) {
-    const r = await get(`/person?bio_url=is.null&select=person_id,first_name,last_name,born,died,nationality&order=last_name.asc&limit=1000&offset=${offset2}`);
+    const r = await get(`/person?bio_url=is.null&select=person_id,first_name,last_name,born,died,nationality&order=last_name.asc&offset=${offset2}`);
     missing = missing.concat(r);
     if (r.length < 1000) break;
     offset2 += 1000;
