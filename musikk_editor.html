@@ -706,6 +706,10 @@
             <input type="text" id="p_bioUrl" placeholder="https://…" style="flex:1">
             <a id="p_bioLink" href="#" target="_blank" class="btn-upload" style="display:none">Åpne</a>
           </div>
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.4rem">
+            <input type="checkbox" id="p_bioUrlVerified" style="width:auto;margin:0;accent-color:var(--accent2,#2a5c45)">
+            <label for="p_bioUrlVerified" style="margin:0;text-transform:none;font-size:0.85rem;letter-spacing:0;font-weight:500;color:#4a4035;cursor:pointer">Bio-lenke verifisert ✓</label>
+          </div>
         </div>
         <div class="field">
           <label>Biografi</label>
@@ -1579,6 +1583,7 @@ async function loadPersonForm(personId) {
   document.getElementById('p_nationality').value= p.nationality|| '';
   document.getElementById('p_pseudonym').value  = p.pseudonym  || '';
   document.getElementById('p_bioUrl').value     = p.bio_url    || '';
+  document.getElementById('p_bioUrlVerified').checked = (p.bio_url_verified === true);
   document.getElementById('p_bioText').value    = p.bio_text   || '';
   document.getElementById('p_isFemaleNorwegian').checked = (p.is_female_norwegian === 'Yes');
   document.getElementById('p_flag').textContent = countryCodeToFlag(p.nationality || '');
@@ -1605,6 +1610,7 @@ async function savePerson() {
       nationality:          document.getElementById('p_nationality').value.trim() || null,
       pseudonym:            document.getElementById('p_pseudonym').value.trim() || null,
       bio_url:              document.getElementById('p_bioUrl').value.trim() || null,
+      bio_url_verified:     document.getElementById('p_bioUrlVerified').checked,
       bio_text:             document.getElementById('p_bioText').value.trim() || null,
       is_female_norwegian:  document.getElementById('p_isFemaleNorwegian').checked ? 'Yes' : 'No',
     });
@@ -1663,6 +1669,7 @@ async function addNewPerson() {
     });
     showMsg('personMsg', `✓ ${document.getElementById('np_firstName').value} ${last} lagt til (id=${p.person_id})`, 'success');
     ['np_firstName','np_lastName','np_born','np_died','np_nationality','np_bioUrl'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('p_bioUrlVerified').checked = false;
     document.getElementById('np_isFemaleNorwegian').checked = false;
     document.getElementById('np_flag').textContent = '';
   } catch(err) {

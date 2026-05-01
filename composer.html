@@ -112,24 +112,6 @@
     padding: 5px 12px;
   }
   .bio-link:hover { background: var(--accent); color: #fff; }
-  .verify-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin-top: 0.75rem;
-    margin-left: 0.5rem;
-    font-size: 0.82rem;
-    color: var(--accent2);
-    border: 1px solid var(--accent2);
-    border-radius: 5px;
-    padding: 5px 12px;
-    background: transparent;
-    cursor: pointer;
-    font-family: var(--body);
-    transition: background 0.15s, color 0.15s;
-  }
-  .verify-btn:hover { background: var(--accent2); color: #fff; }
-  .verify-btn.verified { color: var(--muted); border-color: var(--border); cursor: default; }
 
   /* ── Scores section ── */
   .scores-heading {
@@ -237,7 +219,7 @@ async function load() {
   try {
     // 1. Fetch person
     const pR = await fetch(
-      `${SUPABASE_URL}/rest/v1/person?person_id=eq.${personId}&select=person_id,first_name,last_name,born,died,nationality,is_female_norwegian,bio_url,bio_url_verified,bio_text`,
+      `${SUPABASE_URL}/rest/v1/person?person_id=eq.${personId}&select=person_id,first_name,last_name,born,died,nationality,is_female_norwegian,bio_url,bio_text`,
       { headers: H }
     );
     const person = (await pR.json())[0];
@@ -292,18 +274,12 @@ async function load() {
         ${person.bio_text ? `<div class="bio-text">${person.bio_text}</div>` : ''}
 
         ${person.bio_url ? `
-          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:0.5rem;margin-top:0.75rem;">
-            <a class="bio-link" style="margin-top:0" href="${person.bio_url}" target="_blank">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M4.5 1.5H2a1 1 0 00-1 1v7a1 1 0 001 1h7a1 1 0 001-1V7m-3-5.5h4m0 0v4m0-4L5.5 7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              Biography
-            </a>
-            ${person.bio_url_verified
-              ? '<span class="verify-btn verified">✓ Verified</span>'
-              : `<button class="verify-btn" id="verifyBtn" onclick="verifyBioUrl(${personId})">✓ Mark as verified</button>`
-            }
-          </div>` : ''}
+          <a class="bio-link" href="${person.bio_url}" target="_blank">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M4.5 1.5H2a1 1 0 00-1 1v7a1 1 0 001 1h7a1 1 0 001-1V7m-3-5.5h4m0 0v4m0-4L5.5 7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Biography
+          </a>` : ''}
       </div>
 
       <div class="scores-heading">
@@ -353,34 +329,6 @@ function filterScores() {
 }
 
 load();
-
-async function verifyBioUrl(pid) {
-  const btn = document.getElementById('verifyBtn');
-  btn.disabled = true;
-  btn.textContent = 'Saving…';
-  try {
-    const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/person?person_id=eq.${pid}`,
-      {
-        method: 'PATCH',
-        headers: { ...H, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ bio_url_verified: true })
-      }
-    );
-    if (r.ok) {
-      btn.textContent = '✓ Verified';
-      btn.classList.add('verified');
-      btn.onclick = null;
-    } else {
-      btn.textContent = 'Failed — try again';
-      btn.disabled = false;
-    }
-  } catch(e) {
-    btn.textContent = 'Error';
-    btn.disabled = false;
-  }
-}
-
 </script>
 </body>
 </html>
