@@ -238,7 +238,7 @@ async function load() {
 
     // 3. Fetch public domain compositions
     const cR = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&public_domain=eq.Yes&select=composition_id,title,year_composed,musescore_link&order=title.asc`,
+      `${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&select=composition_id,title,year_composed,musescore_link,public_domain&order=title.asc`,
       { headers: H }
     );
     const compositions = await cR.json();
@@ -283,7 +283,7 @@ async function load() {
       </div>
 
       <div class="scores-heading">
-        Public Domain Scores
+        Scores
         <span class="scores-heading-count">${compositions.length} work${compositions.length !== 1 ? 's' : ''}</span>
         <label style="margin-left:auto;font-size:0.78rem;color:var(--muted);display:flex;align-items:center;gap:0.4rem;font-weight:400;cursor:pointer;">
           <input type="checkbox" id="filterMedia" onchange="filterScores()" style="width:auto;margin:0;accent-color:var(--accent);">
@@ -292,7 +292,7 @@ async function load() {
       </div>
 
       ${compositions.length === 0
-        ? '<div class="loading-state">No public domain scores found.</div>'
+        ? '<div class="loading-state">No scores found.</div>'
         : `<div class="score-list" id="scoreList">
             ${compositions.map(c => {
               const s = scoreMap[c.composition_id];
@@ -309,6 +309,7 @@ async function load() {
                     ${s?.pdf_url ? '<span class="icon-badge has-pdf">PDF</span>' : ''}
                     ${s?.mp3_url ? '<span class="icon-badge has-mp3">MP3</span>' : ''}
                     ${c.musescore_link ? '<span class="icon-badge">♪</span>' : ''}
+                    ${c.public_domain === 'Yes' ? '<span class="icon-badge" style="color:var(--accent2);border-color:var(--accent2)">PD</span>' : ''}
                   </div>
                 </a>`;
             }).join('')}

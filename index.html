@@ -272,7 +272,7 @@
 
 <header>
   <h1 class="site-title">Norske Musikknoter</h1>
-  <p class="site-subtitle">Historical Nordic Sheet Music — Public Domain</p>
+  <p class="site-subtitle">Historical Nordic Sheet Music</p>
   <p style="font-size:0.75rem;color:var(--muted);margin-top:0.4rem;letter-spacing:0.04em;">With separate PDF open</p>
 </header>
 
@@ -351,7 +351,7 @@
 </main>
 
 <footer>
-  Norske Musikknoter · Historical Nordic Sheet Music · Public Domain Scores
+  Norske Musikknoter · Historical Nordic Sheet Music
 </footer>
 
 <script>
@@ -389,7 +389,7 @@ async function fetchAllComposers() {
     const rows = await r.json();
     if (!rows.length) break;
     rows.forEach(row => {
-      if (row.composition?.public_domain === 'Yes') pdIds.add(row.person_id);
+      pdIds.add(row.person_id);
     });
     if (rows.length < 1000) break;
     offset += 1000;
@@ -406,7 +406,7 @@ async function fetchAllComposers() {
     const rows = await r.json();
     if (!rows.length) break;
     rows.forEach(row => {
-      if (row.composition?.public_domain === 'Yes') {
+      if (row.composition) {
         countMap[row.person_id] = (countMap[row.person_id] || 0) + 1;
       }
     });
