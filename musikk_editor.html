@@ -559,6 +559,12 @@
           <input type="checkbox" id="e_toInvestigate" style="width:auto;margin:0;accent-color:var(--accent)">
           <label for="e_toInvestigate" style="margin:0;text-transform:none;font-size:0.88rem;letter-spacing:0;font-weight:500;color:#4a4035;cursor:pointer">Merk som interessant å undersøke</label>
         </div>
+        <div class="field">
+          <label>Tagger</label>
+          <div id="e_tagCheckboxes" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.25rem">
+            <span style="color:var(--muted);font-size:0.85rem">Laster tagger…</span>
+          </div>
+        </div>
       </div>
 
       <div class="card">
@@ -771,7 +777,6 @@
   </div>
 
 
-  <!-- ═══════════════════════ BIO-LENKER TAB ═══════════════════════ -->
   <div id="tab-biolinks" class="tab-content">
     <div class="card">
       <div class="card-title" style="display:flex;align-items:center;gap:1rem">
@@ -877,10 +882,6 @@ function switchTab(name) {
   document.querySelectorAll('.tab-content').forEach(el => {
     el.classList.toggle('active', el.id === `tab-${name}`);
   });
-}[name];
-  tabs[idx].classList.add('active');
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  document.getElementById(`tab-${name}`).classList.add('active');
 }
 
 // ── Person lookup factory ─────────────────────────────────────────────────────
@@ -1314,6 +1315,7 @@ async function loadEditForm(compId) {
   document.getElementById('e_category').value = c.public_domain === 'Yes' ? 'pd' : 'copyright';
   document.getElementById('e_msLink').value  = c.musescore_link || '';
   document.getElementById('e_notes').value       = c.composition_notes || '';
+  await loadTagCheckboxes(parseInt(compId));
   document.getElementById('e_dedication').value  = c.dedication || '';
   document.getElementById('e_msNotes').innerHTML = c.musescore_notes || '';
   document.getElementById('e_toInvestigate').checked = c.to_investigate || false;
@@ -1428,6 +1430,13 @@ async function saveEdit() {
     // Update lyricists
     await del('composition_lyricist', `composition_id=eq.${compId}`);
     for (const l of eLyricists) await post('composition_lyricist', { composition_id: parseInt(compId), person_id: l.person_id, credited_as: l.credited_as || null });
+
+    // Update tags
+    await del('composition_tag', `composition_id=eq.${compId}`);
+    const checkedTags = [...document.querySelectorAll('#e_tagCheckboxes input[type=checkbox]:checked')];
+    for (const cb of checkedTags) {
+      await post('composition_tag', { composition_id: parseInt(compId), tag_id: parseInt(cb.value) });
+    }
 
     // Update score
     const pubId   = await resolvePublisher('e_publisherSearch', ePubState, 'id');
@@ -1685,8 +1694,6 @@ async function addNewPerson() {
   const last  = document.getElementById('np_lastName').value.trim();
   const first = document.getElementById('np_firstName').value.trim();
   if (!last) { alert('Etternavn er påkrevd.'); return; }
-
-  // Check for existing person with same name
   const existing = await get(`/person?last_name=ilike.${encodeURIComponent(last)}&select=person_id,first_name,last_name,pseudonym`);
   const match = existing.find(p =>
     (!first && !p.first_name) ||
@@ -1701,8 +1708,8 @@ async function addNewPerson() {
     );
     if (usePseudo) {
       const newPseudo = first ? `${first} ${last}` : last;
-      const existing_pseudo = match.pseudonym ? match.pseudonym + ', ' + newPseudo : newPseudo;
-      await patch('person', `person_id=eq.${match.person_id}`, { pseudonym: existing_pseudo });
+      const updatedPseudo = match.pseudonym ? match.pseudonym + ', ' + newPseudo : newPseudo;
+      await patch('person', `person_id=eq.${match.person_id}`, { pseudonym: updatedPseudo });
       showMsg('personMsg', `✓ "${newPseudo}" lagt til som pseudonym på ${fullName} (ID ${match.person_id})`, 'success');
       ['np_firstName','np_lastName','np_born','np_died','np_nationality','np_bioUrl'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('np_isFemaleNorwegian').checked = false;
@@ -1710,7 +1717,6 @@ async function addNewPerson() {
       return;
     }
   }
-
   try {
     const p = await post('person', {
       first_name:          document.getElementById('np_firstName').value.trim() || null,
@@ -1731,6 +1737,41 @@ async function addNewPerson() {
 }
 
 
+// ═══════════════════════ TAGS ═══════════════════════
+let _allTags = null;
+
+async function getAllTags() {
+  if (_allTags) return _allTags;
+  _allTags = await get('/tag?select=tag_id,tag_name&order=tag_name.asc');
+  return _allTags;
+}
+
+async function loadTagCheckboxes(compId) {
+  const container = document.getElementById('e_tagCheckboxes');
+  if (!container) return;
+
+  const [allTags, compTags] = await Promise.all([
+    getAllTags(),
+    get(`/composition_tag?composition_id=eq.${compId}&select=tag_id`)
+  ]);
+
+  const assigned = new Set(compTags.map(t => t.tag_id));
+
+  container.innerHTML = allTags.map(t => `
+    <label style="display:inline-flex;align-items:center;gap:0.35rem;padding:0.3rem 0.75rem;border:1px solid var(--border);border-radius:20px;cursor:pointer;font-size:0.85rem;background:${assigned.has(t.tag_id) ? 'var(--accent)' : 'white'};color:${assigned.has(t.tag_id) ? 'white' : 'var(--ink)'};transition:background 0.15s" onclick="toggleTagLabel(this)">
+      <input type="checkbox" value="${t.tag_id}" ${assigned.has(t.tag_id) ? 'checked' : ''} style="display:none">
+      ${t.tag_name}
+    </label>`).join('');
+}
+
+function toggleTagLabel(label) {
+  const cb = label.querySelector('input');
+  cb.checked = !cb.checked;
+  label.style.background = cb.checked ? 'var(--accent)' : 'white';
+  label.style.color       = cb.checked ? 'white' : 'var(--ink)';
+}
+
+
 // ═══════════════════════ BIO-LENKER ═══════════════════════
 let bioPersons  = [];
 let bioIndex    = 0;
@@ -1746,16 +1787,12 @@ async function loadBioPersons() {
   let unverified = [], offset = 0;
   while (true) {
     const r = await get(`/person?bio_url=not.is.null&bio_url_verified=eq.false&select=person_id,first_name,last_name,born,died,nationality,bio_url&order=last_name.asc&offset=${offset}`);
-    unverified = unverified.concat(r);
-    if (r.length < 1000) break;
-    offset += 1000;
+    unverified = unverified.concat(r); if (r.length < 1000) break; offset += 1000;
   }
   let missing = [], offset2 = 0;
   while (true) {
     const r = await get(`/person?bio_url=is.null&select=person_id,first_name,last_name,born,died,nationality&order=last_name.asc&offset=${offset2}`);
-    missing = missing.concat(r);
-    if (r.length < 1000) break;
-    offset2 += 1000;
+    missing = missing.concat(r); if (r.length < 1000) break; offset2 += 1000;
   }
   document.getElementById('countUnverified').textContent = unverified.length;
   document.getElementById('countMissing').textContent    = missing.length;
@@ -1781,19 +1818,15 @@ function renderBioCard() {
   document.getElementById('bioProgressLabel').textContent = `${bioIndex} av ${total} (${pct}%)`;
   const area = document.getElementById('bioCardArea');
   if (bioIndex >= total) {
-    const stat = bioMode === 'unverified'
-      ? `${bioVerified} verifisert · ${bioNulled} lenke fjernet`
-      : `${bioSaved} lenker lagt til`;
+    const stat = bioMode === 'unverified' ? `${bioVerified} verifisert · ${bioNulled} fjernet` : `${bioSaved} lagt til`;
     area.innerHTML = `<div class="card" style="text-align:center;padding:2rem;color:var(--accent2);font-family:'Playfair Display',serif;font-size:1.2rem">✓ Alle gjennomgått<br><span style="font-size:0.9rem;font-family:sans-serif;color:var(--muted)">${stat}</span></div>`;
     return;
   }
   const p    = bioPersons[bioIndex];
   const name = ((p.first_name || '') + ' ' + (p.last_name || '')).trim() || '⚠ Navn mangler';
-  const nameWarning = (!p.first_name && !p.last_name)
-    ? ` <span style="font-size:0.78rem;color:var(--accent)">ID ${p.person_id} — navn mangler</span>` : '';
-  const meta = `ID: ${p.person_id}` + ([p.born, p.died].filter(Boolean).join('–') ? ' · ' + [p.born, p.died].filter(Boolean).join('–') : '') + (p.nationality ? ' · ' + p.nationality : '');
+  const nameWarning = (!p.first_name && !p.last_name) ? ` <span style="font-size:0.78rem;color:var(--accent)">ID ${p.person_id} — navn mangler</span>` : '';
+  const meta = `ID: ${p.person_id}` + ([p.born,p.died].filter(Boolean).join('–') ? ' · ' + [p.born,p.died].filter(Boolean).join('–') : '') + (p.nationality ? ' · ' + p.nationality : '');
   const enc  = encodeURIComponent(name);
-
   if (bioMode === 'unverified') {
     area.innerHTML = `
       <div class="card">
@@ -1833,8 +1866,7 @@ function renderBioCard() {
         <div id="bioMsg" style="font-size:0.82rem;margin-top:0.5rem;color:var(--muted);min-height:1.2em"></div>
       </div>`;
     document.getElementById('bioUrlInput').addEventListener('input', () => {
-      const v = document.getElementById('bioUrlInput').value.trim();
-      document.getElementById('btnBioTest').href = v || '#';
+      document.getElementById('btnBioTest').href = document.getElementById('bioUrlInput').value.trim() || '#';
     });
   }
 }
