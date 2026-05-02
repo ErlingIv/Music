@@ -552,8 +552,8 @@
           <input type="text" id="e_dedication">
         </div>
         <div class="field">
-          <label>MuseScore-info (automatisk hentet)</label>
-          <div id="e_msNotes" style="background:#f9f6f0;color:var(--muted);font-size:0.85rem;padding:0.5rem 0.6rem;border-radius:6px;border:1px solid var(--border);min-height:3rem;line-height:1.6;white-space:pre-wrap;"></div>
+          <label>MuseScore-info</label>
+          <textarea id="e_msNotes" style="font-size:0.85rem;min-height:6rem;line-height:1.6;resize:vertical;font-family:inherit"></textarea>
         </div>
         <div class="field" style="display:flex;align-items:center;gap:0.6rem;margin-top:0.25rem">
           <input type="checkbox" id="e_toInvestigate" style="width:auto;margin:0;accent-color:var(--accent)">
@@ -779,8 +779,7 @@
 
   <div id="tab-biolinks" class="tab-content">
     <div class="card">
-      <div class="card-title" style="display:flex;align-items:center;gap:1rem">
-        Bio-lenker
+      <div class="card-title" style="display:flex;align-items:center;gap:1rem">Bio-lenker
         <div style="display:flex;gap:0.5rem;margin-left:auto">
           <button type="button" class="btn btn-secondary" onclick="showBioSection('unverified')" id="bioTabUnverified" style="font-size:0.82rem;padding:0.3rem 0.9rem">Uverifiserte <span id="countUnverified" style="background:var(--accent);color:white;border-radius:3px;padding:1px 6px;font-size:0.75rem;margin-left:4px">…</span></button>
           <button type="button" class="btn btn-secondary" onclick="showBioSection('missing')" id="bioTabMissing" style="font-size:0.82rem;padding:0.3rem 0.9rem">Mangler lenke <span id="countMissing" style="background:var(--muted);color:white;border-radius:3px;padding:1px 6px;font-size:0.75rem;margin-left:4px">…</span></button>
@@ -788,9 +787,7 @@
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem">
-      <div style="flex:1;background:var(--warm);border-radius:6px;height:8px;overflow:hidden">
-        <div id="bioProgressBar" style="height:100%;border-radius:6px;transition:width 0.4s ease;width:0%;background:var(--accent2)"></div>
-      </div>
+      <div style="flex:1;background:var(--warm);border-radius:6px;height:8px;overflow:hidden"><div id="bioProgressBar" style="height:100%;border-radius:6px;transition:width 0.4s ease;width:0%;background:var(--accent2)"></div></div>
       <div id="bioProgressLabel" style="font-size:0.85rem;color:var(--muted);white-space:nowrap">—</div>
     </div>
     <div id="bioCardArea"></div>
@@ -1127,10 +1124,12 @@ async function saveNewPerson() {
 
 const nComposers  = [];
 const nLyricists  = [];
+const nIllustrators = [];
 const nPubState   = {};
 
 makeLookup('n_composerSearch', 'n_composerResults', 'n_composerTags', nComposers);
 makeLookup('n_lyricistSearch', 'n_lyricistResults', 'n_lyricistTags', nLyricists);
+makeLookup('n_illustratorSearch', 'n_illustratorResults', 'n_illustratorTags', nIllustrators);
 makePubLookup('n_publisherSearch', 'n_publisherResults', 'n_publisherId', nPubState, 'id');
 
 function showMsg(tabId, text, type) {
@@ -1168,6 +1167,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
 
     for (const c of nComposers) await post('composition_composer', { composition_id: compId, person_id: c.person_id, credited_as: c.credited_as || null });
     for (const l of nLyricists) await post('composition_lyricist', { composition_id: compId, person_id: l.person_id, credited_as: l.credited_as || null });
+    for (const i of nIllustrators) await post('composition_illustrator', { composition_id: compId, person_id: i.person_id });
 
     const source   = document.getElementById('n_source').value;
     await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, pdf_url: pdfUrl||null, mp3_url: mp3Url||null, source: source||null });
@@ -1183,19 +1183,21 @@ document.getElementById('newForm').addEventListener('submit', async e => {
 function resetNewForm() {
   document.getElementById('newForm').reset();
   document.getElementById('n_toInvestigate').checked = false;
-  nComposers.length = 0; nLyricists.length = 0; nPubState.id = null;
-  ['n_composerTags','n_lyricistTags'].forEach(id => document.getElementById(id).innerHTML = '');
-  ['n_composerSearch','n_lyricistSearch','n_publisherSearch'].forEach(id => document.getElementById(id).value = '');
+  nComposers.length = 0; nLyricists.length = 0; nIllustrators.length = 0; nPubState.id = null;
+  ['n_composerTags','n_lyricistTags','n_illustratorTags'].forEach(id => document.getElementById(id).innerHTML = '');
+  ['n_composerSearch','n_lyricistSearch','n_illustratorSearch','n_publisherSearch'].forEach(id => document.getElementById(id).value = '');
 }
 
 // ── EDIT TAB ──────────────────────────────────────────────────────────────────
 
 const eComposers = [];
 const eLyricists = [];
+const eIllustrators = [];
 const ePubState  = {};
 
 makeLookup('e_composerSearch', 'e_composerResults', 'e_composerTags', eComposers);
 makeLookup('e_lyricistSearch', 'e_lyricistResults', 'e_lyricistTags', eLyricists);
+makeLookup('e_illustratorSearch', 'e_illustratorResults', 'e_illustratorTags', eIllustrators);
 makePubLookup('e_publisherSearch', 'e_publisherResults', 'e_publisherId', ePubState, 'id');
 
 let editSearchTimeout;
@@ -1305,6 +1307,7 @@ async function loadEditForm(compId) {
     get(`/composition?composition_id=eq.${compId}&select=*`),
     get(`/composition_composer?composition_id=eq.${compId}&select=person_id,credited_as,person(person_id,first_name,last_name,bio_url,pseudonym)`),
     get(`/composition_lyricist?composition_id=eq.${compId}&select=person_id,credited_as,person(person_id,first_name,last_name,pseudonym)`),
+    get(`/composition_illustrator?composition_id=eq.${compId}&select=person_id,person(person_id,first_name,last_name,pseudonym)`),
     get(`/score?composition_id=eq.${compId}&select=*,publisher(publisher_id,publisher_name)`)
   ]);
 
@@ -1317,7 +1320,7 @@ async function loadEditForm(compId) {
   document.getElementById('e_notes').value       = c.composition_notes || '';
   await loadTagCheckboxes(parseInt(compId));
   document.getElementById('e_dedication').value  = c.dedication || '';
-  document.getElementById('e_msNotes').innerHTML = c.musescore_notes || '';
+  document.getElementById('e_msNotes').value = c.musescore_notes || '';
   document.getElementById('e_toInvestigate').checked = c.to_investigate || false;
 
   eComposers.length = 0;
@@ -1327,6 +1330,9 @@ async function loadEditForm(compId) {
   eLyricists.length = 0;
   cl.forEach(row => eLyricists.push({ person_id: row.person.person_id, name: [row.person.first_name, row.person.last_name].filter(Boolean).join(' '), credited_as: row.credited_as || '', pseudonyms: row.person.pseudonym || '' }));
   renderTags('e_lyricistTags', eLyricists);
+  eIllustrators.length = 0;
+  ci.forEach(row => eIllustrators.push({ person_id: row.person.person_id, name: [row.person.first_name, row.person.last_name].filter(Boolean).join(' '), credited_as: '', pseudonyms: row.person.pseudonym || '' }));
+  renderTags('e_illustratorTags', eIllustrators);
 
   const score = scores[0];
   document.getElementById('e_scoreId').value = score ? score.score_id : '';
@@ -1419,6 +1425,7 @@ async function saveEdit() {
       public_domain:     cat === 'pd' ? 'Yes' : 'No',
       musescore_link:    document.getElementById('e_msLink').value.trim() || null,
       composition_notes: document.getElementById('e_notes').value.trim() || null,
+      musescore_notes:    document.getElementById('e_msNotes').value.trim() || null,
       dedication:        document.getElementById('e_dedication').value.trim() || null,
       to_investigate:    document.getElementById('e_toInvestigate').checked,
     });
@@ -1430,6 +1437,9 @@ async function saveEdit() {
     // Update lyricists
     await del('composition_lyricist', `composition_id=eq.${compId}`);
     for (const l of eLyricists) await post('composition_lyricist', { composition_id: parseInt(compId), person_id: l.person_id, credited_as: l.credited_as || null });
+    // Update illustrators
+    await del('composition_illustrator', `composition_id=eq.${compId}`);
+    for (const i of eIllustrators) await post('composition_illustrator', { composition_id: parseInt(compId), person_id: i.person_id });
 
     // Update tags
     await del('composition_tag', `composition_id=eq.${compId}`);
@@ -1477,7 +1487,7 @@ async function deleteComposition() {
 
 function closeEditPanel() {
   document.getElementById('editPanel').classList.remove('open');
-  eComposers.length = 0; eLyricists.length = 0; ePubState.id = null;
+  eComposers.length = 0; eLyricists.length = 0; eIllustrators.length = 0; ePubState.id = null;
 
   // Restore previous search state
   if (window._savedSearch) {
@@ -1612,9 +1622,8 @@ async function loadPersonForm(personId) {
   const p = rows[0];
   document.getElementById('p_personId').value   = p.person_id;
   document.getElementById('p_firstName').value  = p.first_name || '';
-  document.getElementById('p_lastName').value   = p.last_name  || '';
-  // Store original name so we can detect changes on save
   document.getElementById('p_firstName').dataset.original = p.first_name || '';
+  document.getElementById('p_lastName').value   = p.last_name  || '';
   document.getElementById('p_lastName').dataset.original  = p.last_name  || '';
   document.getElementById('p_born').value       = p.born       || '';
   document.getElementById('p_died').value       = p.died       || '';
@@ -1636,90 +1645,12 @@ async function loadPersonForm(personId) {
 }
 
 async function savePerson() {
-  const personId  = document.getElementById('p_personId').value;
-  const first     = document.getElementById('p_firstName').value.trim();
-  const last      = document.getElementById('p_lastName').value.trim();
-  const origFirst = document.getElementById('p_firstName').dataset.original || '';
-  const origLast  = document.getElementById('p_lastName').dataset.original  || '';
+  const personId = document.getElementById('p_personId').value;
+  const last     = document.getElementById('p_lastName').value.trim();
   if (!last) { alert('Etternavn er påkrevd.'); return; }
-
-  // Check if name has changed
-  const nameChanged = first !== origFirst || last !== origLast;
-
-  if (nameChanged) {
-    // Check if new name already exists in database
-    const existing = await get(`/person?last_name=ilike.${encodeURIComponent(last)}&select=person_id,first_name,last_name,pseudonym`);
-    const match = existing.find(p =>
-      parseInt(p.person_id) !== parseInt(personId) && (
-        (!first && !p.first_name) ||
-        (first && p.first_name && p.first_name.toLowerCase() === first.toLowerCase())
-      )
-    );
-
-    if (match) {
-      const targetName  = ((match.first_name || '') + ' ' + match.last_name).trim();
-      const currentName = (origFirst ? origFirst + ' ' : '') + origLast;
-      const choice = confirm(
-        `"${targetName}" finnes allerede i databasen (ID ${match.person_id}).
-
-` +
-        `Vil du SLÅ SAMMEN disse to personene?
-
-` +
-        `OK = Slå sammen: flytt alle komposisjoner/tekster til "${targetName}", ` +
-        `legg til "${currentName}" som pseudonym, og slett denne posten.
-
-` +
-        `Avbryt = Lagre bare navneendringen uten sammenslåing`
-      );
-
-      if (choice) {
-        showMsg('personMsg', 'Slår sammen…', '');
-        try {
-          // Move composition_composer links
-          const cc = await get(`/composition_composer?person_id=eq.${personId}&select=composition_id,credited_as,role`);
-          for (const row of cc) {
-            // Check if target already has this composition to avoid duplicates
-            const exists = await get(`/composition_composer?person_id=eq.${match.person_id}&composition_id=eq.${row.composition_id}&select=id`);
-            if (!exists.length) {
-              await post('composition_composer', { composition_id: row.composition_id, person_id: match.person_id, credited_as: row.credited_as||null, role: row.role||null });
-            }
-          }
-          await del('composition_composer', `person_id=eq.${personId}`);
-
-          // Move composition_lyricist links
-          const cl = await get(`/composition_lyricist?person_id=eq.${personId}&select=composition_id,credited_as`);
-          for (const row of cl) {
-            const exists = await get(`/composition_lyricist?person_id=eq.${match.person_id}&composition_id=eq.${row.composition_id}&select=id`);
-            if (!exists.length) {
-              await post('composition_lyricist', { composition_id: row.composition_id, person_id: match.person_id, credited_as: row.credited_as||null });
-            }
-          }
-          await del('composition_lyricist', `person_id=eq.${personId}`);
-
-          // Add old name as pseudonym on target
-          const newPseudo = match.pseudonym
-            ? match.pseudonym + ', ' + currentName
-            : currentName;
-          await patch('person', `person_id=eq.${match.person_id}`, { pseudonym: newPseudo });
-
-          // Delete the current (now empty) record
-          await del('person', `person_id=eq.${personId}`);
-
-          showMsg('personMsg', `✓ Slått sammen med "${targetName}" (ID ${match.person_id}). "${currentName}" lagt til som pseudonym.`, 'success');
-          closePerson();
-        } catch(err) {
-          showMsg('personMsg', 'Feil under sammenslåing: ' + err.message, 'error');
-        }
-        return;
-      }
-    }
-  }
-
-  // Normal save
   try {
     await patch('person', `person_id=eq.${personId}`, {
-      first_name:           first || null,
+      first_name:           document.getElementById('p_firstName').value.trim() || null,
       last_name:            last,
       born:                 parseInt(document.getElementById('p_born').value) || null,
       died:                 parseInt(document.getElementById('p_died').value) || null,
@@ -1775,27 +1706,19 @@ async function addNewPerson() {
   const first = document.getElementById('np_firstName').value.trim();
   if (!last) { alert('Etternavn er påkrevd.'); return; }
   const existing = await get(`/person?last_name=ilike.${encodeURIComponent(last)}&select=person_id,first_name,last_name,pseudonym`);
-  const match = existing.find(p =>
-    (!first && !p.first_name) ||
-    (first && p.first_name && p.first_name.toLowerCase() === first.toLowerCase())
-  );
+  const match = existing.find(p => (!first&&!p.first_name)||(first&&p.first_name&&p.first_name.toLowerCase()===first.toLowerCase()));
   if (match) {
-    const fullName = ((match.first_name || '') + ' ' + match.last_name).trim();
-    const usePseudo = confirm(
-      `"${fullName}" finnes allerede i databasen (ID ${match.person_id}).
+    const fullName = ((match.first_name||'')+' '+match.last_name).trim();
+    const usePseudo = confirm(`"${fullName}" finnes allerede i databasen (ID ${match.person_id}).
 
-` +
-      `Vil du legge til det nye navnet som pseudonym på den eksisterende personen?
+Vil du legge til det nye navnet som pseudonym?
 
-` +
-      `OK = Legg til som pseudonym
-Avbryt = Opprett likevel som ny person`
-    );
+OK = Legg til som pseudonym
+Avbryt = Opprett som ny person`);
     if (usePseudo) {
       const newPseudo = first ? `${first} ${last}` : last;
-      const updatedPseudo = match.pseudonym ? match.pseudonym + ', ' + newPseudo : newPseudo;
-      await patch('person', `person_id=eq.${match.person_id}`, { pseudonym: updatedPseudo });
-      showMsg('personMsg', `✓ "${newPseudo}" lagt til som pseudonym på ${fullName} (ID ${match.person_id})`, 'success');
+      await patch('person', `person_id=eq.${match.person_id}`, { pseudonym: match.pseudonym ? match.pseudonym+', '+newPseudo : newPseudo });
+      showMsg('personMsg', `✓ "${newPseudo}" lagt til som pseudonym på ${fullName}`, 'success');
       ['np_firstName','np_lastName','np_born','np_died','np_nationality','np_bioUrl'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('np_isFemaleNorwegian').checked = false;
       document.getElementById('np_flag').textContent = '';
@@ -1820,176 +1743,6 @@ Avbryt = Opprett likevel som ny person`
     showMsg('personMsg', 'Feil: ' + err.message, 'error');
   }
 }
-
-
-// ═══════════════════════ TAGS ═══════════════════════
-let _allTags = null;
-async function getAllTags() {
-  if (_allTags) return _allTags;
-  _allTags = await get('/tag?select=tag_id,tag_name&order=tag_name.asc');
-  return _allTags;
-}
-async function loadTagCheckboxes(compId) {
-  const container = document.getElementById('e_tagCheckboxes');
-  if (!container) return;
-  const [allTags, compTags] = await Promise.all([
-    getAllTags(),
-    get(`/composition_tag?composition_id=eq.${compId}&select=tag_id`)
-  ]);
-  const assigned = new Set(compTags.map(t => t.tag_id));
-  container.innerHTML = allTags.map(t => `
-    <label style="display:inline-flex;align-items:center;gap:0.35rem;padding:0.3rem 0.75rem;border:1px solid var(--border);border-radius:20px;cursor:pointer;font-size:0.85rem;background:${assigned.has(t.tag_id) ? 'var(--accent)' : 'white'};color:${assigned.has(t.tag_id) ? 'white' : 'var(--ink)'};transition:background 0.15s" onclick="toggleTagLabel(this)">
-      <input type="checkbox" value="${t.tag_id}" ${assigned.has(t.tag_id) ? 'checked' : ''} style="display:none">
-      ${t.tag_name}
-    </label>`).join('');
-}
-function toggleTagLabel(label) {
-  const cb = label.querySelector('input');
-  cb.checked = !cb.checked;
-  label.style.background = cb.checked ? 'var(--accent)' : 'white';
-  label.style.color       = cb.checked ? 'white' : 'var(--ink)';
-}
-
-// ═══════════════════════ BIO-LENKER ═══════════════════════
-let bioPersons  = [];
-let bioIndex    = 0;
-let bioMode     = 'unverified';
-let bioLoaded   = false;
-let bioVerified = 0;
-let bioNulled   = 0;
-let bioSaved    = 0;
-
-async function loadBioPersons() {
-  if (bioLoaded) return;
-  bioLoaded = true;
-  let unverified = [], offset = 0;
-  while (true) {
-    const r = await get(`/person?bio_url=not.is.null&bio_url_verified=eq.false&select=person_id,first_name,last_name,born,died,nationality,bio_url&order=last_name.asc&offset=${offset}`);
-    unverified = unverified.concat(r); if (r.length < 1000) break; offset += 1000;
-  }
-  let missing = [], offset2 = 0;
-  while (true) {
-    const r = await get(`/person?bio_url=is.null&select=person_id,first_name,last_name,born,died,nationality&order=last_name.asc&offset=${offset2}`);
-    missing = missing.concat(r); if (r.length < 1000) break; offset2 += 1000;
-  }
-  document.getElementById('countUnverified').textContent = unverified.length;
-  document.getElementById('countMissing').textContent    = missing.length;
-  window._bioUnverified = unverified;
-  window._bioMissing    = missing;
-  showBioSection(bioMode);
-}
-
-function showBioSection(mode) {
-  bioMode    = mode;
-  bioIndex   = 0;
-  bioPersons = mode === 'unverified' ? (window._bioUnverified || []) : (window._bioMissing || []);
-  document.getElementById('bioTabUnverified').style.borderColor = mode === 'unverified' ? 'var(--accent)' : '';
-  document.getElementById('bioTabMissing').style.borderColor    = mode === 'missing'    ? 'var(--accent)' : '';
-  document.getElementById('bioProgressBar').style.background    = mode === 'unverified' ? 'var(--accent2)' : 'var(--accent)';
-  renderBioCard();
-}
-
-function renderBioCard() {
-  const total = bioPersons.length;
-  const pct   = total > 0 ? Math.round((bioIndex / total) * 100) : 100;
-  document.getElementById('bioProgressBar').style.width   = pct + '%';
-  document.getElementById('bioProgressLabel').textContent = `${bioIndex} av ${total} (${pct}%)`;
-  const area = document.getElementById('bioCardArea');
-  if (bioIndex >= total) {
-    const stat = bioMode === 'unverified' ? `${bioVerified} verifisert · ${bioNulled} fjernet` : `${bioSaved} lagt til`;
-    area.innerHTML = `<div class="card" style="text-align:center;padding:2rem;color:var(--accent2);font-family:'Playfair Display',serif;font-size:1.2rem">✓ Alle gjennomgått<br><span style="font-size:0.9rem;font-family:sans-serif;color:var(--muted)">${stat}</span></div>`;
-    return;
-  }
-  const p    = bioPersons[bioIndex];
-  const name = ((p.first_name || '') + ' ' + (p.last_name || '')).trim() || '⚠ Navn mangler';
-  const nameWarning = (!p.first_name && !p.last_name) ? ` <span style="font-size:0.78rem;color:var(--accent)">ID ${p.person_id} — navn mangler</span>` : '';
-  const meta = `ID: ${p.person_id}` + ([p.born,p.died].filter(Boolean).join('–') ? ' · ' + [p.born,p.died].filter(Boolean).join('–') : '') + (p.nationality ? ' · ' + p.nationality : '');
-  const enc  = encodeURIComponent(name);
-  if (bioMode === 'unverified') {
-    area.innerHTML = `
-      <div class="card">
-        <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;margin-bottom:0.2rem">${name}${nameWarning}</div>
-        <div style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem">${meta}</div>
-        <div style="background:var(--paper);border:1px solid var(--border);border-radius:5px;padding:0.6rem 0.9rem;font-size:0.82rem;word-break:break-all;margin-bottom:1rem;font-family:monospace">${p.bio_url}</div>
-        <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
-          <a class="btn btn-secondary" href="${p.bio_url}" target="_blank" style="font-size:0.85rem">🔗 Åpne lenke</a>
-          <button type="button" class="btn btn-primary" id="btnBioVerify" onclick="biDoVerify(${p.person_id})" style="font-size:0.85rem">✓ Verifiser</button>
-          <button type="button" class="btn btn-secondary" onclick="biDoNull(${p.person_id})" style="font-size:0.85rem;color:var(--accent);border-color:var(--accent)">✗ Fjern lenke</button>
-          <button type="button" class="btn btn-secondary" onclick="biSkip()" style="font-size:0.85rem">→ Hopp over</button>
-        </div>
-        <div id="bioMsg" style="font-size:0.82rem;margin-top:0.5rem;color:var(--muted);min-height:1.2em"></div>
-      </div>`;
-  } else {
-    area.innerHTML = `
-      <div class="card">
-        <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;margin-bottom:0.2rem">${name}</div>
-        <div style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem">${meta}</div>
-        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem">
-          <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://no.wikipedia.org/w/index.php?search=${enc}" target="_blank">no.wikipedia</a>
-          <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://sv.wikipedia.org/w/index.php?search=${enc}" target="_blank">sv.wikipedia</a>
-          <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://en.wikipedia.org/w/index.php?search=${enc}" target="_blank">en.wikipedia</a>
-          <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://da.wikipedia.org/w/index.php?search=${enc}" target="_blank">da.wikipedia</a>
-          <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://snl.no/search?query=${enc}" target="_blank">snl.no</a>
-          <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://nbl.snl.no/search?query=${enc}" target="_blank">nbl.snl.no</a>
-          <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://www.nb.no/search?q=${enc}" target="_blank">nb.no</a>
-        </div>
-        <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
-          <input id="bioUrlInput" type="url" placeholder="Lim inn bio-lenke her…" style="flex:1;padding:0.55rem 0.8rem;border:1px solid var(--border);border-radius:5px;font-family:inherit;font-size:0.88rem">
-          <a id="btnBioTest" class="btn btn-secondary" href="#" target="_blank" style="font-size:0.85rem">Åpne</a>
-        </div>
-        <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
-          <button type="button" class="btn btn-primary" id="btnBioSave" onclick="biDoSave(${p.person_id})" style="font-size:0.85rem">💾 Lagre lenke</button>
-          <button type="button" class="btn btn-secondary" onclick="biSkip()" style="font-size:0.85rem">→ Hopp over</button>
-        </div>
-        <div id="bioMsg" style="font-size:0.82rem;margin-top:0.5rem;color:var(--muted);min-height:1.2em"></div>
-      </div>`;
-    document.getElementById('bioUrlInput').addEventListener('input', () => {
-      document.getElementById('btnBioTest').href = document.getElementById('bioUrlInput').value.trim() || '#';
-    });
-  }
-}
-
-async function biDoVerify(pid) {
-  document.getElementById('btnBioVerify').disabled = true;
-  document.getElementById('bioMsg').textContent = 'Lagrer…';
-  try {
-    await patch('person', `person_id=eq.${pid}`, { bio_url_verified: true });
-    bioVerified++;
-    window._bioUnverified = window._bioUnverified.filter(p => p.person_id !== pid);
-    bioPersons = window._bioUnverified;
-    document.getElementById('countUnverified').textContent = bioPersons.length;
-    renderBioCard();
-  } catch(e) { document.getElementById('bioMsg').textContent = 'Feil — prøv igjen'; }
-}
-
-async function biDoNull(pid) {
-  document.getElementById('bioMsg').textContent = 'Fjerner…';
-  try {
-    await patch('person', `person_id=eq.${pid}`, { bio_url: null, bio_url_verified: false });
-    bioNulled++;
-    window._bioUnverified = window._bioUnverified.filter(p => p.person_id !== pid);
-    bioPersons = window._bioUnverified;
-    document.getElementById('countUnverified').textContent = bioPersons.length;
-    renderBioCard();
-  } catch(e) { document.getElementById('bioMsg').textContent = 'Feil — prøv igjen'; }
-}
-
-async function biDoSave(pid) {
-  const url = document.getElementById('bioUrlInput')?.value.trim();
-  if (!url) { document.getElementById('bioMsg').textContent = 'Skriv inn en lenke først'; return; }
-  document.getElementById('btnBioSave').disabled = true;
-  document.getElementById('bioMsg').textContent = 'Lagrer…';
-  try {
-    await patch('person', `person_id=eq.${pid}`, { bio_url: url, bio_url_verified: true });
-    bioSaved++;
-    window._bioMissing = window._bioMissing.filter(p => p.person_id !== pid);
-    bioPersons = window._bioMissing;
-    document.getElementById('countMissing').textContent = bioPersons.length;
-    renderBioCard();
-  } catch(e) { document.getElementById('bioMsg').textContent = 'Feil — prøv igjen'; }
-}
-
-function biSkip() { bioIndex++; renderBioCard(); }
 
 </script>
 </body>
