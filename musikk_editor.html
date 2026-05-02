@@ -1433,8 +1433,7 @@ async function saveEdit() {
 
     // Update tags
     await del('composition_tag', `composition_id=eq.${compId}`);
-    const checkedTags = [...document.querySelectorAll('#e_tagCheckboxes input[type=checkbox]:checked')];
-    for (const cb of checkedTags) {
+    for (const cb of [...document.querySelectorAll('#e_tagCheckboxes input[type=checkbox]:checked')]) {
       await post('composition_tag', { composition_id: parseInt(compId), tag_id: parseInt(cb.value) });
     }
 
@@ -1614,6 +1613,9 @@ async function loadPersonForm(personId) {
   document.getElementById('p_personId').value   = p.person_id;
   document.getElementById('p_firstName').value  = p.first_name || '';
   document.getElementById('p_lastName').value   = p.last_name  || '';
+  // Store original name so we can detect changes on save
+  document.getElementById('p_firstName').dataset.original = p.first_name || '';
+  document.getElementById('p_lastName').dataset.original  = p.last_name  || '';
   document.getElementById('p_born').value       = p.born       || '';
   document.getElementById('p_died').value       = p.died       || '';
   document.getElementById('p_nationality').value= p.nationality|| '';
@@ -1634,12 +1636,90 @@ async function loadPersonForm(personId) {
 }
 
 async function savePerson() {
-  const personId = document.getElementById('p_personId').value;
-  const last     = document.getElementById('p_lastName').value.trim();
+  const personId  = document.getElementById('p_personId').value;
+  const first     = document.getElementById('p_firstName').value.trim();
+  const last      = document.getElementById('p_lastName').value.trim();
+  const origFirst = document.getElementById('p_firstName').dataset.original || '';
+  const origLast  = document.getElementById('p_lastName').dataset.original  || '';
   if (!last) { alert('Etternavn er påkrevd.'); return; }
+
+  // Check if name has changed
+  const nameChanged = first !== origFirst || last !== origLast;
+
+  if (nameChanged) {
+    // Check if new name already exists in database
+    const existing = await get(`/person?last_name=ilike.${encodeURIComponent(last)}&select=person_id,first_name,last_name,pseudonym`);
+    const match = existing.find(p =>
+      parseInt(p.person_id) !== parseInt(personId) && (
+        (!first && !p.first_name) ||
+        (first && p.first_name && p.first_name.toLowerCase() === first.toLowerCase())
+      )
+    );
+
+    if (match) {
+      const targetName  = ((match.first_name || '') + ' ' + match.last_name).trim();
+      const currentName = (origFirst ? origFirst + ' ' : '') + origLast;
+      const choice = confirm(
+        `"${targetName}" finnes allerede i databasen (ID ${match.person_id}).
+
+` +
+        `Vil du SLÅ SAMMEN disse to personene?
+
+` +
+        `OK = Slå sammen: flytt alle komposisjoner/tekster til "${targetName}", ` +
+        `legg til "${currentName}" som pseudonym, og slett denne posten.
+
+` +
+        `Avbryt = Lagre bare navneendringen uten sammenslåing`
+      );
+
+      if (choice) {
+        showMsg('personMsg', 'Slår sammen…', '');
+        try {
+          // Move composition_composer links
+          const cc = await get(`/composition_composer?person_id=eq.${personId}&select=composition_id,credited_as,role`);
+          for (const row of cc) {
+            // Check if target already has this composition to avoid duplicates
+            const exists = await get(`/composition_composer?person_id=eq.${match.person_id}&composition_id=eq.${row.composition_id}&select=id`);
+            if (!exists.length) {
+              await post('composition_composer', { composition_id: row.composition_id, person_id: match.person_id, credited_as: row.credited_as||null, role: row.role||null });
+            }
+          }
+          await del('composition_composer', `person_id=eq.${personId}`);
+
+          // Move composition_lyricist links
+          const cl = await get(`/composition_lyricist?person_id=eq.${personId}&select=composition_id,credited_as`);
+          for (const row of cl) {
+            const exists = await get(`/composition_lyricist?person_id=eq.${match.person_id}&composition_id=eq.${row.composition_id}&select=id`);
+            if (!exists.length) {
+              await post('composition_lyricist', { composition_id: row.composition_id, person_id: match.person_id, credited_as: row.credited_as||null });
+            }
+          }
+          await del('composition_lyricist', `person_id=eq.${personId}`);
+
+          // Add old name as pseudonym on target
+          const newPseudo = match.pseudonym
+            ? match.pseudonym + ', ' + currentName
+            : currentName;
+          await patch('person', `person_id=eq.${match.person_id}`, { pseudonym: newPseudo });
+
+          // Delete the current (now empty) record
+          await del('person', `person_id=eq.${personId}`);
+
+          showMsg('personMsg', `✓ Slått sammen med "${targetName}" (ID ${match.person_id}). "${currentName}" lagt til som pseudonym.`, 'success');
+          closePerson();
+        } catch(err) {
+          showMsg('personMsg', 'Feil under sammenslåing: ' + err.message, 'error');
+        }
+        return;
+      }
+    }
+  }
+
+  // Normal save
   try {
     await patch('person', `person_id=eq.${personId}`, {
-      first_name:           document.getElementById('p_firstName').value.trim() || null,
+      first_name:           first || null,
       last_name:            last,
       born:                 parseInt(document.getElementById('p_born').value) || null,
       died:                 parseInt(document.getElementById('p_died').value) || null,
@@ -1702,9 +1782,14 @@ async function addNewPerson() {
   if (match) {
     const fullName = ((match.first_name || '') + ' ' + match.last_name).trim();
     const usePseudo = confirm(
-      `"${fullName}" finnes allerede i databasen (ID ${match.person_id}).\n\n` +
-      `Vil du legge til det nye navnet som pseudonym på den eksisterende personen?\n\n` +
-      `OK = Legg til som pseudonym\nAvbryt = Opprett likevel som ny person`
+      `"${fullName}" finnes allerede i databasen (ID ${match.person_id}).
+
+` +
+      `Vil du legge til det nye navnet som pseudonym på den eksisterende personen?
+
+` +
+      `OK = Legg til som pseudonym
+Avbryt = Opprett likevel som ny person`
     );
     if (usePseudo) {
       const newPseudo = first ? `${first} ${last}` : last;
@@ -1739,38 +1824,31 @@ async function addNewPerson() {
 
 // ═══════════════════════ TAGS ═══════════════════════
 let _allTags = null;
-
 async function getAllTags() {
   if (_allTags) return _allTags;
   _allTags = await get('/tag?select=tag_id,tag_name&order=tag_name.asc');
   return _allTags;
 }
-
 async function loadTagCheckboxes(compId) {
   const container = document.getElementById('e_tagCheckboxes');
   if (!container) return;
-
   const [allTags, compTags] = await Promise.all([
     getAllTags(),
     get(`/composition_tag?composition_id=eq.${compId}&select=tag_id`)
   ]);
-
   const assigned = new Set(compTags.map(t => t.tag_id));
-
   container.innerHTML = allTags.map(t => `
     <label style="display:inline-flex;align-items:center;gap:0.35rem;padding:0.3rem 0.75rem;border:1px solid var(--border);border-radius:20px;cursor:pointer;font-size:0.85rem;background:${assigned.has(t.tag_id) ? 'var(--accent)' : 'white'};color:${assigned.has(t.tag_id) ? 'white' : 'var(--ink)'};transition:background 0.15s" onclick="toggleTagLabel(this)">
       <input type="checkbox" value="${t.tag_id}" ${assigned.has(t.tag_id) ? 'checked' : ''} style="display:none">
       ${t.tag_name}
     </label>`).join('');
 }
-
 function toggleTagLabel(label) {
   const cb = label.querySelector('input');
   cb.checked = !cb.checked;
   label.style.background = cb.checked ? 'var(--accent)' : 'white';
   label.style.color       = cb.checked ? 'white' : 'var(--ink)';
 }
-
 
 // ═══════════════════════ BIO-LENKER ═══════════════════════
 let bioPersons  = [];
