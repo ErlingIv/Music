@@ -354,7 +354,7 @@
   <div class="tabs">
     <button type="button" class="tab active" onclick="switchTab('new')">Ny innføring</button>
     <button type="button" class="tab" onclick="switchTab('edit')">Rediger</button>
-    <button type="button" class="tab" onclick="switchTab('person')">Komponist</button>
+    <button type="button" class="tab" onclick="switchTab('person')">Person</button>
     <button type="button" class="tab" onclick="switchTab('biolinks')">Bio-lenker</button>
   </div>
 
@@ -406,7 +406,7 @@
         <div id="n_composerTags" class="tags"></div>
         <div class="field">
           <div class="lookup-wrap">
-            <input type="text" id="n_composerSearch" placeholder="Søk etter komponist…" autocomplete="off">
+            <input type="text" id="n_composerSearch" placeholder="Søk etter person…" autocomplete="off">
             <div id="n_composerResults" class="lookup-results"></div>
           </div>
         </div>
@@ -646,7 +646,7 @@
     <div id="personMsg" class="msg"></div>
 
     <div class="card">
-      <div class="card-title">Søk etter komponist</div>
+      <div class="card-title">Søk etter person</div>
       <div class="field">
         <input type="text" id="personSearch" placeholder="Søk på etternavn…" autocomplete="off">
       </div>
@@ -726,7 +726,7 @@
     </div>
 
     <div class="card" id="newPersonCard" style="margin-top:1.5rem">
-      <div class="card-title">Legg til ny komponist</div>
+      <div class="card-title">Legg til ny person</div>
       <div class="row2">
         <div class="field">
           <label>Fornavn</label>
@@ -765,35 +765,31 @@
         <label for="np_isFemaleNorwegian" style="margin:0;text-transform:none;font-size:0.88rem;letter-spacing:0;font-weight:500;color:#4a4035;cursor:pointer">Norsk kvinnelig komponist (K-flagg)</label>
       </div>
       <div class="actions">
-        <button class="btn btn-primary" onclick="addNewPerson()">Legg til komponist</button>
+        <button class="btn btn-primary" onclick="addNewPerson()">Legg til person</button>
       </div>
     </div>
   </div>
 
+
   <!-- ═══════════════════════ BIO-LENKER TAB ═══════════════════════ -->
   <div id="tab-biolinks" class="tab-content">
-
     <div class="card">
       <div class="card-title" style="display:flex;align-items:center;gap:1rem">
         Bio-lenker
         <div style="display:flex;gap:0.5rem;margin-left:auto">
-          <button type="button" class="btn btn-secondary" onclick="showBioSection('unverified')" id="bioTabUnverified" style="font-size:0.82rem;padding:0.3rem 0.9rem">Uverifiserte <span id="countUnverified" class="badge" style="background:var(--accent);color:white;border-radius:3px;padding:1px 6px;font-size:0.75rem;margin-left:4px">…</span></button>
-          <button type="button" class="btn btn-secondary" onclick="showBioSection('missing')" id="bioTabMissing" style="font-size:0.82rem;padding:0.3rem 0.9rem">Mangler lenke <span id="countMissing" class="badge" style="background:var(--muted);color:white;border-radius:3px;padding:1px 6px;font-size:0.75rem;margin-left:4px">…</span></button>
+          <button type="button" class="btn btn-secondary" onclick="showBioSection('unverified')" id="bioTabUnverified" style="font-size:0.82rem;padding:0.3rem 0.9rem">Uverifiserte <span id="countUnverified" style="background:var(--accent);color:white;border-radius:3px;padding:1px 6px;font-size:0.75rem;margin-left:4px">…</span></button>
+          <button type="button" class="btn btn-secondary" onclick="showBioSection('missing')" id="bioTabMissing" style="font-size:0.82rem;padding:0.3rem 0.9rem">Mangler lenke <span id="countMissing" style="background:var(--muted);color:white;border-radius:3px;padding:1px 6px;font-size:0.75rem;margin-left:4px">…</span></button>
         </div>
       </div>
     </div>
-
-    <!-- Progress -->
     <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem">
       <div style="flex:1;background:var(--warm);border-radius:6px;height:8px;overflow:hidden">
         <div id="bioProgressBar" style="height:100%;border-radius:6px;transition:width 0.4s ease;width:0%;background:var(--accent2)"></div>
       </div>
       <div id="bioProgressLabel" style="font-size:0.85rem;color:var(--muted);white-space:nowrap">—</div>
     </div>
-
     <div id="bioCardArea"></div>
   </div>
-
 
 </div>
 
@@ -875,14 +871,16 @@ async function del(table, filter) {
 
 function switchTab(name) {
   if (name === 'biolinks' && !bioLoaded) loadBioPersons();
-  // Activate the clicked tab button
   document.querySelectorAll('.tab').forEach(t => {
     t.classList.toggle('active', t.getAttribute('onclick') === `switchTab('${name}')`);
   });
-  // Show matching tab content
   document.querySelectorAll('.tab-content').forEach(el => {
     el.classList.toggle('active', el.id === `tab-${name}`);
   });
+}[name];
+  tabs[idx].classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
 }
 
 // ── Person lookup factory ─────────────────────────────────────────────────────
@@ -1643,7 +1641,7 @@ async function savePerson() {
       bio_text:             document.getElementById('p_bioText').value.trim() || null,
       is_female_norwegian:  document.getElementById('p_isFemaleNorwegian').checked ? 'Yes' : 'No',
     });
-    showMsg('personMsg', '✓ Komponist oppdatert', 'success');
+    showMsg('personMsg', '✓ Person oppdatert', 'success');
     closePerson();
   } catch(err) {
     showMsg('personMsg', 'Feil: ' + err.message, 'error');
@@ -1684,8 +1682,35 @@ function closePerson() {
 }
 
 async function addNewPerson() {
-  const last = document.getElementById('np_lastName').value.trim();
+  const last  = document.getElementById('np_lastName').value.trim();
+  const first = document.getElementById('np_firstName').value.trim();
   if (!last) { alert('Etternavn er påkrevd.'); return; }
+
+  // Check for existing person with same name
+  const existing = await get(`/person?last_name=ilike.${encodeURIComponent(last)}&select=person_id,first_name,last_name,pseudonym`);
+  const match = existing.find(p =>
+    (!first && !p.first_name) ||
+    (first && p.first_name && p.first_name.toLowerCase() === first.toLowerCase())
+  );
+  if (match) {
+    const fullName = ((match.first_name || '') + ' ' + match.last_name).trim();
+    const usePseudo = confirm(
+      `"${fullName}" finnes allerede i databasen (ID ${match.person_id}).\n\n` +
+      `Vil du legge til det nye navnet som pseudonym på den eksisterende personen?\n\n` +
+      `OK = Legg til som pseudonym\nAvbryt = Opprett likevel som ny person`
+    );
+    if (usePseudo) {
+      const newPseudo = first ? `${first} ${last}` : last;
+      const existing_pseudo = match.pseudonym ? match.pseudonym + ', ' + newPseudo : newPseudo;
+      await patch('person', `person_id=eq.${match.person_id}`, { pseudonym: existing_pseudo });
+      showMsg('personMsg', `✓ "${newPseudo}" lagt til som pseudonym på ${fullName} (ID ${match.person_id})`, 'success');
+      ['np_firstName','np_lastName','np_born','np_died','np_nationality','np_bioUrl'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('np_isFemaleNorwegian').checked = false;
+      document.getElementById('np_flag').textContent = '';
+      return;
+    }
+  }
+
   try {
     const p = await post('person', {
       first_name:          document.getElementById('np_firstName').value.trim() || null,
@@ -1698,7 +1723,6 @@ async function addNewPerson() {
     });
     showMsg('personMsg', `✓ ${document.getElementById('np_firstName').value} ${last} lagt til (id=${p.person_id})`, 'success');
     ['np_firstName','np_lastName','np_born','np_died','np_nationality','np_bioUrl'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('p_bioUrlVerified').checked = false;
     document.getElementById('np_isFemaleNorwegian').checked = false;
     document.getElementById('np_flag').textContent = '';
   } catch(err) {
@@ -1707,21 +1731,18 @@ async function addNewPerson() {
 }
 
 
-// ═══════════════════════ BIO-LENKER TAB ═══════════════════════
-
-let bioPersons   = [];
-let bioIndex     = 0;
-let bioMode      = 'unverified';  // 'unverified' or 'missing'
-let bioVerified  = 0;
-let bioNulled    = 0;
-let bioSaved     = 0;
-let bioLoaded    = false;
+// ═══════════════════════ BIO-LENKER ═══════════════════════
+let bioPersons  = [];
+let bioIndex    = 0;
+let bioMode     = 'unverified';
+let bioLoaded   = false;
+let bioVerified = 0;
+let bioNulled   = 0;
+let bioSaved    = 0;
 
 async function loadBioPersons() {
   if (bioLoaded) return;
   bioLoaded = true;
-
-  // Fetch unverified
   let unverified = [], offset = 0;
   while (true) {
     const r = await get(`/person?bio_url=not.is.null&bio_url_verified=eq.false&select=person_id,first_name,last_name,born,died,nationality,bio_url&order=last_name.asc&offset=${offset}`);
@@ -1729,8 +1750,6 @@ async function loadBioPersons() {
     if (r.length < 1000) break;
     offset += 1000;
   }
-
-  // Fetch missing
   let missing = [], offset2 = 0;
   while (true) {
     const r = await get(`/person?bio_url=is.null&select=person_id,first_name,last_name,born,died,nationality&order=last_name.asc&offset=${offset2}`);
@@ -1738,40 +1757,29 @@ async function loadBioPersons() {
     if (r.length < 1000) break;
     offset2 += 1000;
   }
-
   document.getElementById('countUnverified').textContent = unverified.length;
   document.getElementById('countMissing').textContent    = missing.length;
-
-  // Store both lists on the window for switching
   window._bioUnverified = unverified;
   window._bioMissing    = missing;
-
   showBioSection(bioMode);
 }
 
 function showBioSection(mode) {
-  bioMode  = mode;
-  bioIndex = 0;
+  bioMode    = mode;
+  bioIndex   = 0;
   bioPersons = mode === 'unverified' ? (window._bioUnverified || []) : (window._bioMissing || []);
-
-  // Highlight active sub-tab
   document.getElementById('bioTabUnverified').style.borderColor = mode === 'unverified' ? 'var(--accent)' : '';
   document.getElementById('bioTabMissing').style.borderColor    = mode === 'missing'    ? 'var(--accent)' : '';
   document.getElementById('bioProgressBar').style.background    = mode === 'unverified' ? 'var(--accent2)' : 'var(--accent)';
-
   renderBioCard();
 }
 
 function renderBioCard() {
   const total = bioPersons.length;
-  const done  = bioIndex;
-  const pct   = total > 0 ? Math.round((done / total) * 100) : 100;
-
-  document.getElementById('bioProgressBar').style.width = pct + '%';
-  document.getElementById('bioProgressLabel').textContent = `${done} av ${total} (${pct}%)`;
-
+  const pct   = total > 0 ? Math.round((bioIndex / total) * 100) : 100;
+  document.getElementById('bioProgressBar').style.width   = pct + '%';
+  document.getElementById('bioProgressLabel').textContent = `${bioIndex} av ${total} (${pct}%)`;
   const area = document.getElementById('bioCardArea');
-
   if (bioIndex >= total) {
     const stat = bioMode === 'unverified'
       ? `${bioVerified} verifisert · ${bioNulled} lenke fjernet`
@@ -1779,17 +1787,18 @@ function renderBioCard() {
     area.innerHTML = `<div class="card" style="text-align:center;padding:2rem;color:var(--accent2);font-family:'Playfair Display',serif;font-size:1.2rem">✓ Alle gjennomgått<br><span style="font-size:0.9rem;font-family:sans-serif;color:var(--muted)">${stat}</span></div>`;
     return;
   }
-
   const p    = bioPersons[bioIndex];
-  const name = ((p.first_name || '') + ' ' + (p.last_name || '')).trim();
-  const meta = [p.born, p.died].filter(Boolean).join('–') + (p.nationality ? ' · ' + p.nationality : '');
+  const name = ((p.first_name || '') + ' ' + (p.last_name || '')).trim() || '⚠ Navn mangler';
+  const nameWarning = (!p.first_name && !p.last_name)
+    ? ` <span style="font-size:0.78rem;color:var(--accent)">ID ${p.person_id} — navn mangler</span>` : '';
+  const meta = `ID: ${p.person_id}` + ([p.born, p.died].filter(Boolean).join('–') ? ' · ' + [p.born, p.died].filter(Boolean).join('–') : '') + (p.nationality ? ' · ' + p.nationality : '');
   const enc  = encodeURIComponent(name);
 
   if (bioMode === 'unverified') {
     area.innerHTML = `
       <div class="card">
-        <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;margin-bottom:0.2rem">${name}</div>
-        <div style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem">${meta || '—'}</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;margin-bottom:0.2rem">${name}${nameWarning}</div>
+        <div style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem">${meta}</div>
         <div style="background:var(--paper);border:1px solid var(--border);border-radius:5px;padding:0.6rem 0.9rem;font-size:0.82rem;word-break:break-all;margin-bottom:1rem;font-family:monospace">${p.bio_url}</div>
         <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
           <a class="btn btn-secondary" href="${p.bio_url}" target="_blank" style="font-size:0.85rem">🔗 Åpne lenke</a>
@@ -1803,7 +1812,7 @@ function renderBioCard() {
     area.innerHTML = `
       <div class="card">
         <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;margin-bottom:0.2rem">${name}</div>
-        <div style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem">${meta || '—'}</div>
+        <div style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem">${meta}</div>
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem">
           <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://no.wikipedia.org/w/index.php?search=${enc}" target="_blank">no.wikipedia</a>
           <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://sv.wikipedia.org/w/index.php?search=${enc}" target="_blank">sv.wikipedia</a>
@@ -1815,7 +1824,7 @@ function renderBioCard() {
         </div>
         <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
           <input id="bioUrlInput" type="url" placeholder="Lim inn bio-lenke her…" style="flex:1;padding:0.55rem 0.8rem;border:1px solid var(--border);border-radius:5px;font-family:inherit;font-size:0.88rem">
-          <a id="btnBioTest" class="btn btn-secondary" href="#" target="_blank" style="font-size:0.85rem" onclick="updateBioTestLink()">Åpne</a>
+          <a id="btnBioTest" class="btn btn-secondary" href="#" target="_blank" style="font-size:0.85rem">Åpne</a>
         </div>
         <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
           <button type="button" class="btn btn-primary" id="btnBioSave" onclick="biDoSave(${p.person_id})" style="font-size:0.85rem">💾 Lagre lenke</button>
@@ -1823,15 +1832,11 @@ function renderBioCard() {
         </div>
         <div id="bioMsg" style="font-size:0.82rem;margin-top:0.5rem;color:var(--muted);min-height:1.2em"></div>
       </div>`;
-
-    document.getElementById('bioUrlInput').addEventListener('input', updateBioTestLink);
+    document.getElementById('bioUrlInput').addEventListener('input', () => {
+      const v = document.getElementById('bioUrlInput').value.trim();
+      document.getElementById('btnBioTest').href = v || '#';
+    });
   }
-}
-
-function updateBioTestLink() {
-  const val = document.getElementById('bioUrlInput')?.value.trim();
-  const btn = document.getElementById('btnBioTest');
-  if (btn) btn.href = val || '#';
 }
 
 async function biDoVerify(pid) {
@@ -1840,7 +1845,6 @@ async function biDoVerify(pid) {
   try {
     await patch('person', `person_id=eq.${pid}`, { bio_url_verified: true });
     bioVerified++;
-    // Remove from list
     window._bioUnverified = window._bioUnverified.filter(p => p.person_id !== pid);
     bioPersons = window._bioUnverified;
     document.getElementById('countUnverified').textContent = bioPersons.length;
@@ -1849,7 +1853,7 @@ async function biDoVerify(pid) {
 }
 
 async function biDoNull(pid) {
-  document.getElementById('bioMsg').textContent = 'Fjerner lenke…';
+  document.getElementById('bioMsg').textContent = 'Fjerner…';
   try {
     await patch('person', `person_id=eq.${pid}`, { bio_url: null, bio_url_verified: false });
     bioNulled++;
@@ -1875,10 +1879,7 @@ async function biDoSave(pid) {
   } catch(e) { document.getElementById('bioMsg').textContent = 'Feil — prøv igjen'; }
 }
 
-function biSkip() {
-  bioIndex++;
-  renderBioCard();
-}
+function biSkip() { bioIndex++; renderBioCard(); }
 
 </script>
 </body>
