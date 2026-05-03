@@ -348,7 +348,7 @@
 <div class="container">
   <header>
     <h1>Musikk — Administrasjon</h1>
-    <button onclick="downloadSelf()" style="position:absolute;top:1rem;right:1.5rem;padding:0.4rem 1rem;background:var(--warm);border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:0.8rem;cursor:pointer;color:var(--ink)">⬇ Last ned</button>
+    
 
   </header>
 
@@ -1712,12 +1712,12 @@ async function savePerson() {
         showMsg('personMsg', 'Slår sammen…', '');
         try {
           // Move composition_composer links
-          const cc = await get(`/composition_composer?person_id=eq.${personId}&select=composition_id,credited_as,role`);
+          const cc = await get(`/composition_composer?person_id=eq.${personId}&select=composition_id,credited_as`);
           for (const row of cc) {
             // Check if target already has this composition to avoid duplicates
             const exists = await get(`/composition_composer?person_id=eq.${match.person_id}&composition_id=eq.${row.composition_id}&select=id`);
             if (!exists.length) {
-              await post('composition_composer', { composition_id: row.composition_id, person_id: match.person_id, credited_as: row.credited_as||null, role: row.role||null });
+              await post('composition_composer', { composition_id: row.composition_id, person_id: match.person_id, credited_as: row.credited_as||null });
             }
           }
           await del('composition_composer', `person_id=eq.${personId}`);
@@ -1889,7 +1889,6 @@ function toggleTagLabel(label) {
 let bioPersons  = [];
 let bioIndex    = 0;
 let bioMode     = 'unverified';
-let bioLoaded   = false;
 let bioVerified = 0;
 let bioNulled   = 0;
 let bioSaved    = 0;
