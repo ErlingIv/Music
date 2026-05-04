@@ -209,43 +209,61 @@ async function load() {
 
   try {
     // Fetch composition, score, and composers in parallel
-    const [compR, scoreR, ccR] = await Promise.all([
+    const [compR, scoreR, ccR, clR] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${compId}&select=composition_id,title,year_composed,musescore_link,musescore_notes`, { headers: H }),
       fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=eq.${compId}&select=pdf_url,mp3_url`, { headers: H }),
-      fetch(`${SUPABASE_URL}/rest/v1/composition_composer?composition_id=eq.${compId}&select=person_id`, { headers: H }),
+      fetch(`${SUPABASE_URL}/rest/v1/composition_composer?composition_id=eq.${compId}&select=person_id,credited_as`, { headers: H }),
+      fetch(`${SUPABASE_URL}/rest/v1/composition_lyricist?composition_id=eq.${compId}&select=person_id,credited_as`, { headers: H }),
     ]);
 
     const comp  = (await compR.json())[0];
     const score = (await scoreR.json())[0];
     const cc    = await ccR.json();
+    const cl    = await clR.json();
     if (!comp) throw new Error('Score not found');
 
     document.title = `${comp.title} — Norske Musikknoter`;
 
-    // Fetch composer details
-    let composerName   = '—';
-    let composerYears  = '';
-    let composerBioUrl = null;
-    let composerPersonId = null;
+    // Fetch composer details (support multiple composers)
+    const composerDisplayParts = [];
+    let composerName = '—';
+    let composerYears = '';
 
-    if (cc.length > 0) {
-      composerPersonId = cc[0].person_id;
+    for (const row of cc) {
       const pR = await fetch(
-        `${SUPABASE_URL}/rest/v1/person?person_id=eq.${composerPersonId}&select=first_name,last_name,born,died,bio_url`,
+        `${SUPABASE_URL}/rest/v1/person?person_id=eq.${row.person_id}&select=person_id,first_name,last_name,born,died`,
         { headers: H }
       );
       const p = (await pR.json())[0];
       if (p) {
-        composerName   = `${p.first_name} ${p.last_name}`;
-        const parts    = [p.born, p.died].filter(Boolean);
-        composerYears  = parts.length ? `(${parts.join('–')})` : '';
-        composerBioUrl = p.bio_url || null;
+        const displayName = row.credited_as || `${p.first_name} ${p.last_name}`;
+        const years = [p.born, p.died].filter(Boolean);
+        const yearsStr = years.length ? ` <span style="color:var(--muted);font-size:0.88rem">(${years.join('–')})</span>` : '';
+        composerDisplayParts.push(`<a class="composer-link" href="composer.html?id=${p.person_id}">${displayName}</a>${yearsStr}`);
+        if (composerName === '—') {
+          composerName = displayName;
+          composerYears = years.length ? `(${years.join('–')})` : '';
+        }
       }
     }
+    const composerDisplay = composerDisplayParts.length ? composerDisplayParts.join(', ') : '—';
 
-    const composerDisplay = composerPersonId
-      ? `<a class="composer-link" href="composer.html?id=${composerPersonId}">${composerName}</a> <span style="color:var(--muted);font-size:0.88rem">${composerYears}</span>`
-      : `${composerName} <span style="color:var(--muted);font-size:0.88rem">${composerYears}</span>`;
+    // Fetch lyricist details (support multiple lyricists)
+    const lyricistDisplayParts = [];
+    for (const row of cl) {
+      const pR = await fetch(
+        `${SUPABASE_URL}/rest/v1/person?person_id=eq.${row.person_id}&select=person_id,first_name,last_name,born,died`,
+        { headers: H }
+      );
+      const p = (await pR.json())[0];
+      if (p) {
+        const displayName = row.credited_as || `${p.first_name} ${p.last_name}`;
+        const years = [p.born, p.died].filter(Boolean);
+        const yearsStr = years.length ? ` <span style="color:var(--muted);font-size:0.88rem">(${years.join('–')})</span>` : '';
+        lyricistDisplayParts.push(`<a class="composer-link" href="lyricist.html?id=${p.person_id}">${displayName}</a>${yearsStr}`);
+      }
+    }
+    const lyricistDisplay = lyricistDisplayParts.length ? lyricistDisplayParts.join(', ') : null;
 
     const notesRaw = (comp.musescore_notes || '').replace(/`/g, '\\`');
 
@@ -264,6 +282,10 @@ async function load() {
           <p class="meta-label">Year composed</p>
           <p class="meta-value">${comp.year_composed || '—'}</p>
         </div>
+        ${lyricistDisplay ? `<div style="margin-top:0.75rem">
+          <p class="meta-label">Lyricist</p>
+          <p class="meta-value">${lyricistDisplay}</p>
+        </div>` : ''}
       </div>
 
       ${comp.musescore_notes ? `
