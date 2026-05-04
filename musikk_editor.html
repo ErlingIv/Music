@@ -571,10 +571,17 @@
           <input type="checkbox" id="e_toInvestigate" style="width:auto;margin:0;accent-color:var(--accent)">
           <label for="e_toInvestigate" style="margin:0;text-transform:none;font-size:0.88rem;letter-spacing:0;font-weight:500;color:#4a4035;cursor:pointer">Merk som interessant å undersøke</label>
         </div>
-        <div class="field">
-          <label>Tagger</label>
-          <div id="e_tagCheckboxes" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.25rem">
-            <span style="color:var(--muted);font-size:0.85rem">Laster tagger…</span>
+        <div class="field" style="margin-bottom:0.5rem;position:relative">
+          <label style="margin-bottom:0.25rem">Tagger</label>
+          <div id="e_tagDropdown" style="position:relative">
+            <div id="e_tagDropdownBtn" onclick="toggleTagDropdown()"
+              style="display:flex;align-items:center;justify-content:space-between;padding:0.4rem 0.7rem;border:1px solid var(--border);border-radius:5px;background:white;cursor:pointer;font-size:0.85rem;color:var(--ink);user-select:none">
+              <span id="e_tagDropdownLabel">Ingen tagger valgt</span>
+              <span style="font-size:0.7rem;color:var(--muted)">▼</span>
+            </div>
+            <div id="e_tagCheckboxes" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:white;border:1px solid var(--border);border-radius:5px;box-shadow:0 4px 12px rgba(0,0,0,0.1);padding:0.4rem 0;max-height:220px;overflow-y:auto">
+              <span style="color:var(--muted);font-size:0.85rem;padding:0.5rem">Laster tagger…</span>
+            </div>
           </div>
         </div>
       </div>
@@ -1873,7 +1880,7 @@ async function loadTagCheckboxes(compId) {
   ]);
   const assigned = new Set(compTags.map(t => t.tag_id));
   container.innerHTML = allTags.map(t => `
-    <label style="display:inline-flex;align-items:center;gap:0.35rem;padding:0.3rem 0.75rem;border:1px solid var(--border);border-radius:20px;cursor:pointer;font-size:0.85rem;background:${assigned.has(t.tag_id) ? 'var(--accent)' : 'white'};color:${assigned.has(t.tag_id) ? 'white' : 'var(--ink)'};transition:background 0.15s" onclick="toggleTagLabel(this)">
+    <label style="display:inline-flex;align-items:center;gap:0.25rem;padding:0.15rem 0.5rem;border:1px solid var(--border);border-radius:20px;cursor:pointer;font-size:0.72rem;letter-spacing:0.03em;background:${assigned.has(t.tag_id) ? 'var(--accent)' : 'white'};color:${assigned.has(t.tag_id) ? 'white' : 'var(--muted)'};transition:background 0.15s" onclick="toggleTagLabel(this)">
       <input type="checkbox" value="${t.tag_id}" ${assigned.has(t.tag_id) ? 'checked' : ''} style="display:none">
       ${t.tag_name}
     </label>`).join('');
