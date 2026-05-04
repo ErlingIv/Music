@@ -1989,6 +1989,7 @@ function renderBioCard() {
           <a class="btn btn-secondary" href="${p.bio_url}" target="_blank" style="font-size:0.85rem">🔗 Åpne lenke</a>
           <button type="button" class="btn btn-primary" id="btnBioVerify" onclick="biDoVerify(${p.person_id})" style="font-size:0.85rem">✓ Verifiser</button>
           <button type="button" class="btn btn-secondary" onclick="biDoNull(${p.person_id})" style="font-size:0.85rem;color:var(--accent);border-color:var(--accent)">✗ Fjern lenke</button>
+          <button type="button" class="btn btn-secondary" onclick="biToggleScores(${p.person_id}, this)" style="font-size:0.85rem">♪ Vis komposisjoner</button>
           <button type="button" class="btn btn-secondary" onclick="biSkip()" style="font-size:0.85rem">→ Hopp over</button>
         </div>
         <div id="bioMsg" style="font-size:0.82rem;margin-top:0.5rem;color:var(--muted);min-height:1.2em"></div>
@@ -2013,6 +2014,7 @@ function renderBioCard() {
         </div>
         <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
           <button type="button" class="btn btn-primary" id="btnBioSave" onclick="biDoSave(${p.person_id})" style="font-size:0.85rem">💾 Lagre lenke</button>
+          <button type="button" class="btn btn-secondary" onclick="biToggleScores(${p.person_id}, this)" style="font-size:0.85rem">♪ Vis komposisjoner</button>
           <button type="button" class="btn btn-secondary" onclick="biSkip()" style="font-size:0.85rem">→ Hopp over</button>
         </div>
         <div id="bioMsg" style="font-size:0.82rem;margin-top:0.5rem;color:var(--muted);min-height:1.2em"></div>
@@ -2064,6 +2066,69 @@ async function biDoSave(pid) {
 }
 
 function biSkip() { bioIndex++; renderBioCard(); }
+
+async function biToggleScores(pid, btn) {
+  const scoresDiv = document.getElementById('bioScores');
+  if (!scoresDiv) return;
+
+  if (scoresDiv.style.display !== 'none') {
+    scoresDiv.style.display = 'none';
+    btn.textContent = '♪ Vis komposisjoner';
+    return;
+  }
+
+  btn.textContent = 'Laster…';
+  btn.disabled = true;
+
+  try {
+    // Fetch person to get pseudonyms
+    const persons = await get(`/person?person_id=eq.${pid}&select=person_id,first_name,last_name,pseudonym`);
+    const person  = persons[0];
+    const pseudonyms = (person?.pseudonym || '').split(',').map(s => s.trim()).filter(Boolean);
+
+    // Fetch all person_ids to check (this person + any that have this person's name as pseudonym)
+    // Also find persons whose last_name matches any pseudonym
+    const allPids = new Set([pid]);
+
+    // Fetch compositions as composer
+    const cc = await get(`/composition_composer?person_id=eq.${pid}&select=composition_id,credited_as`);
+    // Fetch compositions as lyricist
+    const cl = await get(`/composition_lyricist?person_id=eq.${pid}&select=composition_id,credited_as`);
+
+    const compIds = [...new Set([...cc.map(r => r.composition_id), ...cl.map(r => r.composition_id)])];
+
+    if (compIds.length === 0) {
+      scoresDiv.innerHTML = '<em style="color:var(--muted)">Ingen komposisjoner funnet</em>';
+      scoresDiv.style.display = 'block';
+      btn.textContent = '♪ Skjul';
+      btn.disabled = false;
+      return;
+    }
+
+    const comps = await get(`/composition?composition_id=in.(${compIds.join(',')})&select=composition_id,title,year_composed&order=title.asc`);
+
+    // Build role map
+    const roleMap = {};
+    cc.forEach(r => { roleMap[r.composition_id] = (roleMap[r.composition_id] || []).concat('Komponist' + (r.credited_as ? ` (${r.credited_as})` : '')); });
+    cl.forEach(r => { roleMap[r.composition_id] = (roleMap[r.composition_id] || []).concat('Tekstforfatter' + (r.credited_as ? ` (${r.credited_as})` : '')); });
+
+    scoresDiv.innerHTML = `
+      <div style="font-weight:600;margin-bottom:0.5rem;color:var(--muted);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em">${comps.length} komposisjon${comps.length !== 1 ? 'er' : ''}</div>
+      ${comps.map(comp => `
+        <div style="display:flex;justify-content:space-between;padding:0.25rem 0;border-bottom:1px solid var(--faint)">
+          <span>${comp.title}${comp.year_composed ? ` <span style="color:var(--muted)">(${comp.year_composed})</span>` : ''}</span>
+          <span style="color:var(--muted);font-size:0.78rem;margin-left:1rem;white-space:nowrap">${(roleMap[comp.composition_id] || []).join(', ')}</span>
+        </div>`).join('')}
+    `;
+    scoresDiv.style.display = 'block';
+    btn.textContent = '♪ Skjul';
+  } catch(e) {
+    scoresDiv.innerHTML = `<em style="color:var(--accent)">Feil: ${e.message}</em>`;
+    scoresDiv.style.display = 'block';
+    btn.textContent = '♪ Vis komposisjoner';
+  }
+  btn.disabled = false;
+}
 
 </script>
 </body>
