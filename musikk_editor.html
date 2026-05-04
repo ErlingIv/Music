@@ -1888,8 +1888,41 @@ async function loadTagCheckboxes(compId) {
 function toggleTagLabel(label) {
   const cb = label.querySelector('input');
   cb.checked = !cb.checked;
-  label.style.background = cb.checked ? 'var(--accent)' : 'white';
-  label.style.color       = cb.checked ? 'white' : 'var(--ink)';
+  updateTagDropdownLabel();
+}
+
+function toggleTagDropdown() {
+  const dd  = document.getElementById('e_tagCheckboxes');
+  const btn = document.getElementById('e_tagDropdownBtn');
+  if (!dd) return;
+  const isOpen = dd.style.display !== 'none';
+  dd.style.display = isOpen ? 'none' : 'block';
+  if (btn) btn.querySelector('span:last-child').textContent = isOpen ? '▼' : '▲';
+  if (!isOpen) setTimeout(() => document.addEventListener('click', closeTagDropdownOutside), 0);
+}
+
+function closeTagDropdownOutside(e) {
+  const wrapper = document.getElementById('e_tagDropdown');
+  if (wrapper && !wrapper.contains(e.target)) {
+    const dd  = document.getElementById('e_tagCheckboxes');
+    const btn = document.getElementById('e_tagDropdownBtn');
+    if (dd)  dd.style.display = 'none';
+    if (btn) btn.querySelector('span:last-child').textContent = '▼';
+    document.removeEventListener('click', closeTagDropdownOutside);
+  }
+}
+
+function updateTagDropdownLabel() {
+  const checked = [...document.querySelectorAll('#e_tagCheckboxes input[type=checkbox]:checked')];
+  const lbl = document.getElementById('e_tagDropdownLabel');
+  if (!lbl) return;
+  if (checked.length === 0) {
+    lbl.textContent = 'Ingen tagger valgt';
+    lbl.style.color = 'var(--muted)';
+  } else {
+    lbl.textContent = checked.map(cb => cb.closest('label').textContent.trim()).join(', ');
+    lbl.style.color = 'var(--ink)';
+  }
 }
 
 // ═══════════════════════ BIO-LENKER ═══════════════════════
