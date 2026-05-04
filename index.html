@@ -331,6 +331,14 @@
   <p style="font-size:0.75rem;color:var(--muted);margin-top:0.4rem;letter-spacing:0.04em;">With separate PDF open</p>
 </header>
 
+<div class="search-bar">
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="globalSearch" type="text" placeholder="Search by title or composer…" oninput="handleSearch(this.value)" autocomplete="off">
+  </div>
+  <div class="search-results" id="searchResults"></div>
+</div>
+
 <nav>
   <div class="tab active" data-section="no" onclick="switchTab('no')">
     <span class="tab-flag">🇳🇴</span>Norwegian
