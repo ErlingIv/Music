@@ -1993,6 +1993,7 @@ function renderBioCard() {
           <button type="button" class="btn btn-secondary" onclick="biSkip()" style="font-size:0.85rem">→ Hopp over</button>
         </div>
         <div id="bioMsg" style="font-size:0.82rem;margin-top:0.5rem;color:var(--muted);min-height:1.2em"></div>
+        <div id="bioScores" style="display:none;margin-top:0.75rem;border-top:1px solid var(--border);padding-top:0.75rem;font-size:0.85rem"></div>
       </div>`;
   } else {
     area.innerHTML = `
@@ -2018,6 +2019,7 @@ function renderBioCard() {
           <button type="button" class="btn btn-secondary" onclick="biSkip()" style="font-size:0.85rem">→ Hopp over</button>
         </div>
         <div id="bioMsg" style="font-size:0.82rem;margin-top:0.5rem;color:var(--muted);min-height:1.2em"></div>
+        <div id="bioScores" style="display:none;margin-top:0.75rem;border-top:1px solid var(--border);padding-top:0.75rem;font-size:0.85rem"></div>
       </div>`;
     document.getElementById('bioUrlInput').addEventListener('input', () => {
       document.getElementById('btnBioTest').href = document.getElementById('bioUrlInput').value.trim() || '#';
