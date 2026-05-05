@@ -266,8 +266,9 @@ async function load() {
     const lyricistDisplay = lyricistDisplayParts.length ? lyricistDisplayParts.join(', ') : null;
 
     // Render notes: newlines → <br>, escape backticks for inline JS
-    const notesHtml  = comp.musescore_notes ? comp.musescore_notes.replace(/\n/g, '<br>') : '';
-    const notesRaw   = (comp.musescore_notes || '').replace(/`/g, '\\`');
+    const notesHtml = comp.musescore_notes ? comp.musescore_notes.replace(/\n/g, '<br>') : '';
+    // Store raw notes in a JS variable — never inline into HTML attributes
+    window._notesRaw = comp.musescore_notes || '';
 
     el.innerHTML = `
       <div class="title-row">
@@ -295,7 +296,7 @@ async function load() {
           <div class="notes-header">
             <p class="section-label" style="margin-bottom:0">About the composition</p>
             <button class="translate-btn" id="translateBtn"
-              onclick="translateNotes(this, \`${notesRaw}\`)">
+              onclick="translateNotes(this)">
               Translate to Norwegian
             </button>
           </div>
@@ -358,7 +359,8 @@ async function translateChunk(text) {
   return data[0].map(c => c[0]).join('');
 }
 
-async function translateNotes(btn, originalText) {
+async function translateNotes(btn) {
+  const originalText = window._notesRaw || '';
   const el = document.getElementById('notesText');
   if (_translated) {
     el.innerHTML = originalText.replace(/\n/g, '<br>');
