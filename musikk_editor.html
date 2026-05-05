@@ -1982,7 +1982,7 @@ function renderBioCard() {
   if (bioMode === 'unverified') {
     area.innerHTML = `
       <div class="card">
-        <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;margin-bottom:0.2rem"><a href="composer.html?id=${p.person_id}" target="_blank" style="color:inherit;text-decoration:none;border-bottom:1px solid var(--border)">${name}</a>${nameWarning}</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;margin-bottom:0.2rem"><a href="#" onclick="switchTab('person');loadPersonForm(${p.person_id});return false;" style="color:inherit;text-decoration:none;border-bottom:1px solid var(--border)">${name}</a>${nameWarning}</div>
         <div style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem">${meta}</div>
         <div style="background:var(--paper);border:1px solid var(--border);border-radius:5px;padding:0.6rem 0.9rem;font-size:0.82rem;word-break:break-all;margin-bottom:1rem;font-family:monospace">${p.bio_url}</div>
         <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
@@ -1998,7 +1998,7 @@ function renderBioCard() {
   } else {
     area.innerHTML = `
       <div class="card">
-        <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;margin-bottom:0.2rem"><a href="composer.html?id=${p.person_id}" target="_blank" style="color:inherit;text-decoration:none;border-bottom:1px solid var(--border)">${name}</a></div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;margin-bottom:0.2rem"><a href="#" onclick="switchTab('person');loadPersonForm(${p.person_id});return false;" style="color:inherit;text-decoration:none;border-bottom:1px solid var(--border)">${name}</a></div>
         <div style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem">${meta}</div>
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem">
           <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://no.wikipedia.org/w/index.php?search=${enc}" target="_blank">no.wikipedia</a>
@@ -2118,7 +2118,7 @@ async function biToggleScores(pid, btn) {
       <div style="font-weight:600;margin-bottom:0.5rem;color:var(--muted);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em">${comps.length} komposisjon${comps.length !== 1 ? 'er' : ''}</div>
       ${comps.map(comp => `
         <div style="display:flex;justify-content:space-between;padding:0.25rem 0;border-bottom:1px solid var(--faint)">
-          <a href="score.html?id=${comp.composition_id}" target="_blank" style="color:var(--accent);text-decoration:none">${comp.title}</a>${comp.year_composed ? ` <span style="color:var(--muted)">(${comp.year_composed})</span>` : ''}
+          <a href="#" onclick="switchTab('edit');loadEditForm(${comp.composition_id});return false;" style="color:var(--accent);text-decoration:none">${comp.title}</a>${comp.year_composed ? ` <span style="color:var(--muted)">(${comp.year_composed})</span>` : ''}
           <span style="color:var(--muted);font-size:0.78rem;margin-left:1rem;white-space:nowrap">${(roleMap[comp.composition_id] || []).join(', ')}</span>
         </div>`).join('')}
     `;
