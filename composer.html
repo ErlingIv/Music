@@ -258,6 +258,9 @@ async function load() {
     const flag   = FLAGS[person.nationality] || '';
     const female = person.is_female_norwegian === true || person.is_female_norwegian === 'K';
 
+    // bio_text: newlines → <br> for clean display
+    const bioHtml = person.bio_text ? person.bio_text.replace(/\n/g, '<br>') : '';
+
     el.innerHTML = `
       <div class="composer-hero">
         <div class="hero-top">
@@ -271,7 +274,7 @@ async function load() {
           </div>
         </div>
 
-        ${person.bio_text ? `<div class="bio-text">${person.bio_text}</div>` : ''}
+        ${bioHtml ? `<div class="bio-text">${bioHtml}</div>` : ''}
 
         ${person.bio_url ? `
           <a class="bio-link" href="${person.bio_url}" target="_blank">

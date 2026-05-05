@@ -66,6 +66,7 @@
     color: var(--ink);
     margin-bottom: 4px;
   }
+  /* subtitle shows composer name + lifespan only — year is in meta-grid below */
   .score-sub { font-size: 0.9rem; color: var(--muted); }
 
   .meta-grid {
@@ -127,7 +128,6 @@
     font-size: 0.93rem;
     color: #444441;
     line-height: 1.75;
-    white-space: pre-wrap;
   }
   .notes-text a { color: var(--accent); text-decoration: none; }
   .notes-text a:hover { text-decoration: underline; }
@@ -208,7 +208,7 @@ async function load() {
   }
 
   try {
-    // Fetch composition, score, and composers in parallel
+    // Fetch composition, score, composers and lyricists in parallel
     const [compR, scoreR, ccR, clR] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${compId}&select=composition_id,title,year_composed,musescore_link,musescore_notes`, { headers: H }),
       fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=eq.${compId}&select=pdf_url,mp3_url`, { headers: H }),
@@ -224,7 +224,7 @@ async function load() {
 
     document.title = `${comp.title} — Norske Musikknoter`;
 
-    // Fetch composer details (support multiple composers)
+    // Fetch composer details
     const composerDisplayParts = [];
     let composerName = '—';
     let composerYears = '';
@@ -248,7 +248,7 @@ async function load() {
     }
     const composerDisplay = composerDisplayParts.length ? composerDisplayParts.join(', ') : '—';
 
-    // Fetch lyricist details (support multiple lyricists)
+    // Fetch lyricist details
     const lyricistDisplayParts = [];
     for (const row of cl) {
       const pR = await fetch(
@@ -265,12 +265,14 @@ async function load() {
     }
     const lyricistDisplay = lyricistDisplayParts.length ? lyricistDisplayParts.join(', ') : null;
 
-    const notesRaw = (comp.musescore_notes || '').replace(/`/g, '\\`');
+    // Render notes: newlines → <br>, escape backticks for inline JS
+    const notesHtml  = comp.musescore_notes ? comp.musescore_notes.replace(/\n/g, '<br>') : '';
+    const notesRaw   = (comp.musescore_notes || '').replace(/`/g, '\\`');
 
     el.innerHTML = `
       <div class="title-row">
         <h1 class="score-title">${comp.title}</h1>
-        <p class="score-sub">${composerName}${composerYears ? ' ' + composerYears : ''}${comp.year_composed ? ' · ' + comp.year_composed : ''}</p>
+        <p class="score-sub">${composerName}${composerYears ? ' ' + composerYears : ''}</p>
       </div>
 
       <div class="meta-grid">
@@ -288,7 +290,7 @@ async function load() {
         </div>` : ''}
       </div>
 
-      ${comp.musescore_notes ? `
+      ${notesHtml ? `
         <div class="notes-section">
           <div class="notes-header">
             <p class="section-label" style="margin-bottom:0">About the composition</p>
@@ -297,7 +299,7 @@ async function load() {
               Translate to Norwegian
             </button>
           </div>
-          <div class="notes-text" id="notesText">${comp.musescore_notes}</div>
+          <div class="notes-text" id="notesText">${notesHtml}</div>
         </div>` : ''}
 
       ${score?.mp3_url ? `
@@ -359,7 +361,7 @@ async function translateChunk(text) {
 async function translateNotes(btn, originalText) {
   const el = document.getElementById('notesText');
   if (_translated) {
-    el.innerHTML = originalText;
+    el.innerHTML = originalText.replace(/\n/g, '<br>');
     btn.textContent = 'Translate to Norwegian';
     _translated = false;
     return;
@@ -367,7 +369,7 @@ async function translateNotes(btn, originalText) {
   btn.disabled = true;
   btn.textContent = 'Translating…';
   try {
-    const plainText = originalText.replace(/<a[^>]*>([^<]+)<\/a>/gi, '$1');
+    const plainText = originalText.replace(/<[^>]+>/g, '');
     const sentences = plainText.match(/[^.!?]+[.!?]+/g) || [plainText];
     let chunks = [], current = '';
     for (const s of sentences) {
@@ -380,7 +382,7 @@ async function translateNotes(btn, originalText) {
     }
     if (current.trim()) chunks.push(current.trim());
     const parts = await Promise.all(chunks.map(translateChunk));
-    el.innerHTML = parts.join(' ');
+    el.innerHTML = parts.join(' ').replace(/\n/g, '<br>');
     btn.textContent = 'Show original';
     btn.disabled = false;
     _translated = true;
