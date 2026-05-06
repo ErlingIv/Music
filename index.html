@@ -458,18 +458,19 @@ async function fetchAllComposers() {
     offset += 1000;
   }
 
-  // 2. Get score counts per person for public domain compositions
+  // 2. Get composition counts per person — only compositions with musescore_link or media
   const countMap = {};
   offset = 0;
   while (true) {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition_composer?select=person_id,composition:composition_id(public_domain)&limit=1000&offset=${offset}`,
+      `${SUPABASE_URL}/rest/v1/composition_composer?select=person_id,composition:composition_id(musescore_link)&limit=1000&offset=${offset}`,
       { headers: H }
     );
     const rows = await r.json();
     if (!rows.length) break;
     rows.forEach(row => {
-      if (row.composition?.public_domain === 'Yes') {
+      // Count compositions with a musescore link — media (PDF/MP3) added in step 5 below
+      if (row.composition?.musescore_link) {
         countMap[row.person_id] = (countMap[row.person_id] || 0) + 1;
       }
     });
@@ -508,7 +509,22 @@ async function fetchAllComposers() {
   }
 
   // 5. Build set of person_ids who have at least one media composition
+  //    Also add media-only compositions (PDF/MP3 but no musescore link) to countMap
   const mediaPersonIds = new Set();
+  // Need composition→musescore_link to avoid double-counting
+  const msLinkCompIds = new Set();
+  offset = 0;
+  while (true) {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/composition?select=composition_id&musescore_link=not.is.null&limit=1000&offset=${offset}`,
+      { headers: H }
+    );
+    const rows = await r.json();
+    if (!rows.length) break;
+    rows.forEach(r => msLinkCompIds.add(r.composition_id));
+    if (rows.length < 1000) break;
+    offset += 1000;
+  }
   let ccOffset = 0;
   while (true) {
     const r = await fetch(
@@ -518,7 +534,13 @@ async function fetchAllComposers() {
     const rows = await r.json();
     if (!rows.length) break;
     rows.forEach(row => {
-      if (mediaCompIds.has(row.composition_id)) mediaPersonIds.add(row.person_id);
+      if (mediaCompIds.has(row.composition_id)) {
+        mediaPersonIds.add(row.person_id);
+        // Count this composition if it wasn't already counted via musescore_link
+        if (!msLinkCompIds.has(row.composition_id)) {
+          countMap[row.person_id] = (countMap[row.person_id] || 0) + 1;
+        }
+      }
     });
     if (rows.length < 1000) break;
     ccOffset += 1000;
@@ -621,7 +643,7 @@ function composerCard(c) {
       <div class="composer-meta">
         ${years ? `<span>${years}</span>` : ''}
         ${female}${media}
-        <span class="score-count">${c.score_count} score${c.score_count !== 1 ? 's' : ''}</span>
+        <span class="score-count">${c.score_count} work${c.score_count !== 1 ? 's' : ''}</span>
       </div>
     </a>
   `;
