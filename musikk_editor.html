@@ -807,7 +807,14 @@
       <div class="row2">
         <div class="field">
           <label>Bio-lenke</label>
-          <input type="text" id="np_bioUrl" placeholder="https://…">
+          <div style="display:flex;gap:0.5rem;align-items:center">
+            <input type="text" id="np_bioUrl" placeholder="https://…" style="flex:1" oninput="document.getElementById('np_bioLink').style.display=this.value.trim()?'inline-block':'none';document.getElementById('np_bioLink').href=this.value.trim()">
+            <a id="np_bioLink" href="#" target="_blank" class="btn-upload" style="display:none">Åpne</a>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.4rem">
+            <input type="checkbox" id="np_bioUrlVerified" style="width:auto;margin:0;accent-color:var(--accent2,#2a5c45)">
+            <label for="np_bioUrlVerified" style="margin:0;text-transform:none;font-size:0.85rem;letter-spacing:0;font-weight:500;color:#4a4035;cursor:pointer">Bio-lenke verifisert ✓</label>
+          </div>
         </div>
       </div>
       <div class="actions">
@@ -1881,6 +1888,8 @@ Avbryt = Opprett likevel som ny person`
       showMsg('personMsg', `✓ "${newPseudo}" lagt til som pseudonym på ${fullName} (ID ${match.person_id})`, 'success');
       ['np_firstName','np_lastName','np_born','np_died','np_nationality','np_bioUrl'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('np_gender').value = '';
+      document.getElementById('np_bioUrlVerified').checked = false;
+      document.getElementById('np_bioLink').style.display = 'none';
       document.getElementById('np_flag').textContent = '';
       return;
     }
@@ -1896,10 +1905,13 @@ Avbryt = Opprett likevel som ny person`
       nationality,
       gender:              gender || null,
       bio_url:             document.getElementById('np_bioUrl').value.trim() || null,
+      bio_url_verified:    document.getElementById('np_bioUrlVerified').checked || false,
     });
     showMsg('personMsg', `✓ ${document.getElementById('np_firstName').value} ${last} lagt til (id=${p.person_id})`, 'success');
     ['np_firstName','np_lastName','np_born','np_died','np_nationality','np_bioUrl'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('np_gender').value = '';
+    document.getElementById('np_bioUrlVerified').checked = false;
+    document.getElementById('np_bioLink').style.display = 'none';
     document.getElementById('np_flag').textContent = '';
   } catch(err) {
     showMsg('personMsg', 'Feil: ' + err.message, 'error');
