@@ -219,7 +219,7 @@ async function load() {
   try {
     // 1. Fetch person
     const pR = await fetch(
-      `${SUPABASE_URL}/rest/v1/person?person_id=eq.${personId}&select=person_id,first_name,last_name,born,died,nationality,is_female_norwegian,bio_url,bio_text`,
+      `${SUPABASE_URL}/rest/v1/person?person_id=eq.${personId}&select=person_id,first_name,last_name,born,died,nationality,gender,bio_url,bio_text`,
       { headers: H }
     );
     const person = (await pR.json())[0];
@@ -256,7 +256,7 @@ async function load() {
 
     const years  = [person.born, person.died].filter(Boolean).join('–');
     const flag   = FLAGS[person.nationality] || '';
-    const female = person.is_female_norwegian === true || person.is_female_norwegian === 'K';
+    const female = person.gender === 'F';
 
     // bio_text: newlines → <br> for clean display
     const bioHtml = person.bio_text ? person.bio_text.replace(/\n/g, '<br>') : '';

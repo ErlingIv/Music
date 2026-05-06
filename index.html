@@ -483,7 +483,7 @@ async function fetchAllComposers() {
   for (let i = 0; i < pdIdsArr.length; i += 200) {
     const chunk = pdIdsArr.slice(i, i + 200).join(',');
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/person?person_id=in.(${chunk})&select=person_id,first_name,last_name,born,died,nationality,is_female_norwegian&order=last_name.asc`,
+      `${SUPABASE_URL}/rest/v1/person?person_id=in.(${chunk})&select=person_id,first_name,last_name,born,died,nationality,gender&order=last_name.asc`,
       { headers: H }
     );
     const rows = await r.json();
@@ -528,7 +528,7 @@ async function fetchAllComposers() {
   persons.forEach(p => {
     p.score_count = countMap[p.person_id] || 0;
     p.has_media   = mediaPersonIds.has(p.person_id);
-    p.is_female   = p.is_female_norwegian === true || p.is_female_norwegian === 'K';
+    p.is_female   = p.gender === 'F';
     if (!p.nationality) {
       allComposers.unknown.push(p);
     } else if (p.nationality === 'NO') {
