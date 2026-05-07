@@ -385,7 +385,7 @@
           </div>
           <div class="field">
             <label>Kategori *</label>
-            <select id="n_category" required>
+            <select id="n_category">
               <option value="">— velg —</option>
               <option value="pd">Offentlig domene (PD)</option>
               <option value="copyright">Opphavsrettsbeskyttet</option>
@@ -1235,6 +1235,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
   const warnVisible = document.getElementById('n_duplicateWarn').style.display !== 'none';
   if (warnVisible && !document.getElementById('n_notDuplicate').checked) {
     showMsg('newMsg', '⚠ Mulige duplikater funnet — bekreft at dette ikke er et duplikat før du lagrer.', 'error');
+    document.getElementById('newMsg').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     return;
   }
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Lagrer…';
