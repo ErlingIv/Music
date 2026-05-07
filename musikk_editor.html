@@ -368,7 +368,15 @@
         <div class="card-title">Komposisjon</div>
         <div class="field">
           <label>Tittel *</label>
-          <input type="text" id="n_title" required placeholder="Tittel på komposisjonen">
+          <input type="text" id="n_title" required placeholder="Tittel på komposisjonen" autocomplete="off">
+          <div id="n_duplicateWarn" style="display:none;margin-top:0.5rem;background:#fff8e8;border:1px solid #e8c84a;border-radius:4px;padding:0.6rem 0.85rem;font-size:0.85rem;color:#5a4a00">
+            <div style="font-weight:600;margin-bottom:0.35rem">⚠ Mulige duplikater funnet:</div>
+            <div id="n_duplicateList"></div>
+            <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem">
+              <input type="checkbox" id="n_notDuplicate" style="width:auto;margin:0;accent-color:var(--accent)">
+              <label for="n_notDuplicate" style="margin:0;text-transform:none;font-size:0.85rem;letter-spacing:0;font-weight:500;color:#5a4a00;cursor:pointer">Dette er ikke et duplikat — lagre likevel</label>
+            </div>
+          </div>
         </div>
         <div class="row2">
           <div class="field">
@@ -1222,6 +1230,13 @@ function showMsg(tabId, text, type) {
 document.getElementById('newForm').addEventListener('submit', async e => {
   e.preventDefault();
   const btn = document.getElementById('newSubmitBtn');
+
+  // Duplicate gate
+  const warnVisible = document.getElementById('n_duplicateWarn').style.display !== 'none';
+  if (warnVisible && !document.getElementById('n_notDuplicate').checked) {
+    showMsg('newMsg', '⚠ Mulige duplikater funnet — bekreft at dette ikke er et duplikat før du lagrer.', 'error');
+    return;
+  }
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Lagrer…';
   showMsg('newMsg', '', '');
   try {
@@ -1267,7 +1282,39 @@ function resetNewForm() {
   nComposers.length = 0; nLyricists.length = 0; nIllustrators.length = 0; nPubState.id = null;
   ['n_composerTags','n_lyricistTags','n_illustratorTags'].forEach(id => document.getElementById(id).innerHTML = '');
   ['n_composerSearch','n_lyricistSearch','n_illustratorSearch','n_publisherSearch'].forEach(id => document.getElementById(id).value = '');
+  hideDuplicateWarn();
 }
+
+// ── Duplicate title check ─────────────────────────────────────────────────────
+
+function hideDuplicateWarn() {
+  document.getElementById('n_duplicateWarn').style.display = 'none';
+  document.getElementById('n_duplicateList').innerHTML = '';
+  document.getElementById('n_notDuplicate').checked = false;
+}
+
+let dupCheckTimeout;
+document.getElementById('n_title').addEventListener('input', () => {
+  clearTimeout(dupCheckTimeout);
+  hideDuplicateWarn();
+  const q = document.getElementById('n_title').value.trim();
+  if (q.length < 2) return;
+  dupCheckTimeout = setTimeout(async () => {
+    const results = await get(`/composition?title=ilike.*${encodeURIComponent(q)}*&select=composition_id,title,year_composed,public_domain&limit=8&order=title`);
+    if (!results.length) return;
+    const list = document.getElementById('n_duplicateList');
+    list.innerHTML = results.map(c => {
+      const year = c.year_composed ? ` (${c.year_composed})` : '';
+      const pd   = c.public_domain === 'Yes' ? ' · PD' : '';
+      return `<div style="padding:0.2rem 0;border-bottom:1px solid #e8d88a;display:flex;align-items:center;justify-content:space-between;gap:0.75rem">
+        <span>${c.title}${year}${pd}</span>
+        <a href="#" onclick="event.preventDefault();switchTab('edit');loadEditForm(${c.composition_id})"
+           style="font-size:0.78rem;white-space:nowrap;color:var(--accent);text-decoration:underline">Åpne →</a>
+      </div>`;
+    }).join('');
+    document.getElementById('n_duplicateWarn').style.display = 'block';
+  }, 350);
+});
 
 // ── EDIT TAB ──────────────────────────────────────────────────────────────────
 
