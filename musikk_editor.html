@@ -393,6 +393,10 @@
           </div>
         </div>
         <div class="field">
+          <label>Opusnummer</label>
+          <input type="text" id="n_opus" placeholder="f.eks. op. 23, op. 45 nr. 2, WoO 14">
+        </div>
+        <div class="field">
           <label>Kommentarer</label>
           <textarea id="n_notes" placeholder="Notater, merknader…"></textarea>
         </div>
@@ -558,6 +562,10 @@
               <option value="copyright">Opphavsrettsbeskyttet</option>
             </select>
           </div>
+        </div>
+        <div class="field">
+          <label>Opusnummer</label>
+          <input type="text" id="e_opus" placeholder="f.eks. op. 23, op. 45 nr. 2, WoO 14">
         </div>
         <div class="field">
           <label>MuseScore-lenke</label>
@@ -1258,7 +1266,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
     const catName   = cat === 'pd' ? 'Eldre klassisk' : 'Eldre populærmusikk';
     const pubId     = await resolvePublisher('n_publisherSearch', nPubState, 'id');
 
-    const comp = await post('composition', { title, public_domain: pubDomain, year_composed: year||null, composition_notes: notes||null, musescore_link: msLink||null, to_investigate: toInvestigate||null });
+    const comp = await post('composition', { title, public_domain: pubDomain, year_composed: year||null, opus_number: document.getElementById('n_opus').value.trim()||null, composition_notes: notes||null, musescore_link: msLink||null, dedication: dedication||null, to_investigate: toInvestigate||null });
     const compId = comp.composition_id;
     if (!compId) throw new Error('Feil ved lagring.');
 
@@ -1446,6 +1454,7 @@ async function loadEditForm(compId) {
   document.getElementById('e_year').value    = c.year_composed || '';
   document.getElementById('e_category').value = c.public_domain === 'Yes' ? 'pd' : 'copyright';
   document.getElementById('e_msLink').value  = c.musescore_link || '';
+  document.getElementById('e_opus').value    = c.opus_number || '';
   document.getElementById('e_notes').value       = c.composition_notes || '';
   await loadTagCheckboxes(parseInt(compId));
   document.getElementById('e_dedication').value  = c.dedication || '';
@@ -1551,6 +1560,7 @@ async function saveEdit() {
     await patch('composition', `composition_id=eq.${compId}`, {
       title:             document.getElementById('e_title').value.trim(),
       year_composed:     document.getElementById('e_year').value.trim() || null,
+      opus_number:       document.getElementById('e_opus').value.trim() || null,
       public_domain:     cat === 'pd' ? 'Yes' : 'No',
       musescore_link:    document.getElementById('e_msLink').value.trim() || null,
       composition_notes: document.getElementById('e_notes').value.trim() || null,
