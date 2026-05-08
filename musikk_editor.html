@@ -1192,12 +1192,30 @@ function closePersonModal() {
 }
 
 async function saveNewPerson() {
-  const last = document.getElementById('m_lastName').value.trim();
+  const last  = document.getElementById('m_lastName').value.trim();
+  const first = document.getElementById('m_firstName').value.trim();
   if (!last) { alert('Etternavn er påkrevd.'); return; }
+
+  // Duplicate check — query by last name, then look for name overlap
+  const existing = await get(`/person?last_name=ilike.${encodeURIComponent(last)}&select=person_id,first_name,last_name,born,died,pseudonym`);
+  const matches = existing.filter(p => personNameOverlap(first, last, p));
+
+  if (matches.length) {
+    const lines = matches.map(p => {
+      const fn = ((p.first_name || '') + ' ' + p.last_name).trim();
+      const yrs = p.born ? ` (${p.born}${p.died ? '–'+p.died : ''})` : '';
+      return `• ${fn}${yrs}  [ID ${p.person_id}]`;
+    }).join('\n');
+    const proceed = confirm(
+      `Advarsel: Følgende person(er) med samme navn finnes allerede:\n\n${lines}\n\nVil du likevel opprette en ny post?`
+    );
+    if (!proceed) return;
+  }
+
   const gender      = document.getElementById('m_gender').value;
   const nationality = document.getElementById('m_nationality').value.trim() || null;
   const data = {
-    first_name: document.getElementById('m_firstName').value.trim() || null,
+    first_name: first || null,
     last_name:  last,
     born:       parseInt(document.getElementById('m_born').value)  || null,
     died:       parseInt(document.getElementById('m_died').value)  || null,
@@ -1212,6 +1230,22 @@ async function saveNewPerson() {
     if (modalTarget) addTag(p.person_id, name, modalTarget.tagsId, modalTarget.list);
     closePersonModal();
   } catch(e) { alert('Feil: ' + e.message); }
+}
+
+// Helper: returns true if two persons likely have overlapping names.
+// Handles exact match, missing first name, and initial match (e.g. "R." vs "Rudolf").
+function personNameOverlap(newFirst, newLast, existing) {
+  if (existing.last_name.toLowerCase() !== newLast.toLowerCase()) return false;
+  const ef = (existing.first_name || '').toLowerCase().trim();
+  const nf = newFirst.toLowerCase().trim();
+  if (!ef || !nf) return true;                          // one side has no first name
+  if (ef === nf)  return true;                          // exact match
+  // Initial match: "r." matches "rudolf", or "rudolf" matches "r."
+  const efInit = ef.replace(/\.$/, '');
+  const nfInit = nf.replace(/\.$/, '');
+  if (efInit.length === 1 && nfInit.startsWith(efInit)) return true;
+  if (nfInit.length === 1 && efInit.startsWith(nfInit)) return true;
+  return false;
 }
 
 // ── Source cache ──────────────────────────────────────────────────────────────
@@ -1922,15 +1956,13 @@ async function addNewPerson() {
   const last  = document.getElementById('np_lastName').value.trim();
   const first = document.getElementById('np_firstName').value.trim();
   if (!last) { alert('Etternavn er påkrevd.'); return; }
-  const existing = await get(`/person?last_name=ilike.${encodeURIComponent(last)}&select=person_id,first_name,last_name,pseudonym`);
-  const match = existing.find(p =>
-    (!first && !p.first_name) ||
-    (first && p.first_name && p.first_name.toLowerCase() === first.toLowerCase())
-  );
+  const existing = await get(`/person?last_name=ilike.${encodeURIComponent(last)}&select=person_id,first_name,last_name,born,died,pseudonym`);
+  const match = existing.find(p => personNameOverlap(first, last, p));
   if (match) {
     const fullName = ((match.first_name || '') + ' ' + match.last_name).trim();
+    const yrs = match.born ? ` (${match.born}${match.died ? '–'+match.died : ''})` : '';
     const usePseudo = confirm(
-      `"${fullName}" finnes allerede i databasen (ID ${match.person_id}).
+      `"${fullName}${yrs}" finnes allerede i databasen (ID ${match.person_id}).
 
 ` +
       `Vil du legge til det nye navnet som pseudonym på den eksisterende personen?
