@@ -1214,12 +1214,12 @@ async function saveNewPerson() {
       warn.style.cssText = 'margin-top:0.75rem;background:#fff8e8;border:1px solid #e8c84a;border-radius:4px;padding:0.6rem 0.85rem;font-size:0.85rem;color:#5a4a00';
       document.querySelector('#addPersonModal .modal-actions').before(warn);
     }
-    warn.innerHTML = `<div style="font-weight:600;margin-bottom:0.35rem">⚠ Person med dette navnet finnes allerede:</div>
-      <div style="margin-bottom:0.5rem">${lines}</div>
-      <div style="display:flex;align-items:center;gap:0.5rem">
-        <input type="checkbox" id="m_notDuplicate" style="width:auto;margin:0;accent-color:var(--accent)">
-        <label for="m_notDuplicate" style="margin:0;text-transform:none;font-size:0.85rem;letter-spacing:0;font-weight:500;color:#5a4a00;cursor:pointer">Dette er ikke et duplikat — opprett likevel</label>
-      </div>`;
+    warn.innerHTML = '<div style="font-weight:600;margin-bottom:0.35rem">&#9888; Person med dette navnet finnes allerede:</div>'
+      + '<div style="margin-bottom:0.5rem">' + lines + '</div>'
+      + '<div style="display:flex;align-items:center;gap:0.5rem">'
+      + '<input type="checkbox" id="m_notDuplicate" style="width:auto;margin:0;accent-color:var(--accent)">'
+      + '<label for="m_notDuplicate" style="margin:0;text-transform:none;font-size:0.85rem;letter-spacing:0;font-weight:500;color:#5a4a00;cursor:pointer">Dette er ikke et duplikat — opprett likevel</label>'
+      + '</div>';
     warn.style.display = 'block';
     if (!document.getElementById('m_notDuplicate')?.checked) return;
   }
@@ -2059,11 +2059,13 @@ async function addNewPerson() {
   if (match) {
     const fullName = ((match.first_name || '') + ' ' + match.last_name).trim();
     const yrs = match.born ? ` (${match.born}${match.died ? '–'+match.died : ''})` : '';
+    // Store match for use by the inline action buttons
+    window._personDupMatch = { person_id: match.person_id, fullName, yrs, pseudonym: match.pseudonym };
     const msgEl = document.getElementById('personMsg');
     msgEl.innerHTML = `<div style="background:#fff8e8;border:1px solid #e8c84a;border-radius:4px;padding:0.6rem 0.85rem;font-size:0.85rem;color:#5a4a00">
-      <div style="font-weight:600;margin-bottom:0.35rem">⚠ Person finnes allerede: ${fullName}${yrs} [ID ${match.person_id}]</div>
+      <div style="font-weight:600;margin-bottom:0.35rem">&#9888; Person finnes allerede: ${fullName}${yrs} [ID ${match.person_id}]</div>
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem">
-        <button onclick="addAsPseudonym(${match.person_id},'${fullName.replace(/'/g,\"\\'\")}','${yrs.replace(/'/g,\"\\'\")}',this)" class="btn btn-secondary" style="font-size:0.8rem;padding:0.25rem 0.6rem">Legg til som pseudonym</button>
+        <button onclick="addAsPseudonymFromMatch()" class="btn btn-secondary" style="font-size:0.8rem;padding:0.25rem 0.6rem">Legg til som pseudonym</button>
         <button onclick="forceAddPerson(this)" class="btn" style="font-size:0.8rem;padding:0.25rem 0.6rem;background:#c8a000;color:#fff;border:none;border-radius:4px;cursor:pointer">Opprett likevel som ny person</button>
       </div>
     </div>`;
