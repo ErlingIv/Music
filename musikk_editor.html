@@ -1205,12 +1205,27 @@ async function saveNewPerson() {
       const fn = ((p.first_name || '') + ' ' + p.last_name).trim();
       const yrs = p.born ? ` (${p.born}${p.died ? '–'+p.died : ''})` : '';
       return `• ${fn}${yrs}  [ID ${p.person_id}]`;
-    }).join('\n');
-    const proceed = confirm(
-      `Advarsel: Følgende person(er) med samme navn finnes allerede:\n\n${lines}\n\nVil du likevel opprette en ny post?`
-    );
-    if (!proceed) return;
+    }).join('<br>');
+    // Show inline warning and block save unless checkbox ticked
+    let warn = document.getElementById('m_dupWarn');
+    if (!warn) {
+      warn = document.createElement('div');
+      warn.id = 'm_dupWarn';
+      warn.style.cssText = 'margin-top:0.75rem;background:#fff8e8;border:1px solid #e8c84a;border-radius:4px;padding:0.6rem 0.85rem;font-size:0.85rem;color:#5a4a00';
+      document.querySelector('#addPersonModal .modal-actions').before(warn);
+    }
+    warn.innerHTML = `<div style="font-weight:600;margin-bottom:0.35rem">⚠ Person med dette navnet finnes allerede:</div>
+      <div style="margin-bottom:0.5rem">${lines}</div>
+      <div style="display:flex;align-items:center;gap:0.5rem">
+        <input type="checkbox" id="m_notDuplicate" style="width:auto;margin:0;accent-color:var(--accent)">
+        <label for="m_notDuplicate" style="margin:0;text-transform:none;font-size:0.85rem;letter-spacing:0;font-weight:500;color:#5a4a00;cursor:pointer">Dette er ikke et duplikat — opprett likevel</label>
+      </div>`;
+    warn.style.display = 'block';
+    if (!document.getElementById('m_notDuplicate')?.checked) return;
   }
+  // Hide warning if shown from a previous attempt
+  const prevWarn = document.getElementById('m_dupWarn');
+  if (prevWarn) prevWarn.style.display = 'none';
 
   const gender      = document.getElementById('m_gender').value;
   const nationality = document.getElementById('m_nationality').value.trim() || null;
@@ -1309,6 +1324,42 @@ document.getElementById('newForm').addEventListener('submit', async e => {
     for (const i of nIllustrators) await post('composition_illustrator', { composition_id: compId, person_id: i.person_id });
 
     const source   = document.getElementById('n_source').value;
+
+    // Score duplicate check: same plate number + same title already in DB?
+    if (plate) {
+      const dupScores = await get(`/score?plate_number=eq.${encodeURIComponent(plate)}&select=score_id,composition_id,plate_number`);
+      if (dupScores.length) {
+        // Fetch composition titles for the matching scores
+        const dupIds = dupScores.map(s => s.composition_id).join(',');
+        const dupComps = await get(`/composition?composition_id=in.(${dupIds})&select=composition_id,title`);
+        const titleMap = Object.fromEntries(dupComps.map(c => [c.composition_id, c.title]));
+        const dupLines = dupScores.map(s => `• "${titleMap[s.composition_id] || '?'}" (score_id=${s.score_id}, plate=${s.plate_number})`).join('<br>');
+        // Show warning in newMsg and require confirmation
+        showMsg('newMsg', '', '');
+        const msgEl = document.getElementById('newMsg');
+        msgEl.innerHTML = `<div style="background:#fff8e8;border:1px solid #e8c84a;border-radius:4px;padding:0.6rem 0.85rem;font-size:0.85rem;color:#5a4a00">
+          <div style="font-weight:600;margin-bottom:0.35rem">⚠ Noteeksemplar med platenummer <em>${plate}</em> finnes allerede:</div>
+          <div style="margin-bottom:0.5rem">${dupLines}</div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem">
+            <button id="scoreDupConfirm" class="btn" style="font-size:0.8rem;padding:0.25rem 0.6rem;background:#c8a000;color:#fff;border:none;border-radius:4px;cursor:pointer">Lagre likevel</button>
+            <button onclick="document.getElementById('newMsg').innerHTML=''" class="btn btn-secondary" style="font-size:0.8rem;padding:0.25rem 0.6rem">Avbryt</button>
+          </div>
+        </div>`;
+        msgEl.className = 'msg';
+        btn.disabled = false; btn.textContent = 'Lagre innføring';
+        // Wire confirm button to finish the save
+        document.getElementById('scoreDupConfirm').onclick = async () => {
+          msgEl.innerHTML = '';
+          btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Lagrer…';
+          await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, pdf_url: pdfUrl||null, mp3_url: mp3Url||null, source: source||null });
+          showMsg('newMsg', `✓ "${title}" er lagret (id=${compId})`, 'success');
+          resetNewForm();
+          btn.disabled = false; btn.textContent = 'Lagre innføring';
+        };
+        return;
+      }
+    }
+
     await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, pdf_url: pdfUrl||null, mp3_url: mp3Url||null, source: source||null });
 
     showMsg('newMsg', `✓ "${title}" er lagret (id=${compId})`, 'success');
@@ -1952,6 +2003,53 @@ function closePerson() {
   document.getElementById('newPersonCard').style.display = 'block';
 }
 
+
+// ── Person duplicate helpers (called from inline warning buttons) ─────────────
+async function addAsPseudonym(matchId, fullName, yrs, btn) {
+  const last  = document.getElementById('np_lastName').value.trim();
+  const first = document.getElementById('np_firstName').value.trim();
+  const newPseudo = first ? `${first} ${last}` : last;
+  // Fetch current pseudonym value
+  const rows = await get(`/person?person_id=eq.${matchId}&select=pseudonym`);
+  const curPseudo = rows[0]?.pseudonym || '';
+  const updatedPseudo = curPseudo ? curPseudo + ', ' + newPseudo : newPseudo;
+  await patch('person', `person_id=eq.${matchId}`, { pseudonym: updatedPseudo });
+  showMsg('personMsg', `✓ "${newPseudo}" lagt til som pseudonym på ${fullName} (ID ${matchId})`, 'success');
+  ['np_firstName','np_lastName','np_born','np_died','np_nationality','np_bioUrl'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('np_gender').value = '';
+  document.getElementById('np_bioUrlVerified').checked = false;
+  document.getElementById('np_bioLink').style.display = 'none';
+  document.getElementById('np_flag').textContent = '';
+}
+
+async function forceAddPerson(btn) {
+  btn.disabled = true; btn.textContent = 'Lagrer…';
+  const last  = document.getElementById('np_lastName').value.trim();
+  const first = document.getElementById('np_firstName').value.trim();
+  const gender      = document.getElementById('np_gender').value;
+  const nationality = document.getElementById('np_nationality').value.trim() || null;
+  try {
+    const p = await post('person', {
+      first_name:       first || null,
+      last_name:        last,
+      born:             parseInt(document.getElementById('np_born').value) || null,
+      died:             parseInt(document.getElementById('np_died').value) || null,
+      nationality,
+      gender:           gender || null,
+      bio_url:          document.getElementById('np_bioUrl').value.trim() || null,
+      bio_url_verified: document.getElementById('np_bioUrlVerified').checked || false,
+    });
+    showMsg('personMsg', `✓ ${first} ${last} lagt til som ny person (id=${p.person_id})`, 'success');
+    ['np_firstName','np_lastName','np_born','np_died','np_nationality','np_bioUrl'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('np_gender').value = '';
+    document.getElementById('np_bioUrlVerified').checked = false;
+    document.getElementById('np_bioLink').style.display = 'none';
+    document.getElementById('np_flag').textContent = '';
+  } catch(err) {
+    showMsg('personMsg', 'Feil: ' + err.message, 'error');
+  }
+}
+
 async function addNewPerson() {
   const last  = document.getElementById('np_lastName').value.trim();
   const first = document.getElementById('np_firstName').value.trim();
@@ -1961,28 +2059,16 @@ async function addNewPerson() {
   if (match) {
     const fullName = ((match.first_name || '') + ' ' + match.last_name).trim();
     const yrs = match.born ? ` (${match.born}${match.died ? '–'+match.died : ''})` : '';
-    const usePseudo = confirm(
-      `"${fullName}${yrs}" finnes allerede i databasen (ID ${match.person_id}).
-
-` +
-      `Vil du legge til det nye navnet som pseudonym på den eksisterende personen?
-
-` +
-      `OK = Legg til som pseudonym
-Avbryt = Opprett likevel som ny person`
-    );
-    if (usePseudo) {
-      const newPseudo = first ? `${first} ${last}` : last;
-      const updatedPseudo = match.pseudonym ? match.pseudonym + ', ' + newPseudo : newPseudo;
-      await patch('person', `person_id=eq.${match.person_id}`, { pseudonym: updatedPseudo });
-      showMsg('personMsg', `✓ "${newPseudo}" lagt til som pseudonym på ${fullName} (ID ${match.person_id})`, 'success');
-      ['np_firstName','np_lastName','np_born','np_died','np_nationality','np_bioUrl'].forEach(id => document.getElementById(id).value = '');
-      document.getElementById('np_gender').value = '';
-      document.getElementById('np_bioUrlVerified').checked = false;
-      document.getElementById('np_bioLink').style.display = 'none';
-      document.getElementById('np_flag').textContent = '';
-      return;
-    }
+    const msgEl = document.getElementById('personMsg');
+    msgEl.innerHTML = `<div style="background:#fff8e8;border:1px solid #e8c84a;border-radius:4px;padding:0.6rem 0.85rem;font-size:0.85rem;color:#5a4a00">
+      <div style="font-weight:600;margin-bottom:0.35rem">⚠ Person finnes allerede: ${fullName}${yrs} [ID ${match.person_id}]</div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem">
+        <button onclick="addAsPseudonym(${match.person_id},'${fullName.replace(/'/g,\"\\'\")}','${yrs.replace(/'/g,\"\\'\")}',this)" class="btn btn-secondary" style="font-size:0.8rem;padding:0.25rem 0.6rem">Legg til som pseudonym</button>
+        <button onclick="forceAddPerson(this)" class="btn" style="font-size:0.8rem;padding:0.25rem 0.6rem;background:#c8a000;color:#fff;border:none;border-radius:4px;cursor:pointer">Opprett likevel som ny person</button>
+      </div>
+    </div>`;
+    msgEl.className = 'msg';
+    return;
   }
   try {
     const gender      = document.getElementById('np_gender').value;
