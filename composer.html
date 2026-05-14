@@ -243,14 +243,25 @@ async function load() {
     );
     const compositions = await cR.json();
 
-    // 4. Fetch scores (pdf_url, mp3_url) for these compositions
-    const scoreR = await fetch(
-      `${SUPABASE_URL}/rest/v1/score?composition_id=in.(${compIds})&select=composition_id,pdf_url,mp3_url`,
-      { headers: H }
-    );
+    // 4. Fetch scores (pdf_url, mp3_url) and tags for these compositions
+    const [scoreR, ctR, tagR] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=in.(${compIds})&select=composition_id,pdf_url,mp3_url`, { headers: H }),
+      fetch(`${SUPABASE_URL}/rest/v1/composition_tag?composition_id=in.(${compIds})&select=composition_id,tag_id`, { headers: H }),
+      fetch(`${SUPABASE_URL}/rest/v1/tag?select=tag_id,name`, { headers: H }),
+    ]);
     const scores = await scoreR.json();
     const scoreMap = {};
     scores.forEach(s => { scoreMap[s.composition_id] = s; });
+
+    const ctRows  = await ctR.json();
+    const allTags = await tagR.json();
+    const tagNameMap = Object.fromEntries(allTags.map(t => [t.tag_id, t.name]));
+    const tagMap = {};  // composition_id → [tag names]
+    ctRows.forEach(row => {
+      if (!tagMap[row.composition_id]) tagMap[row.composition_id] = [];
+      const name = tagNameMap[row.tag_id];
+      if (name) tagMap[row.composition_id].push(name);
+    });
 
     // ── Render ──────────────────────────────────────────────────────────────
 
@@ -306,6 +317,7 @@ async function load() {
                     <div class="score-title">${c.title}</div>
                     <div class="score-meta">
                       ${c.year_composed ? `<span>${c.year_composed}</span>` : ''}
+                      ${(tagMap[c.composition_id]||[]).map(t => `<span style="background:#eaf3ee;color:var(--accent2);border:1px solid #b8d4c0;border-radius:3px;padding:1px 6px;font-size:0.7rem;">${t}</span>`).join('')}
                     </div>
                   </div>
                   <div class="score-icons">
