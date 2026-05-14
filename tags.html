@@ -184,7 +184,7 @@ let activeTagId = null;
 async function loadTags() {
   // Fetch all tags
   const r = await fetch(
-    `${SUPABASE_URL}/rest/v1/tag?select=tag_id,name&order=name.asc`,
+    `${SUPABASE_URL}/rest/v1/tag?select=tag_id,tag_name&order=name.asc`,
     { headers: H }
   );
   allTags = await r.json();
@@ -207,8 +207,8 @@ async function loadTags() {
   }
 
   cloud.innerHTML = allTags.map(t => `
-    <div class="tag-pill" id="tag-pill-${t.tag_id}" onclick="selectTag(${t.tag_id}, '${t.name.replace(/'/g, "\\'")}')">
-      ${t.name}
+    <div class="tag-pill" id="tag-pill-${t.tag_id}" onclick="selectTag(${t.tag_id}, '${t.tag_name.replace(/'/g, "\\'")}')">
+      ${t.tag_name}
       <span class="tag-count">${countMap[t.tag_id] || 0}</span>
     </div>
   `).join('');
