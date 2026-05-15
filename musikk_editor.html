@@ -2108,6 +2108,47 @@ async function getAllTags() {
   _allTags = await get('/tag?select=tag_id,tag_name&order=tag_name.asc');
   return _allTags;
 }
+
+async function createNewTag() {
+  const input = document.getElementById('e_newTagInput');
+  const tagName = (input?.value || '').trim();
+  if (!tagName) { alert('Skriv inn et tagnavn først.'); return; }
+
+  // Check for duplicate (case-insensitive)
+  const existing = await getAllTags();
+  const dup = existing.find(t => t.tag_name.toLowerCase() === tagName.toLowerCase());
+  if (dup) {
+    alert(`Taggen "${dup.tag_name}" finnes allerede.`);
+    return;
+  }
+
+  try {
+    const res = await fetch(`${SB}/tag`, {
+      method: 'POST',
+      headers: { ...H, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+      body: JSON.stringify({ tag_name: tagName })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const [newTag] = await res.json();
+
+    // Reset cache so checkboxes reload with new tag
+    _allTags = null;
+
+    // Reload checkboxes with current composition and auto-check the new tag
+    const compId = document.getElementById('e_compId')?.value;
+    if (compId) {
+      await loadTagCheckboxes(parseInt(compId));
+      // Auto-check the newly created tag
+      const cb = [...document.querySelectorAll('#e_tagCheckboxes input[type=checkbox]')]
+        .find(c => c.value == newTag.tag_id);
+      if (cb) { cb.checked = true; updateTagDropdownLabel(); }
+    }
+
+    input.value = '';
+  } catch(e) {
+    alert('Feil ved oppretting av tagg: ' + e.message);
+  }
+}
 async function loadTagCheckboxes(compId) {
   const container = document.getElementById('e_tagCheckboxes');
   if (!container) return;

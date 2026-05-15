@@ -247,7 +247,7 @@ async function load() {
     const [scoreR, ctR, tagR] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=in.(${compIds})&select=composition_id,pdf_url,mp3_url`, { headers: H }),
       fetch(`${SUPABASE_URL}/rest/v1/composition_tag?composition_id=in.(${compIds})&select=composition_id,tag_id`, { headers: H }),
-      fetch(`${SUPABASE_URL}/rest/v1/tag?select=tag_id,name`, { headers: H }),
+      fetch(`${SUPABASE_URL}/rest/v1/tag?select=tag_id,tag_name`, { headers: H }),
     ]);
     const scores = await scoreR.json();
     const scoreMap = {};
@@ -255,7 +255,7 @@ async function load() {
 
     const ctRows  = await ctR.json();
     const allTags = await tagR.json();
-    const tagNameMap = Object.fromEntries(allTags.map(t => [t.tag_id, t.name]));
+    const tagNameMap = Object.fromEntries(allTags.map(t => [t.tag_id, t.tag_name]));
     const tagMap = {};  // composition_id → [tag names]
     ctRows.forEach(row => {
       if (!tagMap[row.composition_id]) tagMap[row.composition_id] = [];

@@ -184,7 +184,7 @@ let activeTagId = null;
 async function loadTags() {
   // Fetch all tags
   const r = await fetch(
-    `${SUPABASE_URL}/rest/v1/tag?select=tag_id,tag_name&order=name.asc`,
+    `${SUPABASE_URL}/rest/v1/tag?select=tag_id,tag_name&order=tag_name.asc`,
     { headers: H }
   );
   allTags = await r.json();
@@ -218,7 +218,7 @@ async function loadTags() {
   const preTag = params.get('tag');
   if (preTag) {
     const match = allTags.find(t => t.tag_id == preTag);
-    if (match) selectTag(match.tag_id, match.name);
+    if (match) selectTag(match.tag_id, match.tag_name);
   }
 }
 
