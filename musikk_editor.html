@@ -2414,6 +2414,15 @@ async function biToggleScores(pid, btn) {
   btn.disabled = false;
 }
 
+// Open directly to a composition if ?edit=ID is in the URL
+(function() {
+  const p = new URLSearchParams(window.location.search);
+  const editId = p.get('edit');
+  if (editId) {
+    switchTab('edit');
+    loadEditForm(parseInt(editId));
+  }
+})();
 </script>
 </body>
 </html>
