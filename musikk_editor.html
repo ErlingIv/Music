@@ -1058,9 +1058,6 @@ function addTag(pid, name, tagsId, list, creditedAs, pseudonyms) {
 function renderTags(tagsId, list) {
   const c = document.getElementById(tagsId);
   c.innerHTML = '';
-  const isIllustrator = tagsId.includes('illustrator');
-  const creditedLabel = isIllustrator ? 'Kreditert som (initialer el.)…' : 'Brukt pseudonym…';
-  const creditedTitle = isIllustrator ? 'Fyll inn hvis bare initialer eller annen kreditering er kjent' : 'Fyll inn hvis et pseudonym er brukt på dette noteeksemplaret';
   list.forEach((p, i) => {
     const t = document.createElement('div');
     t.className = 'tag';
@@ -1075,7 +1072,7 @@ function renderTags(tagsId, list) {
     // Build pseudonym dropdown
     const pseudoList = (p.pseudonyms || '').split(',').map(s => s.trim()).filter(Boolean);
     let creditedEl;
-    if (pseudoList.length > 0 && !isIllustrator) {
+    if (pseudoList.length > 0) {
       creditedEl = document.createElement('select');
       creditedEl.title = 'Velg pseudonym brukt på dette noteeksemplaret';
       creditedEl.style.cssText = 'font-size:0.78rem;padding:0.15rem 0.35rem;border:1px dashed var(--border);border-radius:3px;background:white;color:var(--ink);font-family:inherit;font-weight:400;max-width:150px';
@@ -1103,9 +1100,9 @@ function renderTags(tagsId, list) {
       creditedEl = document.createElement('input');
       creditedEl.type = 'text';
       creditedEl.value = p.credited_as || '';
-      creditedEl.placeholder = creditedLabel;
-      creditedEl.title = creditedTitle;
-      creditedEl.style.cssText = 'width:160px;font-size:0.78rem;padding:0.15rem 0.35rem;border:1px dashed var(--border);border-radius:3px;background:white;color:var(--ink);font-family:inherit;font-weight:400';
+      creditedEl.placeholder = 'Brukt pseudonym…';
+      creditedEl.title = 'Fyll inn hvis et pseudonym er brukt på dette noteeksemplaret';
+      creditedEl.style.cssText = 'width:130px;font-size:0.78rem;padding:0.15rem 0.35rem;border:1px dashed var(--border);border-radius:3px;background:white;color:var(--ink);font-family:inherit;font-weight:400';
       creditedEl.oninput = () => { list[i].credited_as = creditedEl.value.trim(); };
     }
 
@@ -1719,7 +1716,14 @@ async function deleteComposition() {
 
 function closeEditPanel() {
   document.getElementById('editPanel').classList.remove('open');
-  eComposers.length = 0; eLyricists.length = 0; ePubState.id = null;
+  eComposers.length = 0; eLyricists.length = 0; eIllustrators.length = 0; ePubState.id = null;
+  ['e_composerTags','e_lyricistTags','e_illustratorTags'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
+
+  // Reset tag dropdown
+  const dd  = document.getElementById('e_tagCheckboxes');
+  const lbl = document.getElementById('e_tagDropdownLabel');
+  if (dd)  { dd.innerHTML = ''; dd.style.display = 'none'; }
+  if (lbl) lbl.textContent = 'Ingen tagger valgt';
 
   // Restore previous search state
   if (window._savedSearch) {
