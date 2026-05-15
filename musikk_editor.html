@@ -1325,7 +1325,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
 
     for (const c of nComposers) await post('composition_composer', { composition_id: compId, person_id: c.person_id, credited_as: c.credited_as || null });
     for (const l of nLyricists) await post('composition_lyricist', { composition_id: compId, person_id: l.person_id, credited_as: l.credited_as || null });
-    for (const i of nIllustrators) await post('composition_illustrator', { composition_id: compId, person_id: i.person_id });
+    for (const i of nIllustrators) await post('composition_illustrator', { composition_id: compId, person_id: i.person_id, credited_as: i.credited_as || null });
 
     const source   = document.getElementById('n_source').value;
 
@@ -1534,7 +1534,7 @@ async function loadEditForm(compId) {
     get(`/composition_composer?composition_id=eq.${compId}&select=person_id,credited_as,person(person_id,first_name,last_name,bio_url,pseudonym)`),
     get(`/composition_lyricist?composition_id=eq.${compId}&select=person_id,credited_as,person(person_id,first_name,last_name,pseudonym)`),
     get(`/score?composition_id=eq.${compId}&select=*,publisher(publisher_id,publisher_name)`),
-    get(`/composition_illustrator?composition_id=eq.${compId}&select=person_id,person(person_id,first_name,last_name,pseudonym)`)
+    get(`/composition_illustrator?composition_id=eq.${compId}&select=person_id,credited_as,person(person_id,first_name,last_name,pseudonym)`)
   ]);
 
   const c = comp[0];
@@ -1558,7 +1558,7 @@ async function loadEditForm(compId) {
   cl.forEach(row => eLyricists.push({ person_id: row.person.person_id, name: [row.person.first_name, row.person.last_name].filter(Boolean).join(' '), credited_as: row.credited_as || '', pseudonyms: row.person.pseudonym || '' }));
   renderTags('e_lyricistTags', eLyricists);
   eIllustrators.length = 0;
-  ci.forEach(row => eIllustrators.push({ person_id: row.person.person_id, name: [row.person.first_name, row.person.last_name].filter(Boolean).join(' '), credited_as: '', pseudonyms: row.person.pseudonym || '' }));
+  ci.forEach(row => eIllustrators.push({ person_id: row.person.person_id, name: [row.person.first_name, row.person.last_name].filter(Boolean).join(' '), credited_as: row.credited_as || '', pseudonyms: row.person.pseudonym || '' }));
   renderTags('e_illustratorTags', eIllustrators);
 
   const score = scores[0];
@@ -1665,6 +1665,10 @@ async function saveEdit() {
     // Update lyricists
     await del('composition_lyricist', `composition_id=eq.${compId}`);
     for (const l of eLyricists) await post('composition_lyricist', { composition_id: parseInt(compId), person_id: l.person_id, credited_as: l.credited_as || null });
+
+    // Update illustrators
+    await del('composition_illustrator', `composition_id=eq.${compId}`);
+    for (const i of eIllustrators) await post('composition_illustrator', { composition_id: parseInt(compId), person_id: i.person_id, credited_as: i.credited_as || null });
 
     // Update tags
     await del('composition_tag', `composition_id=eq.${compId}`);
