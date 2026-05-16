@@ -1517,6 +1517,9 @@ async function searchCompositions(q) {
 
 async function loadEditForm(compId) {
   showMsg('editMsg', '', '');
+  // Clear tag containers immediately so stale tags don't show during async fetch
+  eComposers.length = 0; eLyricists.length = 0; eIllustrators.length = 0;
+  ['e_composerTags','e_lyricistTags','e_illustratorTags'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
   // Save search state so we can restore it on Back
   window._savedSearch = {
     query:             document.getElementById('editSearch').value,
