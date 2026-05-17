@@ -175,6 +175,10 @@
   }
   .icon-badge.has-pdf { color: var(--accent); border-color: var(--accent); }
   .icon-badge.has-mp3 { color: var(--accent2); border-color: var(--accent2); }
+  .icon-badge.ms-info { border: none; background: none; font-size: 0.7rem; padding: 0 2px; }
+  .icon-badge.ms-low  { filter: grayscale(0.4) opacity(0.55); }
+  .icon-badge.ms-med  { filter: sepia(0.3) saturate(1.2); }
+  .icon-badge.ms-high { filter: none; }
 
   .loading-state {
     text-align: center;
@@ -209,6 +213,19 @@ const FLAGS = { NO:'🇳🇴', SE:'🇸🇪', DK:'🇩🇰', FI:'🇫🇮', IS:'
 const params    = new URLSearchParams(window.location.search);
 const personId  = params.get('id');
 
+function wordCount(text) {
+  if (!text || !text.trim()) return 0;
+  return text.trim().split(/\s+/).length;
+}
+
+function msInfoBadge(notes) {
+  const wc = wordCount(notes);
+  if (wc === 0) return '';
+  if (wc <= 30)  return '<span class="icon-badge ms-info ms-low"  title="MuseScore info: low (~' + wc + ' words)">📝</span>';
+  if (wc <= 100) return '<span class="icon-badge ms-info ms-med"  title="MuseScore info: medium (~' + wc + ' words)">📝</span>';
+                 return '<span class="icon-badge ms-info ms-high" title="MuseScore info: high (~' + wc + ' words)">📝</span>';
+}
+
 async function load() {
   const el = document.getElementById('content');
   if (!personId) {
@@ -238,7 +255,7 @@ async function load() {
 
     // 3. Fetch public domain compositions
     const cR = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&select=composition_id,title,year_composed,musescore_link,public_domain&order=title.asc`,
+      `${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&select=composition_id,title,year_composed,musescore_link,public_domain,musescore_notes&order=title.asc`,
       { headers: H }
     );
     const compositions = await cR.json();
@@ -325,6 +342,7 @@ async function load() {
                     ${s?.mp3_url ? '<span class="icon-badge has-mp3">MP3</span>' : ''}
                     ${c.musescore_link ? '<span class="icon-badge">♪</span>' : ''}
                     ${c.public_domain === 'Yes' ? '<span class="icon-badge" style="color:var(--accent2);border-color:var(--accent2)">PD</span>' : ''}
+                    ${msInfoBadge(c.musescore_notes)}
                   </div>
                 </a>`;
             }).join('')}
