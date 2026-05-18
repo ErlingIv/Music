@@ -219,10 +219,10 @@ function wordCount(text) {
 
 function msInfoBadge(notes) {
   const wc = wordCount(notes);
-  if (wc === 0)  return '';
-  if (wc <= 30)  return '<span class="icon-badge ms-low"  title="MuseScore info: ~' + wc + ' words">info: low</span>';
-  if (wc <= 100) return '<span class="icon-badge ms-med"  title="MuseScore info: ~' + wc + ' words">info: med</span>';
-                 return '<span class="icon-badge ms-high" title="MuseScore info: ~' + wc + ' words">info: high</span>';
+  if (wc === 0)   return '';
+  if (wc <= 100)  return '<span class="icon-badge ms-low"  title="MuseScore info: ~' + wc + ' words">info: short</span>';
+  if (wc <= 300)  return '<span class="icon-badge ms-med"  title="MuseScore info: ~' + wc + ' words">info: med</span>';
+                  return '<span class="icon-badge ms-high" title="MuseScore info: ~' + wc + ' words">info: full</span>';
 }
 
 async function load() {
