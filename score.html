@@ -161,6 +161,40 @@
   }
   .musescore-link:hover { background: var(--accent); color: #fff; }
 
+  /* ── Media tabs ── */
+  .media-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.25rem;
+  }
+  .media-tab {
+    font-family: var(--body);
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 8px 18px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+    margin-bottom: -1px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .media-tab:hover { color: var(--ink); }
+  .media-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+  .media-tab-panel { display: none; }
+  .media-tab-panel.active { display: block; }
+
+  .score-embed-wrapper iframe {
+    display: block;
+    width: 100%;
+    height: 480px;
+    border: none;
+    border-radius: 6px;
+  }
+
   .loading-state { text-align: center; padding: 3rem; color: var(--muted); font-size: 0.9rem; }
   .error-state { color: #a32d2d; font-size: 0.9rem; padding: 1rem 0; }
 </style>
@@ -303,43 +337,61 @@ async function load() {
           <div class="notes-text" id="notesText">${notesHtml}</div>
         </div>` : ''}
 
-      ${score?.mp3_url ? `
+      ${(comp.musescore_link || score?.pdf_url || score?.mp3_url) ? `
         <div class="media-section">
-          <p class="section-label">Listen</p>
-          <audio controls src="${score.mp3_url}"></audio>
-        </div>` : ''}
-
-      ${score?.pdf_url ? `
-        <div class="media-section">
-          <p class="section-label">Score</p>
-          <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:8px;">
-            <div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:var(--bg);border-bottom:1px solid var(--border);">
-              <button class="btn" style="padding:4px 12px;" onclick="prevPage()">◀ Prev</button>
-              <span id="pageInfo" style="font-size:0.82rem;color:var(--muted);flex:1;text-align:center;">Loading…</span>
-              <button class="btn" style="padding:4px 12px;" onclick="nextPage()">Next ▶</button>
-            </div>
-            <div style="overflow:auto;max-height:80vh;background:#525659;text-align:center;">
-              <canvas id="pdf-canvas" style="display:block;margin:0 auto;max-width:100%;"></canvas>
-            </div>
+          <div class="media-tabs">
+            ${comp.musescore_link ? `<button class="media-tab active" onclick="switchMediaTab('score', this)">Score</button>` : ''}
+            ${score?.pdf_url     ? `<button class="media-tab ${!comp.musescore_link ? 'active' : ''}" onclick="switchMediaTab('pdf', this)">PDF</button>` : ''}
+            ${score?.mp3_url     ? `<button class="media-tab ${(!comp.musescore_link && !score?.pdf_url) ? 'active' : ''}" onclick="switchMediaTab('audio', this)">Audio</button>` : ''}
           </div>
-          <a class="btn" href="${score.pdf_url}" target="_blank">
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-              <path d="M2 12h10M7 2v7M4 6l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Download PDF
-          </a>
-        </div>` : ''}
 
-      ${comp.musescore_link ? `
-        <a class="musescore-link" href="${comp.musescore_link}" target="_blank">
-          <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-            <path d="M5.5 2H3a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1V8.5M8 2h4m0 0v4m0-4L6 8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Link to MuseScore
-        </a>` : ''}
+          ${comp.musescore_link ? `
+            <div class="media-tab-panel active" id="tab-score">
+              <div class="score-embed-wrapper" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px;">
+                <iframe src="${comp.musescore_link}/embed"
+                  allowfullscreen allow="autoplay; fullscreen">
+                </iframe>
+              </div>
+              <a class="musescore-link" href="${comp.musescore_link}" target="_blank">
+                <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                  <path d="M5.5 2H3a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1V8.5M8 2h4m0 0v4m0-4L6 8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                View on MuseScore
+              </a>
+            </div>` : ''}
+
+          ${score?.pdf_url ? `
+            <div class="media-tab-panel ${!comp.musescore_link ? 'active' : ''}" id="tab-pdf">
+              <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:8px;">
+                <div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:var(--bg);border-bottom:1px solid var(--border);">
+                  <button class="btn" style="padding:4px 12px;" onclick="prevPage()">◀ Prev</button>
+                  <span id="pageInfo" style="font-size:0.82rem;color:var(--muted);flex:1;text-align:center;">Loading…</span>
+                  <button class="btn" style="padding:4px 12px;" onclick="nextPage()">Next ▶</button>
+                </div>
+                <div style="overflow:auto;max-height:80vh;background:#525659;text-align:center;">
+                  <canvas id="pdf-canvas" style="display:block;margin:0 auto;max-width:100%;"></canvas>
+                </div>
+              </div>
+              <a class="btn" href="${score.pdf_url}" target="_blank">
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                  <path d="M2 12h10M7 2v7M4 6l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Download PDF
+              </a>
+            </div>` : ''}
+
+          ${score?.mp3_url ? `
+            <div class="media-tab-panel ${(!comp.musescore_link && !score?.pdf_url) ? 'active' : ''}" id="tab-audio">
+              <audio controls src="${score.mp3_url}" style="width:100%;margin-bottom:0.5rem;"></audio>
+            </div>` : ''}
+        </div>` : ''}
     `;
 
-    if (score?.pdf_url) setTimeout(() => initPdf(score.pdf_url), 0);
+    // PDF: init only when PDF tab is shown (may not be the active tab)
+    if (score?.pdf_url) {
+      window._pdfUrl = score.pdf_url;
+      if (!comp.musescore_link) setTimeout(() => initPdf(score.pdf_url), 0);
+    }
 
   } catch(e) {
     document.getElementById('content').innerHTML =
@@ -350,7 +402,20 @@ async function load() {
 load();
 
 
-let _translated = false;
+function switchMediaTab(tabId, btn) {
+  // Update tab buttons
+  document.querySelectorAll('.media-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  // Update panels
+  document.querySelectorAll('.media-tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`tab-${tabId}`).classList.add('active');
+  // Lazy-init PDF when switching to it
+  if (tabId === 'pdf' && window._pdfUrl && !pdfDoc) {
+    setTimeout(() => initPdf(window._pdfUrl), 0);
+  }
+}
+
+
 
 async function translateChunk(text) {
   const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=no&dt=t&q=${encodeURIComponent(text)}`;
