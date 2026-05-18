@@ -175,9 +175,10 @@
   }
   .icon-badge.has-pdf { color: var(--accent); border-color: var(--accent); }
   .icon-badge.has-mp3 { color: var(--accent2); border-color: var(--accent2); }
-  .icon-badge.ms-low  { color: #956010; border-color: #c8902a; background: #fdf3e3; }
-  .icon-badge.ms-med  { color: #2a6e4a; border-color: #5aaa7a; background: #e8f5ee; }
-  .icon-badge.ms-high { color: #1a4a8a; border-color: #4a7abf; background: #e6eef8; }
+  .ms-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .ms-dot.ms-low  { background: #c8902a; }
+  .ms-dot.ms-med  { background: #5aaa7a; }
+  .ms-dot.ms-high { background: #4a7abf; }
 
   .loading-state {
     text-align: center;
@@ -219,10 +220,10 @@ function wordCount(text) {
 
 function msInfoBadge(notes) {
   const wc = wordCount(notes);
-  if (wc === 0)   return '';
-  if (wc <= 100)  return '<span class="icon-badge ms-low"  title="MuseScore info: ~' + wc + ' words">info: short</span>';
-  if (wc <= 300)  return '<span class="icon-badge ms-med"  title="MuseScore info: ~' + wc + ' words">info: med</span>';
-                  return '<span class="icon-badge ms-high" title="MuseScore info: ~' + wc + ' words">info: full</span>';
+  if (wc === 0)  return '';
+  if (wc <= 100) return '<span class="ms-dot ms-low"  title="MuseScore info: ~' + wc + ' words"></span>';
+  if (wc <= 300) return '<span class="ms-dot ms-med"  title="MuseScore info: ~' + wc + ' words"></span>';
+                 return '<span class="ms-dot ms-high" title="MuseScore info: ~' + wc + ' words"></span>';
 }
 
 async function load() {
