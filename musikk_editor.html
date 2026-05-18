@@ -356,7 +356,6 @@
     <button type="button" class="tab active" onclick="switchTab('new')">Ny innføring</button>
     <button type="button" class="tab" onclick="switchTab('edit')">Rediger</button>
     <button type="button" class="tab" onclick="switchTab('person')">Person</button>
-    <button type="button" class="tab" onclick="switchTab('newperson')">Ny person</button>
     <button type="button" class="tab" onclick="switchTab('biolinks')">Bio-lenker</button>
   </div>
 
@@ -844,85 +843,6 @@
     </div>
   </div>
 
-
-  <!-- ═══════════════════════ NY PERSON TAB ═══════════════════════ -->
-  <div id="tab-newperson" class="tab-content">
-    <div id="newPersonMsg" class="msg"></div>
-
-    <div class="card">
-      <div class="card-title">Legg til ny person</div>
-
-      <div class="row2">
-        <div class="field">
-          <label>Fornavn</label>
-          <input type="text" id="tnp_firstName" autocomplete="off">
-        </div>
-        <div class="field">
-          <label>Etternavn *</label>
-          <input type="text" id="tnp_lastName" autocomplete="off">
-        </div>
-      </div>
-
-      <div class="row2">
-        <div class="field">
-          <label>Født</label>
-          <input type="text" id="tnp_born" placeholder="årstall" autocomplete="off">
-        </div>
-        <div class="field">
-          <label>Død</label>
-          <input type="text" id="tnp_died" placeholder="årstall" autocomplete="off">
-        </div>
-      </div>
-
-      <div class="row2">
-        <div class="field">
-          <label>Nasjonalitet (landkode)</label>
-          <div style="display:flex;gap:0.5rem;align-items:center">
-            <input type="text" id="tnp_nationality" placeholder="NO, DE, SE…" style="width:6rem;flex:none"
-              oninput="updateFlag('tnp_nationality','tnp_flag')">
-            <span id="tnp_flag" style="font-size:1.8rem"></span>
-          </div>
-        </div>
-        <div class="field">
-          <label>Kjønn</label>
-          <select id="tnp_gender">
-            <option value="">Ukjent</option>
-            <option value="M">Mann</option>
-            <option value="F">Kvinne</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="field">
-        <label>Pseudonymer</label>
-        <input type="text" id="tnp_pseudonym" placeholder="Kommaseparert, f.eks. J. Kunkel, Karl Kunkel" autocomplete="off">
-        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem">Kommaseparert liste</div>
-      </div>
-
-      <div class="field">
-        <label>Bio-lenke (Wikipedia e.l.)</label>
-        <div style="display:flex;gap:0.5rem;align-items:center">
-          <input type="text" id="tnp_bioUrl" placeholder="https://…" style="flex:1"
-            oninput="document.getElementById('tnp_bioLink').style.display=this.value.trim()?'inline-block':'none';document.getElementById('tnp_bioLink').href=this.value.trim()">
-          <a id="tnp_bioLink" href="#" target="_blank" class="btn-upload" style="display:none">Åpne</a>
-        </div>
-        <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.4rem">
-          <input type="checkbox" id="tnp_bioUrlVerified" style="width:auto;margin:0;accent-color:var(--accent2,#2a5c45)">
-          <label for="tnp_bioUrlVerified" style="margin:0;text-transform:none;font-size:0.85rem;letter-spacing:0;font-weight:500;color:#4a4035;cursor:pointer">Bio-lenke verifisert ✓</label>
-        </div>
-      </div>
-
-      <div class="field">
-        <label>Biografi</label>
-        <textarea id="tnp_bioText" placeholder="Biografi…" rows="6"></textarea>
-      </div>
-
-      <div class="actions">
-        <button class="btn btn-primary" onclick="addNewPersonTab()">Legg til person</button>
-        <button class="btn btn-secondary" onclick="clearNewPersonTab()">Tøm skjema</button>
-      </div>
-    </div>
-  </div>
 
   <div id="tab-biolinks" class="tab-content">
     <div class="card">
@@ -1616,7 +1536,7 @@ async function loadEditForm(compId) {
     get(`/composition?composition_id=eq.${compId}&select=*`),
     get(`/composition_composer?composition_id=eq.${compId}&select=person_id,credited_as,person(person_id,first_name,last_name,bio_url,pseudonym)`),
     get(`/composition_lyricist?composition_id=eq.${compId}&select=person_id,credited_as,person(person_id,first_name,last_name,pseudonym)`),
-    get(`/score?composition_id=eq.${compId}&select=*,publisher(publisher_id,publisher_name)`),
+    get(`/score?composition_id=eq.${compId}&select=*`),
     get(`/composition_illustrator?composition_id=eq.${compId}&select=person_id,credited_as,person(person_id,first_name,last_name,pseudonym)`)
   ]);
 
@@ -1647,10 +1567,19 @@ async function loadEditForm(compId) {
   const score = scores[0];
   document.getElementById('e_scoreId').value = score ? score.score_id : '';
   document.getElementById('e_plateNumber').value = score?.plate_number || '';
-  if (score?.publisher) {
-    document.getElementById('e_publisherSearch').value = score.publisher.publisher_name;
-    document.getElementById('e_publisherId').value     = score.publisher.publisher_id;
-    ePubState.id = score.publisher.publisher_id;
+  // Fetch publisher separately to avoid FK join issues
+  if (score?.publisher_id) {
+    const pubRows = await get(`/publisher?publisher_id=eq.${score.publisher_id}&select=publisher_id,publisher_name`);
+    const pub = pubRows[0];
+    if (pub) {
+      document.getElementById('e_publisherSearch').value = pub.publisher_name;
+      document.getElementById('e_publisherId').value     = pub.publisher_id;
+      ePubState.id = pub.publisher_id;
+    } else {
+      document.getElementById('e_publisherSearch').value = '';
+      document.getElementById('e_publisherId').value     = '';
+      ePubState.id = null;
+    }
   } else {
     document.getElementById('e_publisherSearch').value = '';
     document.getElementById('e_publisherId').value     = '';
@@ -2519,81 +2448,6 @@ async function biToggleScores(pid, btn) {
     loadEditForm(parseInt(editId));
   }
 })();
-
-function updateFlag(inputId, flagId) {
-  const FLAGS = { NO:'🇳🇴', SE:'🇸🇪', DK:'🇩🇰', FI:'🇫🇮', IS:'🇮🇸',
-                  DE:'🇩🇪', US:'🇺🇸', FR:'🇫🇷', GB:'🇬🇧', IT:'🇮🇹',
-                  AT:'🇦🇹', BE:'🇧🇪', HU:'🇭🇺', AU:'🇦🇺', CZ:'🇨🇿',
-                  PL:'🇵🇱', VE:'🇻🇪' };
-  const code = document.getElementById(inputId).value.trim().toUpperCase();
-  document.getElementById(flagId).textContent = FLAGS[code] || '';
-}
-
-function clearNewPersonTab() {
-  ['tnp_firstName','tnp_lastName','tnp_born','tnp_died','tnp_nationality',
-   'tnp_pseudonym','tnp_bioUrl','tnp_bioText'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-  document.getElementById('tnp_gender').value = '';
-  document.getElementById('tnp_bioUrlVerified').checked = false;
-  document.getElementById('tnp_bioLink').style.display = 'none';
-  document.getElementById('tnp_flag').textContent = '';
-  document.getElementById('newPersonMsg').textContent = '';
-  document.getElementById('newPersonMsg').className = 'msg';
-}
-
-async function addNewPersonTab() {
-  const last  = document.getElementById('tnp_lastName').value.trim();
-  const first = document.getElementById('tnp_firstName').value.trim();
-  if (!last) { alert('Etternavn er påkrevd.'); return; }
-
-  // Duplicate check
-  const existing = await get(`/person?last_name=ilike.${encodeURIComponent(last)}&select=person_id,first_name,last_name,born,died`);
-  const match = existing.find(p => personNameOverlap(first, last, p));
-  if (match) {
-    const fullName = ((match.first_name || '') + ' ' + match.last_name).trim();
-    const yrs = match.born ? ` (${match.born}${match.died ? '–'+match.died : ''})` : '';
-    const msgEl = document.getElementById('newPersonMsg');
-    msgEl.innerHTML = `<div style="background:#fff8e8;border:1px solid #e8c84a;border-radius:4px;padding:0.6rem 0.85rem;font-size:0.85rem;color:#5a4a00">
-      <div style="font-weight:600;margin-bottom:0.35rem">⚠ Person finnes allerede: ${fullName}${yrs} [ID ${match.person_id}]</div>
-      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem">
-        <button onclick="forceAddNewPersonTab()" class="btn" style="font-size:0.8rem;padding:0.25rem 0.6rem;background:#c8a000;color:#fff;border:none;border-radius:4px;cursor:pointer">Opprett likevel som ny person</button>
-      </div>
-    </div>`;
-    msgEl.className = 'msg';
-    return;
-  }
-  await doAddNewPersonTab();
-}
-
-async function forceAddNewPersonTab() {
-  await doAddNewPersonTab();
-}
-
-async function doAddNewPersonTab() {
-  const last  = document.getElementById('tnp_lastName').value.trim();
-  try {
-    const p = await post('person', {
-      first_name:       document.getElementById('tnp_firstName').value.trim() || null,
-      last_name:        last,
-      born:             parseInt(document.getElementById('tnp_born').value) || null,
-      died:             parseInt(document.getElementById('tnp_died').value) || null,
-      nationality:      document.getElementById('tnp_nationality').value.trim().toUpperCase() || null,
-      gender:           document.getElementById('tnp_gender').value || null,
-      pseudonym:        document.getElementById('tnp_pseudonym').value.trim() || null,
-      bio_url:          document.getElementById('tnp_bioUrl').value.trim() || null,
-      bio_url_verified: document.getElementById('tnp_bioUrlVerified').checked || false,
-      bio_text:         document.getElementById('tnp_bioText').value.trim() || null,
-    });
-    const first = document.getElementById('tnp_firstName').value.trim();
-    showMsg('newPersonMsg', `✓ ${first} ${last} lagt til (id=${p.person_id})`, 'success');
-    clearNewPersonTab();
-  } catch(err) {
-    showMsg('newPersonMsg', 'Feil: ' + err.message, 'error');
-  }
-}
-
 </script>
-
 </body>
 </html>
