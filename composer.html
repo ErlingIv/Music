@@ -145,6 +145,7 @@
     gap: 1rem;
     text-decoration: none;
     transition: border-color 0.15s, box-shadow 0.15s;
+    overflow: hidden;
   }
   .score-row:hover {
     border-color: var(--accent);
@@ -163,7 +164,7 @@
     display: flex;
     gap: 0.75rem;
   }
-  .score-icons { display: flex; gap: 0.4rem; flex-shrink: 0; }
+  .score-icons { display: flex; gap: 0.4rem; flex-shrink: 0; align-items: center; }
   .icon-badge {
     font-size: 0.68rem;
     padding: 2px 7px;
@@ -178,7 +179,7 @@
   .ms-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
   .ms-dot.ms-low  { background: #aaa49c; }
   .ms-dot.ms-med  { background: #3a6ea8; }
-  .ms-dot.ms-high { background: #8b3a1e; }
+  .ms-dot.ms-high { background: #cc2200; }
 
   .loading-state {
     text-align: center;
