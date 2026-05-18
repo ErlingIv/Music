@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Norske Musikknoter — Historical Nordic Scores</title>
+<title>Music Collection — Historical Nordic Scores</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Source+Serif+4:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -205,7 +205,6 @@
   .composer-card {
     background: var(--paper);
     border: 1px solid var(--border);
-    border-left: 3px solid var(--border);
     border-radius: 6px;
     padding: 0.7rem 0.9rem;
     cursor: pointer;
@@ -213,10 +212,6 @@
     text-decoration: none;
     display: block;
   }
-  .composer-card.tier-1 { border-left-color: #c8c0b0; }
-  .composer-card.tier-2 { border-left-color: #c8902a; }
-  .composer-card.tier-3 { border-left-color: #5aaa7a; }
-  .composer-card.tier-4 { border-left-color: #8b3a1e; }
   .composer-card:hover {
     border-color: var(--accent);
     box-shadow: 0 2px 8px rgba(139,58,30,0.1);
@@ -374,8 +369,8 @@
 <body>
 
 <header>
-  <h1 class="site-title">Norske Musikknoter</h1>
-  <p class="site-subtitle" id="pdSubtitle">Historical Nordic Sheet Music — Public Domain</p>
+  <h1 class="site-title">Music Collection</h1>
+  <p class="site-subtitle" id="pdSubtitle">Classic compositions — public domain</p>
   <div style="display:flex;align-items:center;justify-content:center;gap:1rem;margin-top:1rem;flex-wrap:wrap;">
     <div class="pd-switch-wrap" title="Toggle between public domain and copyright music">
       <span class="pd-switch-label" id="pdLabelLeft" style="font-weight:600;color:var(--accent)">Public Domain</span>
@@ -472,7 +467,7 @@
 </main>
 
 <footer>
-  Norske Musikknoter · Historical Nordic Sheet Music · Public Domain Scores
+  Music Collection · Historical Nordic Sheet Music · Public Domain Scores
 </footer>
 
 <script>
@@ -699,10 +694,8 @@ function composerCard(c) {
   const flag   = c.nationality !== 'NO' ? (FLAGS[c.nationality] || '') : '';
   const female = c.is_female ? '<span class="female-badge">♀</span>' : '';
   const media  = c.has_media ? '<span class="female-badge" style="background:#e6f0ea;color:#2a5c45;border-color:#b8d4c0;">🎵</span>' : '';
-  const n = c.score_count;
-  const tier = n >= 20 ? 'tier-4' : n >= 6 ? 'tier-3' : n >= 2 ? 'tier-2' : 'tier-1';
   return `
-    <a class="composer-card ${tier}" href="composer.html?id=${c.person_id}">
+    <a class="composer-card" href="composer.html?id=${c.person_id}">
       <div class="composer-name">${c.last_name}, ${c.first_name} ${flag}</div>
       <div class="composer-meta">
         ${years ? `<span>${years}</span>` : ''}
@@ -753,8 +746,8 @@ function togglePD(checked) {
   document.getElementById('pdLabelRight').style.fontWeight = checked ? '600' : '';
   document.getElementById('pdLabelRight').style.color      = checked ? '#5a6e3e' : 'var(--muted)';
   document.getElementById('pdSubtitle').textContent        = checked
-    ? 'Historical Nordic Sheet Music — Copyright'
-    : 'Historical Nordic Sheet Music — Public Domain';
+    ? 'Popular music — copyright protected'
+    : 'Classic compositions — public domain';
   // Clear grids and reload
   ['no','nordic','others','unknown'].forEach(sec => {
     document.getElementById(`composers-${sec}`).innerHTML =
