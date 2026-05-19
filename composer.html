@@ -260,6 +260,13 @@ async function load() {
       { headers: H }
     );
     const compositions = await cR.json();
+    // Sort by year numerically (year_composed is a text field)
+    compositions.sort((a, b) => {
+      const ya = parseInt(a.year_composed) || 0;
+      const yb = parseInt(b.year_composed) || 0;
+      if (ya !== yb) return ya - yb;
+      return (a.title || '').localeCompare(b.title || '', 'no');
+    });
 
     // 4. Fetch scores (pdf_url, mp3_url) and tags for these compositions
     const [scoreR, ctR, tagR] = await Promise.all([
@@ -341,7 +348,7 @@ async function load() {
                   <div class="score-icons">
                     ${s?.pdf_url ? '<span class="icon-badge has-pdf">PDF</span>' : ''}
                     ${s?.mp3_url ? '<span class="icon-badge has-mp3">MP3</span>' : ''}
-                    ${c.musescore_link ? '<span class="icon-badge">♪</span>' : ''}
+                    ${c.musescore_link ? '<span class="icon-badge">♪</span>' : '<span class="icon-badge" style="visibility:hidden">♪</span>'}
                     ${c.public_domain === 'Yes' ? '<span class="icon-badge" style="color:var(--accent2);border-color:var(--accent2)">PD</span>' : ''}
                     ${msInfoBadge(c.musescore_notes)}
                   </div>
