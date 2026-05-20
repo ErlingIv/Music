@@ -922,6 +922,14 @@
 </div>
 
 <script>
+(function() {
+  const pwd = prompt('Passord:');
+  if (pwd !== 'DITT_PASSORD') {
+    document.body.innerHTML = '<div style="font-family:sans-serif;text-align:center;margin-top:4rem;color:#8b3a2a"><h2>Ingen tilgang</h2></div>';
+    throw new Error('Unauthorized');
+  }
+})();
+
 const SB   = 'https://tfqnzszyjsdgdeksizel.supabase.co/rest/v1';
 const KEY  = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H    = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`,
