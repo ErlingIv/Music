@@ -65,8 +65,8 @@ td.wrap-cell { white-space: normal; line-height: 1.4; }
 
 <div id="titlebar">
   <h1>♩ Musikk Database</h1>
-  <span class="sub">Norske musikknoter — offentlig eiendom</span>
-  <span id="count-display">Laster…</span>
+  <span class="sub">Norwegian music scores — public domain</span>
+  <span id="count-display">Loading…</span>
 </div>
 
 <div id="tabbar" id="tabbar"></div>
@@ -74,14 +74,14 @@ td.wrap-cell { white-space: normal; line-height: 1.4; }
 <div id="toolbar">
   <div id="search-wrap">
     <span id="search-icon">🔍</span>
-    <input id="search" placeholder="Søk tittel, komponist, tekstforfatter…" oninput="onSearch()">
+    <input id="search" placeholder="Search title, composer, lyricist…" oninput="onSearch()">
   </div>
   <span id="sort-info"></span>
-  <button id="reset-sort" onclick="resetSort()">Nullstill sortering</button>
+  <button id="reset-sort" onclick="resetSort()">Reset sort</button>
 </div>
 
 <div id="grid-wrap">
-  <div id="loading"><div class="spin">♩</div><br><br>Henter data fra Supabase…</div>
+  <div id="loading"><div class="spin">♩</div><br><br>Loading data from Supabase…</div>
   <div id="errmsg"></div>
   <table id="grid" style="display:none">
     <thead><tr id="hrow"></tr></thead>
@@ -98,7 +98,7 @@ td.wrap-cell { white-space: normal; line-height: 1.4; }
 </div>
 
 <div id="statusbar">
-  <span id="status-count">0 poster</span>
+  <span id="status-count">0 scores</span>
   <span id="status-sel"></span>
   <span id="status-right">Musikk Database · Supabase</span>
 </div>
@@ -111,13 +111,13 @@ var NO_ALPHA_TABS = 5;
 
 var COLS = [
   { k:'row_num',    l:'#',              w:46,  a:'center', ns:true },
-  { k:'title',      l:'Tittel',          w:270, a:'left' },
-  { k:'composer',   l:'Komponist',       w:210, a:'left',  ns:true },
-  { k:'comp_dates', l:'Levd',            w:100, a:'center', ns:true },
-  { k:'lyricist',   l:'Tekstforfatter',  w:190, a:'left',  ns:true },
-  { k:'lyr_dates',  l:'Levd',            w:100, a:'center', ns:true },
-  { k:'year_composed', l:'År',           w:60,  a:'center' },
-  { k:'notes',      l:'Notat',           w:260, a:'left' }
+  { k:'title',      l:'Title',          w:270, a:'left' },
+  { k:'composer',   l:'Composer',       w:210, a:'left',  ns:true },
+  { k:'comp_dates', l:'Lived',            w:100, a:'center', ns:true },
+  { k:'lyricist',   l:'Lyricist',  w:190, a:'left',  ns:true },
+  { k:'lyr_dates',  l:'Lived',            w:100, a:'center', ns:true },
+  { k:'year_composed', l:'Year',           w:60,  a:'center' },
+  { k:'notes',      l:'Notes',           w:260, a:'left' }
 ];
 
 var allRows = [];
@@ -128,7 +128,8 @@ var sortK = null, sortD = 'asc', selId = null, q = '';
 function apiFetch(table) {
   var results = [];
   function page(offset) {
-    var url = BASE + table + '?select=*&limit=1000&offset=' + offset;
+    var extra = table === 'composition' ? '&musescore_link=not.is.null' : '';
+    var url = BASE + table + '?select=*&limit=1000&offset=' + offset + extra;
     return fetch(url, { headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY } })
       .then(function(r) {
         if (!r.ok) throw new Error(table + ': HTTP ' + r.status);
@@ -239,7 +240,7 @@ function buildTabs() {
   tabs = [];
 
   // Tab 0: All Norwegian
-  tabs.push({ id: 'no-all', label: 'Norske komponister', rows: noSorted });
+  tabs.push({ id: 'no-all', label: 'Norwegian composers', rows: noSorted });
 
   // Tabs 1..5: Alpha splits
   splits.forEach(function(s) {
@@ -250,13 +251,13 @@ function buildTabs() {
   var nordicSorted = nordicRows.slice().sort(function(a,b) {
     return a.sort_last.localeCompare(b.sort_last, 'nb');
   });
-  tabs.push({ id: 'nordic', label: '"Nordisk"', rows: nordicSorted });
+  tabs.push({ id: 'nordic', label: '"Nordic" composers', rows: nordicSorted });
 
   // Other
   var otherSorted = otherRows.slice().sort(function(a,b) {
     return a.sort_last.localeCompare(b.sort_last, 'nb');
   });
-  tabs.push({ id: 'other', label: 'Andre', rows: otherSorted });
+  tabs.push({ id: 'other', label: 'Other', rows: otherSorted });
 }
 
 function calcAlphaSplits(sortedRows, n) {
@@ -365,7 +366,7 @@ function render() {
     var td = document.createElement('td');
     td.colSpan = COLS.length;
     td.style.cssText = 'padding:30px;text-align:center;color:#999';
-    td.textContent = lq ? 'Ingen resultater for "' + q + '"' : 'Ingen poster i denne kategorien';
+    td.textContent = lq ? 'No results for "' + q + '"' : 'No entries in this category';
     tr.appendChild(td); tb.appendChild(tr);
   } else {
     var frag = document.createDocumentFragment();
@@ -387,8 +388,8 @@ function render() {
   }
 
   var tot = tabRows.length, sh = rows.length;
-  document.getElementById('count-display').textContent = lq ? sh + ' av ' + tot + ' poster' : tot + ' poster';
-  document.getElementById('status-count').textContent = sh + ' poster';
+  document.getElementById('count-display').textContent = lq ? sh + ' av ' + tot + ' scores' : tot + ' scores';
+  document.getElementById('status-count').textContent = sh + ' scores';
 }
 
 function personHtml(persons, datesKey, row) {
@@ -442,13 +443,13 @@ function showDetail(row) {
   document.getElementById('detail-title').innerHTML = row.musescore_link
     ? '<a class="title-link" href="' + row.musescore_link + '" target="_blank">' + row.title + ' ↗</a>'
     : row.title;
-  document.getElementById('status-sel').textContent = 'Valgt: ' + row.title;
+  document.getElementById('status-sel').textContent = 'Selected: ' + row.title;
   var h = '';
-  if (row.composers.length) h += '<div><span class="dl">Komponist: </span>' + row.composers.map(function(p){ var n=personName(p); return p.bio_url?'<a class="person-link" href="'+p.bio_url+'" target="_blank">'+n+'</a>':n; }).join(', ') + (row.comp_dates ? ' <span class="person-dates">'+row.comp_dates+'</span>' : '') + '</div>';
-  if (row.lyricists.length) h += '<div><span class="dl">Tekstforfatter: </span>' + row.lyricists.map(function(p){ var n=personName(p); return p.bio_url?'<a class="person-link" href="'+p.bio_url+'" target="_blank">'+n+'</a>':n; }).join(', ') + (row.lyr_dates ? ' <span class="person-dates">'+row.lyr_dates+'</span>' : '') + '</div>';
-  if (row.year_composed) h += '<div><span class="dl">År: </span>' + row.year_composed + '</div>';
-  if (row.notes) h += '<div><span class="dl">Notat: </span>' + row.notes + '</div>';
-  document.getElementById('detail-fields').innerHTML = h || '<span style="color:#999">Ingen tilleggsinfo</span>';
+  if (row.composers.length) h += '<div><span class="dl">Composer: </span>' + row.composers.map(function(p){ var n=personName(p); return p.bio_url?'<a class="person-link" href="'+p.bio_url+'" target="_blank">'+n+'</a>':n; }).join(', ') + (row.comp_dates ? ' <span class="person-dates">'+row.comp_dates+'</span>' : '') + '</div>';
+  if (row.lyricists.length) h += '<div><span class="dl">Lyricist: </span>' + row.lyricists.map(function(p){ var n=personName(p); return p.bio_url?'<a class="person-link" href="'+p.bio_url+'" target="_blank">'+n+'</a>':n; }).join(', ') + (row.lyr_dates ? ' <span class="person-dates">'+row.lyr_dates+'</span>' : '') + '</div>';
+  if (row.year_composed) h += '<div><span class="dl">Year: </span>' + row.year_composed + '</div>';
+  if (row.notes) h += '<div><span class="dl">Notes: </span>' + row.notes + '</div>';
+  document.getElementById('detail-fields').innerHTML = h || '<span style="color:#999">No additional info</span>';
 }
 
 function closeDetail() {
@@ -464,7 +465,7 @@ function doSort(k) {
   var ar = document.getElementById('ar-' + k);
   if (ar) ar.textContent = sortD === 'asc' ? ' ▲' : ' ▼';
   var col = COLS.find(function(c){ return c.k===k; });
-  document.getElementById('sort-info').textContent = 'Sortert: ' + (col ? col.l : '');
+  document.getElementById('sort-info').textContent = 'Sorted: ' + (col ? col.l : '');
   document.getElementById('reset-sort').style.display = '';
   render();
 }
