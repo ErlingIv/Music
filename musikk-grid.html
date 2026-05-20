@@ -5,7 +5,7 @@
 <title>Musikk Database</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Calibri','Segoe UI',Arial,sans-serif; font-size: 13px; background: #f0f0f0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+body { font-family: 'Calibri','Segoe UI',Arial,sans-serif; font-size: 14px; background: #f0f0f0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
 #titlebar { background: #217346; color: #fff; padding: 6px 16px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 #titlebar h1 { font-size: 17px; font-weight: 700; }
@@ -28,19 +28,19 @@ body { font-family: 'Calibri','Segoe UI',Arial,sans-serif; font-size: 13px; back
 #grid-wrap { flex: 1; overflow: auto; }
 table { border-collapse: collapse; table-layout: fixed; }
 thead tr { background: #217346; color: #fff; position: sticky; top: 0; z-index: 10; }
-th { padding: 5px 6px; font-weight: 600; font-size: 12px; border: 1px solid #1a5c38; user-select: none; position: relative; white-space: nowrap; overflow: hidden; cursor: pointer; }
+th { padding: 6px 7px; font-weight: 600; font-size: 13px; border: 1px solid #1a5c38; user-select: none; position: relative; white-space: nowrap; overflow: hidden; cursor: pointer; }
 th.nosort { cursor: default; }
 tbody tr:nth-child(even) { background: #f6fcf7; }
 tbody tr:hover { background: #e8f5e9 !important; }
 tbody tr.selected { background: #c6efce !important; }
 tbody tr { cursor: pointer; }
-td { padding: 3px 6px; border: 1px solid #e0e0e0; overflow: hidden; white-space: nowrap; font-size: 12px; }
+td { padding: 4px 7px; border: 1px solid #e0e0e0; overflow: hidden; white-space: nowrap; font-size: 13px; }
 td.wrap-cell { white-space: normal; line-height: 1.4; }
 .empty { color: #ccc; }
 .rn { color: #999; font-size: 11px; }
 .person-link { color: #217346; text-decoration: none; }
 .person-link:hover { text-decoration: underline; }
-.person-dates { color: #aaa; font-size: 11px; }
+.person-dates { color: #999; font-size: 12px; }
 .title-link { color: #1a4e8a; text-decoration: none; }
 .title-link:hover { text-decoration: underline; }
 .resize-handle { position: absolute; right: 0; top: 0; bottom: 0; width: 5px; cursor: col-resize; }
@@ -112,10 +112,8 @@ var NO_ALPHA_TABS = 5;
 var COLS = [
   { k:'row_num',    l:'#',              w:46,  a:'center', ns:true },
   { k:'title',      l:'Title',          w:270, a:'left' },
-  { k:'composer',   l:'Composer',       w:210, a:'left' },
-  { k:'comp_dates', l:'Lived',            w:100, a:'center', ns:true },
-  { k:'lyricist',   l:'Lyricist',  w:190, a:'left',  ns:true },
-  { k:'lyr_dates',  l:'Lived',            w:100, a:'center', ns:true },
+  { k:'composer',   l:'Composer',       w:280, a:'left' },
+  { k:'lyricist',   l:'Lyricist',  w:260, a:'left',  ns:true },
   { k:'year_composed', l:'Year',           w:60,  a:'center', ns:true },
   { k:'notes',      l:'Notes',          w:260, a:'left',  ns:true }
 ];
@@ -409,13 +407,7 @@ function personHtml(persons, datesKey, row) {
   }).join('<br>');
 }
 
-function datesHtml(persons) {
-  if (!persons || !persons.length) return '<span class="empty">—</span>';
-  return persons.map(function(p) {
-    var d = personDates(p);
-    return d ? '<span class="person-dates">' + d + '</span>' : '<span class="empty">—</span>';
-  }).join('<br>');
-}
+
 
 function cellHtml(col, row) {
   if (col.k === 'row_num') return '<span class="rn">' + row.row_num + '</span>';
@@ -425,9 +417,7 @@ function cellHtml(col, row) {
     return t || '<span class="empty">—</span>';
   }
   if (col.k === 'composer')   return personHtml(row.composers);
-  if (col.k === 'comp_dates') return datesHtml(row.composers);
   if (col.k === 'lyricist')   return personHtml(row.lyricists);
-  if (col.k === 'lyr_dates')  return datesHtml(row.lyricists);
   if (col.k === 'year_composed') return row.year_composed || '<span class="empty">—</span>';
   if (col.k === 'notes') {
     if (!row.notes) return '<span class="empty">—</span>';
