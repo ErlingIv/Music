@@ -348,8 +348,12 @@
 <div class="container">
   <header>
     <h1>Musikk — Administrasjon</h1>
-    
-
+    <nav style="margin-top:0.5rem;display:flex;justify-content:center;gap:1.2rem;font-size:0.85rem">
+      <a href="index.html" style="color:var(--muted);text-decoration:none">Hjem</a>
+      <a href="composer.html" style="color:var(--muted);text-decoration:none">Komponister</a>
+      <a href="score.html" style="color:var(--muted);text-decoration:none">Komposisjoner</a>
+      <a href="tags.html" style="color:var(--muted);text-decoration:none">Tagger</a>
+    </nav>
   </header>
 
   <div class="tabs">
@@ -462,14 +466,6 @@
             <label>Platenummer</label>
             <input type="text" id="n_plateNumber" placeholder="f.eks. 7200">
           </div>
-        </div>
-        <div class="field">
-          <label>PDF-URL</label>
-          <input type="text" id="n_pdfUrl" placeholder="https://…">
-        </div>
-        <div class="field">
-          <label>MP3-URL</label>
-          <input type="text" id="n_mp3Url" placeholder="https://…">
         </div>
         <div class="field">
           <label>Kilde</label>
@@ -645,14 +641,6 @@
             <label>Platenummer</label>
             <input type="text" id="e_plateNumber">
           </div>
-        </div>
-        <div class="field">
-          <label>PDF-URL</label>
-          <input type="text" id="e_pdfUrl" placeholder="https://…">
-        </div>
-        <div class="field">
-          <label>MP3-URL</label>
-          <input type="text" id="e_mp3Url" placeholder="https://…">
         </div>
         <div class="field">
           <label>Kilde</label>
@@ -1285,8 +1273,6 @@ document.getElementById('newForm').addEventListener('submit', async e => {
     const msLink   = document.getElementById('n_msLink').value.trim();
     const toInvestigate = document.getElementById('n_toInvestigate').checked;
     const plate    = document.getElementById('n_plateNumber').value.trim();
-    const pdfUrl   = document.getElementById('n_pdfUrl').value.trim();
-    const mp3Url   = document.getElementById('n_mp3Url').value.trim();
     if (!title) throw new Error('Tittel er påkrevd.');
     if (!cat)   throw new Error('Kategori er påkrevd.');
 
@@ -1330,7 +1316,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
         document.getElementById('scoreDupConfirm').onclick = async () => {
           msgEl.innerHTML = '';
           btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Lagrer…';
-          await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, pdf_url: pdfUrl||null, mp3_url: mp3Url||null, source: source||null });
+          await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, pdf_url: null, mp3_url: null, source: source||null });
           showMsg('newMsg', `✓ "${title}" er lagret (id=${compId})`, 'success');
           resetNewForm();
           btn.disabled = false; btn.textContent = 'Lagre innføring';
@@ -1339,7 +1325,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
       }
     }
 
-    await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, pdf_url: pdfUrl||null, mp3_url: mp3Url||null, source: source||null });
+    await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, pdf_url: null, mp3_url: null, source: source||null });
 
     showMsg('newMsg', `✓ "${title}" er lagret (id=${compId})`, 'success');
     resetNewForm();
@@ -1561,8 +1547,6 @@ async function loadEditForm(compId) {
     ePubState.id = null;
   }
   document.getElementById('e_source').value  = score?.source || '';
-  document.getElementById('e_pdfUrl').value  = score?.pdf_url || '';
-  document.getElementById('e_mp3Url').value  = score?.mp3_url || '';
 
   // Approval state
   const approved = c.approved || false;
@@ -1667,10 +1651,8 @@ async function saveEdit() {
     const pubId   = await resolvePublisher('e_publisherSearch', ePubState, 'id');
     const plate   = document.getElementById('e_plateNumber').value.trim();
     const catName = cat === 'pd' ? 'Eldre klassisk' : 'Eldre populærmusikk';
-    const pdfUrl  = document.getElementById('e_pdfUrl').value.trim();
-    const mp3Url  = document.getElementById('e_mp3Url').value.trim();
     const esource  = document.getElementById('e_source').value;
-    const scoreData = { plate_number: plate||null, publisher_id: pubId||null, category: catName, pdf_url: pdfUrl||null, mp3_url: mp3Url||null, source: esource||null };
+    const scoreData = { plate_number: plate||null, publisher_id: pubId||null, category: catName, pdf_url: null, mp3_url: null, source: esource||null };
 
     if (scoreId) {
       await patch('score', `score_id=eq.${scoreId}`, scoreData);
@@ -2353,10 +2335,6 @@ function biOpenPanel(pid) {
   panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
   if (bioMode === 'missing') {
-    document.getElementById('bioUrlInput').addEventListener('input', () => {
-      document.getElementById('btnBioTest').href = document.getElementById('bioUrlInput').value.trim() || '#';
-    });
-  }
     document.getElementById('bioUrlInput').addEventListener('input', () => {
       document.getElementById('btnBioTest').href = document.getElementById('bioUrlInput').value.trim() || '#';
     });
