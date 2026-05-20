@@ -112,10 +112,10 @@ var NO_ALPHA_TABS = 5;
 var COLS = [
   { k:'row_num',    l:'#',              w:46,  a:'center', ns:true },
   { k:'title',      l:'Title',          w:270, a:'left' },
-  { k:'composer',   l:'Composer',       w:210, a:'left',  ns:true },
-  { k:'comp_dates', l:'Lived',            w:100, a:'center', ns:true },
-  { k:'lyricist',   l:'Lyricist',  w:190, a:'left',  ns:true },
-  { k:'lyr_dates',  l:'Lived',            w:100, a:'center', ns:true },
+  { k:'composer',   l:'Composer',       w:210, a:'left' },
+  { k:'comp_dates', l:'Lived',            w:100, a:'center' },
+  { k:'lyricist',   l:'Lyricist',  w:190, a:'left' },
+  { k:'lyr_dates',  l:'Lived',            w:100, a:'center' },
   { k:'year_composed', l:'Year',           w:60,  a:'center' },
   { k:'notes',      l:'Notes',           w:260, a:'left' }
 ];
@@ -352,7 +352,12 @@ function render() {
 
   if (sortK) {
     rows.sort(function(a,b) {
-      var va = String(a[sortK] || ''), vb = String(b[sortK] || '');
+      var va, vb;
+      if (sortK === 'composer')   { va = a.composer_text; vb = b.composer_text; }
+      else if (sortK === 'lyricist')  { va = a.lyricist_text; vb = b.lyricist_text; }
+      else if (sortK === 'comp_dates') { va = String(a.composers[0] ? (a.composers[0].born||0) : 0); vb = String(b.composers[0] ? (b.composers[0].born||0) : 0); }
+      else if (sortK === 'lyr_dates')  { va = String(a.lyricists[0] ? (a.lyricists[0].born||0) : 0); vb = String(b.lyricists[0] ? (b.lyricists[0].born||0) : 0); }
+      else { va = String(a[sortK] || ''); vb = String(b[sortK] || ''); }
       return sortD === 'asc' ? va.localeCompare(vb,'nb') : vb.localeCompare(va,'nb');
     });
   }
