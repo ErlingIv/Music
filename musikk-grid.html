@@ -229,7 +229,8 @@ function buildTabs() {
 
   // Sort Norwegian by last name for alpha splitting
   var noSorted = noRows.slice().sort(function(a,b) {
-    return a.sort_last.localeCompare(b.sort_last, 'nb');
+    var r = a.sort_last.localeCompare(b.sort_last, 'nb');
+    return r !== 0 ? r : a.title.localeCompare(b.title, 'nb');
   });
 
   // Calculate letter boundaries for 5 even groups
@@ -247,13 +248,15 @@ function buildTabs() {
 
   // Nordic
   var nordicSorted = nordicRows.slice().sort(function(a,b) {
-    return a.sort_last.localeCompare(b.sort_last, 'nb');
+    var r = a.sort_last.localeCompare(b.sort_last, 'nb');
+    return r !== 0 ? r : a.title.localeCompare(b.title, 'nb');
   });
   tabs.push({ id: 'nordic', label: '"Nordic" composers', rows: nordicSorted });
 
   // Other
   var otherSorted = otherRows.slice().sort(function(a,b) {
-    return a.sort_last.localeCompare(b.sort_last, 'nb');
+    var r = a.sort_last.localeCompare(b.sort_last, 'nb');
+    return r !== 0 ? r : a.title.localeCompare(b.title, 'nb');
   });
   tabs.push({ id: 'other', label: 'Other', rows: otherSorted });
 }
