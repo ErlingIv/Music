@@ -464,22 +464,12 @@
           </div>
         </div>
         <div class="field">
-          <label>PDF-fil</label>
-          <div class="file-upload-wrap">
-            <input type="text" id="n_pdfUrl" placeholder="URL settes automatisk ved opplasting…" readonly>
-            <button type="button" class="btn-upload" onclick="triggerUpload('n_pdfFile')">Last opp PDF</button>
-            <input type="file" id="n_pdfFile" accept=".pdf" style="display:none" onchange="uploadFile(this,'n_pdfUrl','scores-pdf')">
-          </div>
-          <div class="upload-progress" id="n_pdfProgress">Laster opp…</div>
+          <label>PDF-URL</label>
+          <input type="text" id="n_pdfUrl" placeholder="https://…">
         </div>
         <div class="field">
-          <label>MP3-fil</label>
-          <div class="file-upload-wrap">
-            <input type="text" id="n_mp3Url" placeholder="URL settes automatisk ved opplasting…" readonly>
-            <button type="button" class="btn-upload" onclick="triggerUpload('n_mp3File')">Last opp MP3</button>
-            <input type="file" id="n_mp3File" accept=".mp3,audio/*" style="display:none" onchange="uploadFile(this,'n_mp3Url','scores-mp3')">
-          </div>
-          <div class="upload-progress" id="n_mp3Progress">Laster opp…</div>
+          <label>MP3-URL</label>
+          <input type="text" id="n_mp3Url" placeholder="https://…">
         </div>
         <div class="field">
           <label>Kilde</label>
@@ -657,22 +647,12 @@
           </div>
         </div>
         <div class="field">
-          <label>PDF-fil</label>
-          <div class="file-upload-wrap">
-            <input type="text" id="e_pdfUrl" placeholder="URL settes automatisk ved opplasting…">
-            <button type="button" class="btn-upload" onclick="triggerUpload('e_pdfFile')">Last opp PDF</button>
-            <input type="file" id="e_pdfFile" accept=".pdf" style="display:none" onchange="uploadFile(this,'e_pdfUrl','scores-pdf')">
-          </div>
-          <div class="upload-progress" id="e_pdfProgress">Laster opp…</div>
+          <label>PDF-URL</label>
+          <input type="text" id="e_pdfUrl" placeholder="https://…">
         </div>
         <div class="field">
-          <label>MP3-fil</label>
-          <div class="file-upload-wrap">
-            <input type="text" id="e_mp3Url" placeholder="URL settes automatisk ved opplasting…">
-            <button type="button" class="btn-upload" onclick="triggerUpload('e_mp3File')">Last opp MP3</button>
-            <input type="file" id="e_mp3File" accept=".mp3,audio/*" style="display:none" onchange="uploadFile(this,'e_mp3Url','scores-mp3')">
-          </div>
-          <div class="upload-progress" id="e_mp3Progress">Laster opp…</div>
+          <label>MP3-URL</label>
+          <input type="text" id="e_mp3Url" placeholder="https://…">
         </div>
         <div class="field">
           <label>Kilde</label>
@@ -854,12 +834,7 @@
         </div>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem">
-      <div style="flex:1;background:var(--warm);border-radius:6px;height:8px;overflow:hidden">
-        <div id="bioProgressBar" style="height:100%;border-radius:6px;transition:width 0.4s ease;width:0%;background:var(--accent2)"></div>
-      </div>
-      <div id="bioProgressLabel" style="font-size:0.85rem;color:var(--muted);white-space:nowrap">—</div>
-    </div>
+    <div id="bioAlphaNav" style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:1.2rem"></div>
     <div id="bioCardArea"></div>
   </div>
 
@@ -922,14 +897,6 @@
 </div>
 
 <script>
-(function() {
-  const pwd = prompt('Passord:');
-  if (pwd !== 'dragspel1958!') {
-    document.body.innerHTML = '<div style="font-family:sans-serif;text-align:center;margin-top:4rem;color:#8b3a2a"><h2>Ingen tilgang</h2></div>';
-    throw new Error('Unauthorized');
-  }
-})();
-
 const SB   = 'https://tfqnzszyjsdgdeksizel.supabase.co/rest/v1';
 const KEY  = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H    = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`,
@@ -2270,72 +2237,126 @@ async function loadBioPersons() {
 
 function showBioSection(mode) {
   bioMode    = mode;
-  bioIndex   = 0;
   bioPersons = mode === 'unverified' ? (window._bioUnverified || []) : (window._bioMissing || []);
   document.getElementById('bioTabUnverified').style.borderColor = mode === 'unverified' ? 'var(--accent)' : '';
   document.getElementById('bioTabMissing').style.borderColor    = mode === 'missing'    ? 'var(--accent)' : '';
-  document.getElementById('bioProgressBar').style.background    = mode === 'unverified' ? 'var(--accent2)' : 'var(--accent)';
-  renderBioCard();
+  renderBioList();
 }
 
-function renderBioCard() {
-  const total = bioPersons.length;
-  const pct   = total > 0 ? Math.round((bioIndex / total) * 100) : 100;
-  document.getElementById('bioProgressBar').style.width   = pct + '%';
-  document.getElementById('bioProgressLabel').textContent = `${bioIndex} av ${total} (${pct}%)`;
+function renderBioList() {
   const area = document.getElementById('bioCardArea');
-  if (bioIndex >= total) {
-    const stat = bioMode === 'unverified' ? `${bioVerified} verifisert · ${bioNulled} fjernet` : `${bioSaved} lagt til`;
-    area.innerHTML = `<div class="card" style="text-align:center;padding:2rem;color:var(--accent2);font-family:'Playfair Display',serif;font-size:1.2rem">✓ Alle gjennomgått<br><span style="font-size:0.9rem;font-family:sans-serif;color:var(--muted)">${stat}</span></div>`;
+  const nav  = document.getElementById('bioAlphaNav');
+  if (!bioPersons.length) {
+    nav.innerHTML = '';
+    area.innerHTML = '<div class="card" style="text-align:center;padding:2rem;color:var(--accent2);font-family:\'Playfair Display\',serif;font-size:1.2rem">✓ Ingen å behandle</div>';
     return;
   }
-  const p    = bioPersons[bioIndex];
-  const name = ((p.first_name || '') + ' ' + (p.last_name || '')).trim() || '⚠ Navn mangler';
-  const nameWarning = (!p.first_name && !p.last_name) ? ` <span style="font-size:0.78rem;color:var(--accent)">ID ${p.person_id} — navn mangler</span>` : '';
+
+  // Group by first letter of last_name
+  const groups = {};
+  for (const p of bioPersons) {
+    const letter = (p.last_name || '?')[0].toUpperCase();
+    if (!groups[letter]) groups[letter] = [];
+    groups[letter].push(p);
+  }
+  const letters = Object.keys(groups).sort((a,b) => a.localeCompare(b, 'nb'));
+
+  // Alpha nav
+  nav.innerHTML = letters.map(l =>
+    `<a href="#bio-letter-${l}" style="display:inline-block;width:2rem;height:2rem;line-height:2rem;text-align:center;border:1px solid var(--border);border-radius:3px;font-size:0.85rem;font-weight:500;color:var(--ink);text-decoration:none;background:var(--paper)">${l}</a>`
+  ).join('');
+
+  // List
+  area.innerHTML = letters.map(letter => {
+    const persons = groups[letter];
+    const rows = persons.map(p => {
+      const name = ((p.first_name||'') + ' ' + (p.last_name||'')).trim() || '⚠ Navn mangler';
+      const meta = [p.born && p.died ? `${p.born}–${p.died}` : (p.born||p.died||''), p.nationality||''].filter(Boolean).join(' · ');
+      const extra = bioMode === 'unverified'
+        ? `<span style="font-size:0.75rem;color:var(--muted);font-family:monospace;word-break:break-all">${p.bio_url}</span>`
+        : '';
+      return `<div style="padding:0.6rem 0;border-bottom:1px solid var(--warm);display:flex;align-items:flex-start;gap:0.75rem;cursor:pointer" onclick="biOpenPanel(${p.person_id})" id="bio-person-${p.person_id}">
+        <div style="flex:1">
+          <span style="font-weight:500">${name}</span>
+          <span style="font-size:0.82rem;color:var(--muted);margin-left:0.5rem">${meta}</span>
+          <div>${extra}</div>
+        </div>
+        <span style="font-size:0.78rem;color:var(--accent);white-space:nowrap;padding-top:0.2rem">Rediger →</span>
+      </div>`;
+    }).join('');
+    return `<div class="card" id="bio-letter-${letter}" style="margin-bottom:1rem">
+      <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:600;color:var(--accent);border-bottom:1px solid var(--border);padding-bottom:0.4rem;margin-bottom:0.2rem">${letter}</div>
+      ${rows}
+    </div>`;
+  }).join('');
+}
+
+function biOpenPanel(pid) {
+  // Close any open panel first
+  const existing = document.getElementById('bio-panel');
+  if (existing) existing.remove();
+
+  const p = bioPersons.find(x => x.person_id === pid);
+  if (!p) return;
+  const name = ((p.first_name||'') + ' ' + (p.last_name||'')).trim() || '⚠ Navn mangler';
   const meta = `ID: ${p.person_id}` + ([p.born,p.died].filter(Boolean).join('–') ? ' · ' + [p.born,p.died].filter(Boolean).join('–') : '') + (p.nationality ? ' · ' + p.nationality : '');
   const enc  = encodeURIComponent(name);
+
+  let panelHtml = '';
   if (bioMode === 'unverified') {
-    area.innerHTML = `
-      <div class="card">
-        <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;margin-bottom:0.2rem"><a href="#" onclick="switchTab('person');loadPersonForm(${p.person_id});return false;" style="color:inherit;text-decoration:none;border-bottom:1px solid var(--border)">${name}</a>${nameWarning}</div>
-        <div style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem">${meta}</div>
-        <div style="background:var(--paper);border:1px solid var(--border);border-radius:5px;padding:0.6rem 0.9rem;font-size:0.82rem;word-break:break-all;margin-bottom:1rem;font-family:monospace">${p.bio_url}</div>
-        <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
-          <a class="btn btn-secondary" href="${p.bio_url}" target="_blank" style="font-size:0.85rem">🔗 Åpne lenke</a>
-          <button type="button" class="btn btn-primary" id="btnBioVerify" onclick="biDoVerify(${p.person_id})" style="font-size:0.85rem">✓ Verifiser</button>
-          <button type="button" class="btn btn-secondary" onclick="biDoNull(${p.person_id})" style="font-size:0.85rem;color:var(--accent);border-color:var(--accent)">✗ Fjern lenke</button>
-          <button type="button" class="btn btn-secondary" onclick="biToggleScores(${p.person_id}, this)" style="font-size:0.85rem">♪ Vis komposisjoner</button>
-          <button type="button" class="btn btn-secondary" onclick="biSkip()" style="font-size:0.85rem">→ Hopp over</button>
-        </div>
-        <div id="bioMsg" style="font-size:0.82rem;margin-top:0.5rem;color:var(--muted);min-height:1.2em"></div>
-        <div id="bioScores" style="display:none;margin-top:0.75rem;border-top:1px solid var(--border);padding-top:0.75rem;font-size:0.85rem"></div>
+    panelHtml = `
+      <div style="background:var(--paper);border:1px solid var(--border);border-radius:5px;padding:0.6rem 0.9rem;font-size:0.82rem;word-break:break-all;margin-bottom:1rem;font-family:monospace">${p.bio_url}</div>
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+        <a class="btn btn-secondary" href="${p.bio_url}" target="_blank" style="font-size:0.85rem">🔗 Åpne lenke</a>
+        <button type="button" class="btn btn-primary" id="btnBioVerify" onclick="biDoVerify(${p.person_id})" style="font-size:0.85rem">✓ Verifiser</button>
+        <button type="button" class="btn btn-secondary" onclick="biDoNull(${p.person_id})" style="font-size:0.85rem;color:var(--accent);border-color:var(--accent)">✗ Fjern lenke</button>
+        <button type="button" class="btn btn-secondary" onclick="biToggleScores(${p.person_id}, this)" style="font-size:0.85rem">♪ Vis komposisjoner</button>
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('bio-panel').remove()" style="font-size:0.85rem">✕ Lukk</button>
       </div>`;
   } else {
-    area.innerHTML = `
-      <div class="card">
-        <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;margin-bottom:0.2rem"><a href="#" onclick="switchTab('person');loadPersonForm(${p.person_id});return false;" style="color:inherit;text-decoration:none;border-bottom:1px solid var(--border)">${name}</a></div>
-        <div style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem">${meta}</div>
-        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem">
-          <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://no.wikipedia.org/w/index.php?search=${enc}" target="_blank">no.wikipedia</a>
-          <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://sv.wikipedia.org/w/index.php?search=${enc}" target="_blank">sv.wikipedia</a>
-          <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://en.wikipedia.org/w/index.php?search=${enc}" target="_blank">en.wikipedia</a>
-          <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://da.wikipedia.org/w/index.php?search=${enc}" target="_blank">da.wikipedia</a>
-          <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://snl.no/search?query=${enc}" target="_blank">snl.no</a>
-          <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://nbl.snl.no/search?query=${enc}" target="_blank">nbl.snl.no</a>
-          <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://www.nb.no/search?q=${enc}" target="_blank">nb.no</a>
-        </div>
-        <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
-          <input id="bioUrlInput" type="url" placeholder="Lim inn bio-lenke her…" style="flex:1;padding:0.55rem 0.8rem;border:1px solid var(--border);border-radius:5px;font-family:inherit;font-size:0.88rem">
-          <a id="btnBioTest" class="btn btn-secondary" href="#" target="_blank" style="font-size:0.85rem">Åpne</a>
-        </div>
-        <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
-          <button type="button" class="btn btn-primary" id="btnBioSave" onclick="biDoSave(${p.person_id})" style="font-size:0.85rem">💾 Lagre lenke</button>
-          <button type="button" class="btn btn-secondary" onclick="biToggleScores(${p.person_id}, this)" style="font-size:0.85rem">♪ Vis komposisjoner</button>
-          <button type="button" class="btn btn-secondary" onclick="biSkip()" style="font-size:0.85rem">→ Hopp over</button>
-        </div>
-        <div id="bioMsg" style="font-size:0.82rem;margin-top:0.5rem;color:var(--muted);min-height:1.2em"></div>
-        <div id="bioScores" style="display:none;margin-top:0.75rem;border-top:1px solid var(--border);padding-top:0.75rem;font-size:0.85rem"></div>
+    panelHtml = `
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem">
+        <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://no.wikipedia.org/w/index.php?search=${enc}" target="_blank">no.wikipedia</a>
+        <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://sv.wikipedia.org/w/index.php?search=${enc}" target="_blank">sv.wikipedia</a>
+        <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://en.wikipedia.org/w/index.php?search=${enc}" target="_blank">en.wikipedia</a>
+        <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://da.wikipedia.org/w/index.php?search=${enc}" target="_blank">da.wikipedia</a>
+        <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://snl.no/search?query=${enc}" target="_blank">snl.no</a>
+        <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://nbl.snl.no/search?query=${enc}" target="_blank">nbl.snl.no</a>
+        <a style="font-size:0.78rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;color:var(--muted);text-decoration:none;background:var(--paper)" href="https://www.nb.no/search?q=${enc}" target="_blank">nb.no</a>
+      </div>
+      <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
+        <input id="bioUrlInput" type="url" placeholder="Lim inn bio-lenke her…" style="flex:1;padding:0.55rem 0.8rem;border:1px solid var(--border);border-radius:5px;font-family:inherit;font-size:0.88rem">
+        <a id="btnBioTest" class="btn btn-secondary" href="#" target="_blank" style="font-size:0.85rem">Åpne</a>
+      </div>
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+        <button type="button" class="btn btn-primary" id="btnBioSave" onclick="biDoSave(${p.person_id})" style="font-size:0.85rem">💾 Lagre lenke</button>
+        <button type="button" class="btn btn-secondary" onclick="biToggleScores(${p.person_id}, this)" style="font-size:0.85rem">♪ Vis komposisjoner</button>
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('bio-panel').remove()" style="font-size:0.85rem">✕ Lukk</button>
       </div>`;
+  }
+
+  const panel = document.createElement('div');
+  panel.id = 'bio-panel';
+  panel.className = 'card';
+  panel.style.cssText = 'position:sticky;top:1rem;z-index:10;border:2px solid var(--accent);margin-bottom:1.5rem';
+  panel.innerHTML = `
+    <div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:600;margin-bottom:0.2rem">
+      <a href="#" onclick="switchTab('person');loadPersonForm(${p.person_id});return false;" style="color:inherit;text-decoration:none;border-bottom:1px solid var(--border)">${name}</a>
+    </div>
+    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem">${meta}</div>
+    ${panelHtml}
+    <div id="bioMsg" style="font-size:0.82rem;margin-top:0.5rem;color:var(--muted);min-height:1.2em"></div>
+    <div id="bioScores" style="display:none;margin-top:0.75rem;border-top:1px solid var(--border);padding-top:0.75rem;font-size:0.85rem"></div>`;
+
+  const personRow = document.getElementById(`bio-person-${pid}`);
+  personRow.insertAdjacentElement('afterend', panel);
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  if (bioMode === 'missing') {
+    document.getElementById('bioUrlInput').addEventListener('input', () => {
+      document.getElementById('btnBioTest').href = document.getElementById('bioUrlInput').value.trim() || '#';
+    });
+  }
     document.getElementById('bioUrlInput').addEventListener('input', () => {
       document.getElementById('btnBioTest').href = document.getElementById('bioUrlInput').value.trim() || '#';
     });
@@ -2351,7 +2372,8 @@ async function biDoVerify(pid) {
     window._bioUnverified = window._bioUnverified.filter(p => p.person_id !== pid);
     bioPersons = window._bioUnverified;
     document.getElementById('countUnverified').textContent = bioPersons.length;
-    renderBioCard();
+    document.getElementById('bio-panel')?.remove();
+    document.getElementById(`bio-person-${pid}`)?.remove();
   } catch(e) { document.getElementById('bioMsg').textContent = 'Feil — prøv igjen'; }
 }
 
@@ -2363,7 +2385,8 @@ async function biDoNull(pid) {
     window._bioUnverified = window._bioUnverified.filter(p => p.person_id !== pid);
     bioPersons = window._bioUnverified;
     document.getElementById('countUnverified').textContent = bioPersons.length;
-    renderBioCard();
+    document.getElementById('bio-panel')?.remove();
+    document.getElementById(`bio-person-${pid}`)?.remove();
   } catch(e) { document.getElementById('bioMsg').textContent = 'Feil — prøv igjen'; }
 }
 
@@ -2378,11 +2401,11 @@ async function biDoSave(pid) {
     window._bioMissing = window._bioMissing.filter(p => p.person_id !== pid);
     bioPersons = window._bioMissing;
     document.getElementById('countMissing').textContent = bioPersons.length;
-    renderBioCard();
+    document.getElementById('bio-panel')?.remove();
+    document.getElementById(`bio-person-${pid}`)?.remove();
   } catch(e) { document.getElementById('bioMsg').textContent = 'Feil — prøv igjen'; }
 }
 
-function biSkip() { bioIndex++; renderBioCard(); }
 
 async function biToggleScores(pid, btn) {
   const scoresDiv = document.getElementById('bioScores');
