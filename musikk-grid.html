@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<title>Musikk Database</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Calibri','Segoe UI',Arial,sans-serif; font-size: 13px; background: #f0f0f0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+#titlebar { background: #217346; color: #fff; padding: 6px 16px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+#titlebar h1 { font-size: 17px; font-weight: 700; }
+#titlebar .sub { font-size: 12px; opacity: 0.7; }
+#count-display { margin-left: auto; font-size: 12px; opacity: 0.85; }
+
+#toolbar { background: #e8f5e9; border-bottom: 1px solid #b2dfdb; padding: 5px 10px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap; }
+.sheet-tab { background: #217346; color: #fff; padding: 3px 14px; border-radius: 3px 3px 0 0; font-size: 12px; font-weight: 600; }
+.divider { width: 1px; height: 20px; background: #bbb; }
+#search-wrap { position: relative; display: flex; align-items: center; }
+#search { padding: 2px 24px 2px 26px; height: 26px; border: 1px solid #bbb; border-radius: 3px; font-size: 12px; width: 260px; outline: none; }
+#sort-info { font-size: 11px; color: #555; }
+#reset-sort { font-size: 11px; padding: 2px 8px; background: #fff; border: 1px solid #bbb; border-radius: 3px; cursor: pointer; color: #555; display: none; }
+
+#grid-wrap { flex: 1; overflow: auto; }
+table { border-collapse: collapse; table-layout: fixed; }
+thead tr { background: #217346; color: #fff; position: sticky; top: 0; z-index: 10; }
+th { padding: 5px 6px; font-weight: 600; font-size: 12px; border: 1px solid #1a5c38; user-select: none; position: relative; white-space: nowrap; overflow: hidden; cursor: pointer; }
+th.nosort { cursor: default; }
+tbody tr:nth-child(even) { background: #f6fcf7; }
+tbody tr:hover { background: #e8f5e9 !important; }
+tbody tr.selected { background: #c6efce !important; }
+tbody tr { cursor: pointer; }
+td { padding: 3px 6px; border: 1px solid #e0e0e0; overflow: hidden; white-space: nowrap; font-size: 12px; }
+.pd-yes { background:#d4edda;color:#276e3a;border-radius:3px;padding:1px 6px;font-size:11px;font-weight:700 }
+.pd-no  { background:#fde8e8;color:#b33030;border-radius:3px;padding:1px 6px;font-size:11px;font-weight:700 }
+.pd-unk { background:#fff3cd;color:#856404;border-radius:3px;padding:1px 6px;font-size:11px;font-weight:700 }
+.ms-link { color:#217346;font-weight:700;font-size:12px;text-decoration:none }
+.empty { color:#ccc }
+.rn { color:#999;font-size:11px }
+.resize-handle { position:absolute;right:0;top:0;bottom:0;width:5px;cursor:col-resize }
+
+#detail { border-top:2px solid #217346;background:#f9fdf9;padding:10px 16px;display:none;max-height:160px;overflow-y:auto;flex-shrink:0 }
+#detail-header { display:flex;align-items:center;margin-bottom:6px }
+#detail-title { font-weight:700;font-size:14px;color:#217346 }
+#detail-close { background:none;border:none;cursor:pointer;font-size:18px;color:#999;margin-left:auto }
+#detail-fields { display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 20px }
+.df { font-size:12px }
+.dl { color:#888;font-size:11px }
+
+#statusbar { background:#217346;color:#c8e6c9;font-size:11px;padding:2px 12px;display:flex;gap:20px;flex-shrink:0 }
+#status-sel { }
+#status-right { margin-left:auto }
+
+#loading { padding:40px;text-align:center;color:#217346;font-size:14px }
+.spin { display:inline-block;animation:spin 1.5s linear infinite;font-size:30px }
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+#errmsg { padding:30px;text-align:center;color:#c00;font-size:13px;display:none }
+</style>
+</head>
+<body>
+
+<div id="titlebar">
+  <h1>♩ Musikk Database</h1>
+  <span class="sub">Norske musikknoter</span>
+  <span id="count-display">Laster…</span>
+</div>
+
+<div id="toolbar">
+  <div class="sheet-tab">Eldre klassisk + populærmusikk</div>
+  <div class="divider"></div>
+  <div id="search-wrap">
+    <span style="position:absolute;left:7px;color:#666">🔍</span>
+    <input id="search" placeholder="Søk tittel, komponist…" oninput="onSearch()">
+  </div>
+  <span id="sort-info"></span>
+  <button id="reset-sort" onclick="resetSort()">Nullstill sortering</button>
+</div>
+
+<div id="grid-wrap">
+  <div id="loading"><div class="spin">♩</div><br><br>Henter data fra Supabase…</div>
+  <div id="errmsg"></div>
+  <table id="grid" style="display:none">
+    <thead><tr id="hrow"></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<div id="detail">
+  <div id="detail-header">
+    <span id="detail-title"></span>
+    <button id="detail-close" onclick="closeDetail()">×</button>
+  </div>
+  <div id="detail-fields"></div>
+</div>
+
+<div id="statusbar">
+  <span id="status-count">0 poster</span>
+  <span id="status-sel"></span>
+  <span id="status-right">Musikk Database · Supabase</span>
+</div>
+
+<script>
+const URL  = 'https://tfqnzszyjsdgdeksizel.supabase.co/rest/v1/';
+const KEY  = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
+const HDR  = { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY };
+
+const COLS = [
+  { k:'row_num',       l:'#',             w:46,  a:'center', ns:true },
+  { k:'title',         l:'Tittel',         w:260, a:'left' },
+  { k:'composer',      l:'Komponist',      w:200, a:'left' },
+  { k:'lyricist',      l:'Tekstforfatter', w:180, a:'left' },
+  { k:'year_composed', l:'År',             w:70,  a:'center' },
+  { k:'opus_number',   l:'Op.',            w:100, a:'left' },
+  { k:'category',      l:'Kategori',       w:160, a:'left' },
+  { k:'public_domain', l:'PD',             w:60,  a:'center', ns:true },
+  { k:'source',        l:'Kilde',          w:130, a:'left' },
+  { k:'publisher',     l:'Utgiver',        w:150, a:'left' },
+  { k:'plate_number',  l:'Platenr.',       w:100, a:'left' },
+  { k:'musescore',     l:'MuseScore',      w:90,  a:'center', ns:true },
+  { k:'notes',         l:'Notat',          w:220, a:'left' },
+];
+
+let allRows=[], dispRows=[], sortK=null, sortD='asc', selId=null, q='';
+
+async function get(table, select, extra='') {
+  let out=[], from=0;
+  while(true) {
+    const r = await fetch(`${URL}${table}?select=${select}${extra}&limit=1000&offset=${from}`, {headers:HDR});
+    if(!r.ok) throw new Error(table+': HTTP '+r.status);
+    const d = await r.json();
+    if(!Array.isArray(d)||d.length===0) break;
+    out=out.concat(d);
+    if(d.length<1000) break;
+    from+=1000;
+  }
+  return out;
+}
+
+async function load() {
+  try {
+    const [comp, cc, cl, ppl, sc, pub, src] = await Promise.all([
+      get('composition','composition_id,title,musescore_link,year_composed,public_domain,composition_notes,opus_number'),
+      get('composition_composer','composition_id,person_id'),
+      get('composition_lyricist','composition_id,person_id'),
+      get('person','person_id,last_name,first_name'),
+      get('score','composition_id,category,source_id,publisher_id,plate_number'),
+      get('publisher','publisher_id,publisher_name'),
+      get('source','source_id,source_name'),
+    ]);
+
+    const pmap={}, cmap={}, lmap={}, smap={}, pubmap={}, srcmap={};
+    ppl.forEach(p=>pmap[p.person_id]=[p.last_name,p.first_name].filter(Boolean).join(', '));
+    cc.forEach(c=>{const n=pmap[c.person_id]||'';if(n)cmap[c.composition_id]=cmap[c.composition_id]?cmap[c.composition_id]+' / '+n:n;});
+    cl.forEach(l=>{const n=pmap[l.person_id]||'';if(n)lmap[l.composition_id]=lmap[l.composition_id]?lmap[l.composition_id]+' / '+n:n;});
+    sc.forEach(s=>{if(!smap[s.composition_id])smap[s.composition_id]=s;});
+    pub.forEach(p=>pubmap[p.publisher_id]=p.publisher_name||'');
+    src.forEach(s=>srcmap[s.source_id]=s.source_name||'');
+
+    allRows = comp.map((c,i)=>{
+      const s=smap[c.composition_id]||{};
+      return {
+        row_num:i+1, composition_id:c.composition_id,
+        title:c.title||'', composer:cmap[c.composition_id]||'',
+        lyricist:lmap[c.composition_id]||'',
+        year_composed:c.year_composed||'', opus_number:c.opus_number||'',
+        category:s.category||'', public_domain:c.public_domain||'',
+        source:s.source_id?(srcmap[s.source_id]||''):'',
+        publisher:s.publisher_id?(pubmap[s.publisher_id]||''):'',
+        plate_number:s.plate_number||'', musescore:c.musescore_link||'',
+        notes:c.composition_notes||''
+      };
+    });
+
+    document.getElementById('loading').style.display='none';
+    buildHead();
+    render();
+  } catch(e) {
+    document.getElementById('loading').style.display='none';
+    const el=document.getElementById('errmsg');
+    el.style.display='block';
+    el.textContent='⚠ '+e.message;
+  }
+}
+
+function buildHead() {
+  const tr=document.getElementById('hrow');
+  COLS.forEach((col,i)=>{
+    const th=document.createElement('th');
+    th.id='th-'+col.k;
+    th.style.cssText=`width:${col.w}px;text-align:${col.a}`;
+    if(col.ns) th.classList.add('nosort');
+    th.innerHTML=`${col.l}<span id="ar-${col.k}"></span>`;
+    if(!col.ns) th.onclick=()=>doSort(col.k);
+    if(i<COLS.length-1){
+      const h=document.createElement('div');
+      h.className='resize-handle';
+      h.onmousedown=e=>startResize(e,col,th);
+      th.appendChild(h);
+    }
+    tr.appendChild(th);
+  });
+  document.getElementById('grid').style.display='';
+  updateTableWidth();
+}
+
+function updateTableWidth(){
+  document.getElementById('grid').style.width=COLS.reduce((s,c)=>s+c.w,0)+'px';
+}
+
+function render() {
+  const lq=q.toLowerCase();
+  let rows = lq ? allRows.filter(r=>
+    r.title.toLowerCase().includes(lq)||
+    r.composer.toLowerCase().includes(lq)||
+    r.lyricist.toLowerCase().includes(lq)||
+    r.notes.toLowerCase().includes(lq)
+  ) : [...allRows];
+
+  if(sortK) rows.sort((a,b)=>{
+    const va=String(a[sortK]||''),vb=String(b[sortK]||'');
+    return sortD==='asc'?va.localeCompare(vb,'nb'):vb.localeCompare(va,'nb');
+  });
+  rows.forEach((r,i)=>r.row_num=i+1);
+  dispRows=rows;
+
+  const tb=document.getElementById('tbody');
+  tb.innerHTML='';
+  if(!rows.length){
+    const tr=document.createElement('tr');
+    const td=document.createElement('td');
+    td.colSpan=COLS.length; td.style.cssText='padding:30px;text-align:center;color:#999';
+    td.textContent=lq?`Ingen resultater for "${q}"`:'Ingen data';
+    tr.appendChild(td);tb.appendChild(tr);
+  } else {
+    const frag=document.createDocumentFragment();
+    rows.forEach(row=>{
+      const tr=document.createElement('tr');
+      if(row.composition_id===selId) tr.classList.add('selected');
+      tr.onclick=()=>selectRow(row);
+      COLS.forEach(col=>{
+        const td=document.createElement('td');
+        td.style.textAlign=col.a;
+        td.style.maxWidth=col.w+'px';
+        td.innerHTML=cell(col,row);
+        tr.appendChild(td);
+      });
+      frag.appendChild(tr);
+    });
+    tb.appendChild(frag);
+  }
+  const tot=allRows.length, sh=rows.length;
+  document.getElementById('count-display').textContent=lq?`${sh} av ${tot} poster`:`${tot} poster`;
+  document.getElementById('status-count').textContent=sh+' poster';
+}
+
+function cell(col,row){
+  const v=row[col.k];
+  if(col.k==='row_num') return `<span class="rn">${v}</span>`;
+  if(col.k==='public_domain'){
+    const lv=String(v||'').toLowerCase();
+    if(lv==='yes') return '<span class="pd-yes">Ja</span>';
+    if(lv==='no')  return '<span class="pd-no">Nei</span>';
+    if(v) return '<span class="pd-unk">?</span>';
+    return '<span class="empty">—</span>';
+  }
+  if(col.k==='musescore') return v?`<a class="ms-link" href="${v}" target="_blank">▶ Åpne</a>`:'<span class="empty">—</span>';
+  if(!v) return '<span class="empty">—</span>';
+  return `<span title="${String(v).replace(/"/g,'&quot;')}" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v}</span>`;
+}
+
+function selectRow(row){
+  if(selId===row.composition_id){selId=null;closeDetail();render();return;}
+  selId=row.composition_id; render(); showDetail(row);
+}
+
+function showDetail(row){
+  document.getElementById('detail').style.display='block';
+  document.getElementById('detail-title').textContent=row.title;
+  document.getElementById('status-sel').textContent='Valgt: '+row.title;
+  const fl=[
+    ['Komponist',row.composer],['Tekstforfatter',row.lyricist],
+    ['År',row.year_composed],['Opus',row.opus_number],
+    ['Kategori',row.category],['Utgiver',row.publisher],
+    ['Platenr.',row.plate_number],['Kilde',row.source],
+    ['Public domain',row.public_domain],['Notat',row.notes],
+  ];
+  let h='';
+  fl.forEach(([l,v])=>{ if(v) h+=`<div class="df"><span class="dl">${l}: </span>${v}</div>`; });
+  if(row.musescore) h+=`<div class="df"><span class="dl">MuseScore: </span><a href="${row.musescore}" target="_blank" style="color:#217346">Åpne ↗</a></div>`;
+  document.getElementById('detail-fields').innerHTML=h;
+}
+
+function closeDetail(){
+  selId=null;
+  document.getElementById('detail').style.display='none';
+  document.getElementById('status-sel').textContent='';
+  render();
+}
+
+function doSort(k){
+  if(sortK===k) sortD=sortD==='asc'?'desc':'asc';
+  else{sortK=k;sortD='asc';}
+  COLS.forEach(c=>{const el=document.getElementById('ar-'+c.k);if(el)el.textContent='';});
+  const ar=document.getElementById('ar-'+k);
+  if(ar) ar.textContent=sortD==='asc'?' ▲':' ▼';
+  document.getElementById('sort-info').textContent='Sortert: '+(COLS.find(c=>c.k===k)?.l||'');
+  document.getElementById('reset-sort').style.display='';
+  render();
+}
+
+function resetSort(){
+  sortK=null;sortD='asc';
+  COLS.forEach(c=>{const el=document.getElementById('ar-'+c.k);if(el)el.textContent='';});
+  document.getElementById('sort-info').textContent='';
+  document.getElementById('reset-sort').style.display='none';
+  render();
+}
+
+function onSearch(){ q=document.getElementById('search').value; render(); }
+
+function startResize(e,col,th){
+  e.preventDefault();
+  const sx=e.clientX,sw=th.offsetWidth;
+  const mv=ev=>{col.w=Math.max(40,sw+ev.clientX-sx);th.style.width=col.w+'px';updateTableWidth();};
+  const up=()=>{window.removeEventListener('mousemove',mv);window.removeEventListener('mouseup',up);};
+  window.addEventListener('mousemove',mv);
+  window.addEventListener('mouseup',up);
+}
+
+load();
+</script>
+</body>
+</html>
