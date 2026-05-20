@@ -201,7 +201,7 @@ function load() {
         year_composed: c.year_composed || '',
         notes: c.composition_notes || '',
         nationality: compNat,
-        sort_last: firstComp ? (firstComp.last_name || '') : ''
+        sort_last: firstComp ? ((firstComp.last_name || '') + ', ' + (firstComp.first_name || '')) : ''
       };
     });
 
@@ -395,18 +395,18 @@ function render() {
   document.getElementById('status-count').textContent = sh + ' scores';
 }
 
-function personHtml(persons, datesKey, row) {
+function personHtml(persons) {
   if (!persons || !persons.length) return '<span class="empty">—</span>';
-  // Name with link
   return persons.map(function(p) {
     var name = personName(p);
+    var dates = personDates(p);
+    var datesSpan = dates ? ' <span class="person-dates">' + dates + '</span>' : '';
     if (p.bio_url) {
-      return '<a class="person-link" href="' + p.bio_url + '" target="_blank" rel="noreferrer">' + name + '</a>';
+      return '<a class="person-link" href="' + p.bio_url + '" target="_blank" rel="noreferrer">' + name + '</a>' + datesSpan;
     }
-    return name;
+    return name + datesSpan;
   }).join('<br>');
 }
-
 
 
 function cellHtml(col, row) {
