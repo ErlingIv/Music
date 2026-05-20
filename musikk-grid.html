@@ -6,18 +6,25 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Calibri','Segoe UI',Arial,sans-serif; font-size: 13px; background: #f0f0f0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
 #titlebar { background: #217346; color: #fff; padding: 6px 16px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 #titlebar h1 { font-size: 17px; font-weight: 700; }
 #titlebar .sub { font-size: 12px; opacity: 0.7; }
 #count-display { margin-left: auto; font-size: 12px; opacity: 0.85; }
-#toolbar { background: #e8f5e9; border-bottom: 1px solid #b2dfdb; padding: 5px 10px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap; }
-.sheet-tab { background: #217346; color: #fff; padding: 3px 14px; border-radius: 3px 3px 0 0; font-size: 12px; font-weight: 600; }
-.divider { width: 1px; height: 20px; background: #bbb; }
+
+#tabbar { background: #e8f5e9; border-bottom: 2px solid #217346; padding: 0 10px; display: flex; align-items: flex-end; gap: 2px; flex-shrink: 0; flex-wrap: wrap; }
+.tab { padding: 5px 12px; font-size: 12px; font-weight: 600; border: 1px solid #b2dfdb; border-bottom: none; border-radius: 4px 4px 0 0; cursor: pointer; background: #c8e6c9; color: #1b5e20; margin-top: 4px; white-space: nowrap; }
+.tab:hover { background: #a5d6a7; }
+.tab.active { background: #217346; color: #fff; border-color: #217346; }
+.tab-group-sep { width: 8px; }
+
+#toolbar { background: #f1f8f1; border-bottom: 1px solid #b2dfdb; padding: 4px 10px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap; }
 #search-wrap { position: relative; display: flex; align-items: center; }
 #search-icon { position: absolute; left: 7px; color: #666; pointer-events: none; }
 #search { padding: 2px 8px 2px 26px; height: 26px; border: 1px solid #bbb; border-radius: 3px; font-size: 12px; width: 260px; outline: none; }
 #sort-info { font-size: 11px; color: #555; }
 #reset-sort { font-size: 11px; padding: 2px 8px; background: #fff; border: 1px solid #bbb; border-radius: 3px; cursor: pointer; color: #555; display: none; }
+
 #grid-wrap { flex: 1; overflow: auto; }
 table { border-collapse: collapse; table-layout: fixed; }
 thead tr { background: #217346; color: #fff; position: sticky; top: 0; z-index: 10; }
@@ -28,24 +35,26 @@ tbody tr:hover { background: #e8f5e9 !important; }
 tbody tr.selected { background: #c6efce !important; }
 tbody tr { cursor: pointer; }
 td { padding: 3px 6px; border: 1px solid #e0e0e0; overflow: hidden; white-space: nowrap; font-size: 12px; }
-td.wrap-cell { white-space: normal; word-break: break-word; }
+td.wrap-cell { white-space: normal; line-height: 1.4; }
 .empty { color: #ccc; }
 .rn { color: #999; font-size: 11px; }
-.person-link { color: #217346; text-decoration: none; font-weight: 500; }
+.person-link { color: #217346; text-decoration: none; }
 .person-link:hover { text-decoration: underline; }
-.person-dates { color: #888; font-size: 11px; margin-left: 2px; }
+.person-dates { color: #aaa; font-size: 11px; }
 .title-link { color: #1a4e8a; text-decoration: none; }
 .title-link:hover { text-decoration: underline; }
 .resize-handle { position: absolute; right: 0; top: 0; bottom: 0; width: 5px; cursor: col-resize; }
-#detail { border-top: 2px solid #217346; background: #f9fdf9; padding: 10px 16px; display: none; max-height: 160px; overflow-y: auto; flex-shrink: 0; }
-#detail-header { display: flex; align-items: center; margin-bottom: 6px; }
-#detail-title { font-weight: 700; font-size: 14px; color: #217346; }
+
+#detail { border-top: 2px solid #217346; background: #f9fdf9; padding: 8px 16px; display: none; max-height: 140px; overflow-y: auto; flex-shrink: 0; }
+#detail-header { display: flex; align-items: center; margin-bottom: 4px; }
+#detail-title { font-weight: 700; font-size: 13px; color: #217346; }
 #detail-close { background: none; border: none; cursor: pointer; font-size: 18px; color: #999; margin-left: auto; }
-#detail-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap: 6px 20px; }
-.df { font-size: 12px; }
+#detail-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 4px 20px; font-size: 12px; }
 .dl { color: #888; font-size: 11px; }
+
 #statusbar { background: #217346; color: #c8e6c9; font-size: 11px; padding: 2px 12px; display: flex; gap: 20px; flex-shrink: 0; }
 #status-right { margin-left: auto; }
+
 #loading { padding: 40px; text-align: center; color: #217346; font-size: 14px; }
 .spin { display: inline-block; animation: spin 1.5s linear infinite; font-size: 30px; }
 @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
@@ -60,9 +69,9 @@ td.wrap-cell { white-space: normal; word-break: break-word; }
   <span id="count-display">Laster…</span>
 </div>
 
+<div id="tabbar" id="tabbar"></div>
+
 <div id="toolbar">
-  <div class="sheet-tab">Eldre klassisk + populærmusikk</div>
-  <div class="divider"></div>
   <div id="search-wrap">
     <span id="search-icon">🔍</span>
     <input id="search" placeholder="Søk tittel, komponist, tekstforfatter…" oninput="onSearch()">
@@ -97,35 +106,52 @@ td.wrap-cell { white-space: normal; word-break: break-word; }
 <script>
 var BASE = 'https://tfqnzszyjsdgdeksizel.supabase.co/rest/v1/';
 var KEY  = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
+var NORDIC = ['SE','DK','FI','IS'];
+var NO_ALPHA_TABS = 5;
 
 var COLS = [
-  { k:'row_num',       l:'#',             w:46,  a:'center', ns:true },
-  { k:'title',         l:'Tittel',         w:280, a:'left' },
-  { k:'composer',      l:'Komponist',      w:240, a:'left', ns:true },
-  { k:'lyricist',      l:'Tekstforfatter', w:220, a:'left', ns:true },
-  { k:'year_composed', l:'År',             w:65,  a:'center' },
-  { k:'notes',         l:'Notat',          w:280, a:'left' }
+  { k:'row_num',    l:'#',              w:46,  a:'center', ns:true },
+  { k:'title',      l:'Tittel',          w:270, a:'left' },
+  { k:'composer',   l:'Komponist',       w:210, a:'left',  ns:true },
+  { k:'comp_dates', l:'Levd',            w:100, a:'center', ns:true },
+  { k:'lyricist',   l:'Tekstforfatter',  w:190, a:'left',  ns:true },
+  { k:'lyr_dates',  l:'Levd',            w:100, a:'center', ns:true },
+  { k:'year_composed', l:'År',           w:60,  a:'center' },
+  { k:'notes',      l:'Notat',           w:260, a:'left' }
 ];
 
-var allRows=[], sortK=null, sortD='asc', selId=null, q='';
+var allRows = [];
+var tabs = [];       // [{id, label, rows}]
+var activeTab = 0;
+var sortK = null, sortD = 'asc', selId = null, q = '';
 
 function apiFetch(table) {
   var results = [];
   function page(offset) {
     var url = BASE + table + '?select=*&limit=1000&offset=' + offset;
-    return fetch(url, {
-      headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY }
-    }).then(function(r) {
-      if (!r.ok) throw new Error(table + ': HTTP ' + r.status);
-      return r.json();
-    }).then(function(data) {
-      if (!Array.isArray(data) || data.length === 0) return results;
-      results = results.concat(data);
-      if (data.length < 1000) return results;
-      return page(offset + 1000);
-    });
+    return fetch(url, { headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY } })
+      .then(function(r) {
+        if (!r.ok) throw new Error(table + ': HTTP ' + r.status);
+        return r.json();
+      }).then(function(data) {
+        if (!Array.isArray(data) || data.length === 0) return results;
+        results = results.concat(data);
+        if (data.length < 1000) return results;
+        return page(offset + 1000);
+      });
   }
   return page(0);
+}
+
+function personName(p) {
+  return [p.last_name, p.first_name].filter(Boolean).join(', ');
+}
+
+function personDates(p) {
+  if (!p) return '';
+  var b = p.born || '', d = p.died || '';
+  if (!b && !d) return '';
+  return (b || '?') + ' – ' + (d || '');
 }
 
 function load() {
@@ -134,17 +160,12 @@ function load() {
     apiFetch('composition_composer'),
     apiFetch('composition_lyricist'),
     apiFetch('person')
-  ]).then(function(results) {
-    var comp = results[0];
-    var cc   = results[1];
-    var cl   = results[2];
-    var ppl  = results[3];
+  ]).then(function(res) {
+    var comp = res[0], cc = res[1], cl = res[2], ppl = res[3];
 
-    // Build person map: person_id -> person object
     var pmap = {};
     ppl.forEach(function(p) { pmap[p.person_id] = p; });
 
-    // Build composer/lyricist maps: composition_id -> array of person objects
     var cmap = {}, lmap = {};
     cc.forEach(function(c) {
       if (!cmap[c.composition_id]) cmap[c.composition_id] = [];
@@ -155,30 +176,42 @@ function load() {
       if (pmap[l.person_id]) lmap[l.composition_id].push(pmap[l.person_id]);
     });
 
-    // Only include public domain scores
+    // Only PD
     var pdComp = comp.filter(function(c) {
       return String(c.public_domain || '').toLowerCase() === 'yes';
     });
 
     allRows = pdComp.map(function(c, i) {
+      var composers = cmap[c.composition_id] || [];
+      var lyricists = lmap[c.composition_id] || [];
+      var firstComp = composers[0] || null;
+      var firstLyr  = lyricists[0] || null;
+      var compNat = firstComp ? (firstComp.nationality || '') : '';
+
       return {
         row_num: i + 1,
         composition_id: c.composition_id,
         title: c.title || '',
         musescore_link: c.musescore_link || '',
-        composers: cmap[c.composition_id] || [],
-        lyricists: lmap[c.composition_id] || [],
+        composers: composers,
+        lyricists: lyricists,
+        composer_text: composers.map(personName).join(' / '),
+        lyricist_text: lyricists.map(personName).join(' / '),
+        comp_dates: firstComp ? personDates(firstComp) : '',
+        lyr_dates:  firstLyr  ? personDates(firstLyr)  : '',
         year_composed: c.year_composed || '',
         notes: c.composition_notes || '',
-        // plain text versions for sorting/searching
-        composer_text: personListText(cmap[c.composition_id] || []),
-        lyricist_text: personListText(lmap[c.composition_id] || [])
+        nationality: compNat,
+        sort_last: firstComp ? (firstComp.last_name || '') : ''
       };
     });
 
+    buildTabs();
     document.getElementById('loading').style.display = 'none';
     buildHead();
-    render();
+    renderTabs();
+    switchTab(0);
+
   }).catch(function(e) {
     document.getElementById('loading').style.display = 'none';
     var el = document.getElementById('errmsg');
@@ -187,31 +220,98 @@ function load() {
   });
 }
 
-function personListText(persons) {
-  return persons.map(function(p) {
-    return [p.last_name, p.first_name].filter(Boolean).join(', ');
-  }).join(' / ');
+function buildTabs() {
+  // Separate Norwegian (NO), Nordic (SE/DK/FI/IS), Other
+  var noRows = allRows.filter(function(r) { return r.nationality === 'NO'; });
+  var nordicRows = allRows.filter(function(r) { return NORDIC.indexOf(r.nationality) >= 0; });
+  var otherRows = allRows.filter(function(r) {
+    return r.nationality !== 'NO' && NORDIC.indexOf(r.nationality) < 0;
+  });
+
+  // Sort Norwegian by last name for alpha splitting
+  var noSorted = noRows.slice().sort(function(a,b) {
+    return a.sort_last.localeCompare(b.sort_last, 'nb');
+  });
+
+  // Calculate letter boundaries for 5 even groups
+  var splits = calcAlphaSplits(noSorted, NO_ALPHA_TABS);
+
+  tabs = [];
+
+  // Tab 0: All Norwegian
+  tabs.push({ id: 'no-all', label: 'Norske komponister', rows: noSorted });
+
+  // Tabs 1..5: Alpha splits
+  splits.forEach(function(s) {
+    tabs.push({ id: 'no-' + s.label, label: s.label, rows: s.rows });
+  });
+
+  // Nordic
+  var nordicSorted = nordicRows.slice().sort(function(a,b) {
+    return a.sort_last.localeCompare(b.sort_last, 'nb');
+  });
+  tabs.push({ id: 'nordic', label: '"Nordisk"', rows: nordicSorted });
+
+  // Other
+  var otherSorted = otherRows.slice().sort(function(a,b) {
+    return a.sort_last.localeCompare(b.sort_last, 'nb');
+  });
+  tabs.push({ id: 'other', label: 'Andre', rows: otherSorted });
 }
 
-function personDates(p) {
-  if (!p) return '';
-  var born = p.born || '';
-  var died = p.died || '';
-  if (!born && !died) return '';
-  return '(' + (born || '?') + '–' + (died || '') + ')';
-}
-
-function personHtml(persons) {
-  if (!persons || persons.length === 0) return '<span class="empty">—</span>';
-  return persons.map(function(p) {
-    var name = [p.last_name, p.first_name].filter(Boolean).join(', ');
-    var dates = personDates(p);
-    var inner = name + (dates ? ' <span class="person-dates">' + dates + '</span>' : '');
-    if (p.bio_url) {
-      return '<a class="person-link" href="' + p.bio_url + '" target="_blank" rel="noreferrer">' + inner + '</a>';
+function calcAlphaSplits(sortedRows, n) {
+  if (sortedRows.length === 0) return [];
+  var total = sortedRows.length;
+  var perGroup = Math.ceil(total / n);
+  var groups = [];
+  var i = 0;
+  while (i < total && groups.length < n) {
+    var end = Math.min(i + perGroup, total);
+    // Extend end to include all rows with same starting letter
+    while (end < total) {
+      var curLetter = (sortedRows[end].sort_last || '?')[0].toUpperCase();
+      var prevLetter = (sortedRows[end-1].sort_last || '?')[0].toUpperCase();
+      if (curLetter === prevLetter) end++;
+      else break;
     }
-    return '<span>' + inner + '</span>';
-  }).join('<br>');
+    var startLetter = (sortedRows[i].sort_last || '?')[0].toUpperCase();
+    var endLetter   = (sortedRows[end-1].sort_last || '?')[0].toUpperCase();
+    var label = startLetter === endLetter ? startLetter : startLetter + '–' + endLetter;
+    groups.push({ label: label, rows: sortedRows.slice(i, end) });
+    i = end;
+  }
+  return groups;
+}
+
+function renderTabs() {
+  var bar = document.getElementById('tabbar');
+  bar.innerHTML = '';
+
+  tabs.forEach(function(tab, idx) {
+    // Add separator before Nordic
+    if (tab.id === 'nordic') {
+      var sep = document.createElement('div');
+      sep.className = 'tab-group-sep';
+      bar.appendChild(sep);
+    }
+    var el = document.createElement('div');
+    el.className = 'tab' + (idx === activeTab ? ' active' : '');
+    el.textContent = tab.label;
+    el.onclick = (function(i){ return function(){ switchTab(i); }; })(idx);
+    bar.appendChild(el);
+  });
+}
+
+function switchTab(idx) {
+  activeTab = idx;
+  sortK = null; sortD = 'asc'; q = '';
+  document.getElementById('search').value = '';
+  document.getElementById('sort-info').textContent = '';
+  document.getElementById('reset-sort').style.display = 'none';
+  COLS.forEach(function(c) { var el = document.getElementById('ar-' + c.k); if (el) el.textContent = ''; });
+  closeDetail();
+  renderTabs();
+  render();
 }
 
 function buildHead() {
@@ -226,7 +326,7 @@ function buildHead() {
     if (i < COLS.length - 1) {
       var h = document.createElement('div');
       h.className = 'resize-handle';
-      h.onmousedown = (function(c, t){ return function(e){ startResize(e, c, t); }; })(col, th);
+      h.onmousedown = (function(c,t){ return function(e){ startResize(e,c,t); }; })(col, th);
       th.appendChild(h);
     }
     tr.appendChild(th);
@@ -236,28 +336,26 @@ function buildHead() {
 }
 
 function updateWidth() {
-  document.getElementById('grid').style.width = COLS.reduce(function(s,c){ return s+c.w; }, 0) + 'px';
+  document.getElementById('grid').style.width = COLS.reduce(function(s,c){ return s+c.w; },0) + 'px';
 }
 
 function render() {
+  var tabRows = tabs[activeTab] ? tabs[activeTab].rows : [];
   var lq = q.toLowerCase();
-  var rows = lq ? allRows.filter(function(r) {
+  var rows = lq ? tabRows.filter(function(r) {
     return r.title.toLowerCase().indexOf(lq) >= 0 ||
            r.composer_text.toLowerCase().indexOf(lq) >= 0 ||
            r.lyricist_text.toLowerCase().indexOf(lq) >= 0 ||
            r.notes.toLowerCase().indexOf(lq) >= 0;
-  }) : allRows.slice();
+  }) : tabRows.slice();
 
   if (sortK) {
-    rows.sort(function(a, b) {
-      var va, vb;
-      if (sortK === 'composer') { va = a.composer_text; vb = b.composer_text; }
-      else if (sortK === 'lyricist') { va = a.lyricist_text; vb = b.lyricist_text; }
-      else { va = String(a[sortK] || ''); vb = String(b[sortK] || ''); }
-      return sortD === 'asc' ? va.localeCompare(vb, 'nb') : vb.localeCompare(va, 'nb');
+    rows.sort(function(a,b) {
+      var va = String(a[sortK] || ''), vb = String(b[sortK] || '');
+      return sortD === 'asc' ? va.localeCompare(vb,'nb') : vb.localeCompare(va,'nb');
     });
   }
-  rows.forEach(function(r, i) { r.row_num = i + 1; });
+  rows.forEach(function(r,i){ r.row_num = i+1; });
 
   var tb = document.getElementById('tbody');
   tb.innerHTML = '';
@@ -267,7 +365,7 @@ function render() {
     var td = document.createElement('td');
     td.colSpan = COLS.length;
     td.style.cssText = 'padding:30px;text-align:center;color:#999';
-    td.textContent = lq ? 'Ingen resultater for "' + q + '"' : 'Ingen data';
+    td.textContent = lq ? 'Ingen resultater for "' + q + '"' : 'Ingen poster i denne kategorien';
     tr.appendChild(td); tb.appendChild(tr);
   } else {
     var frag = document.createDocumentFragment();
@@ -279,7 +377,6 @@ function render() {
         var td = document.createElement('td');
         td.style.textAlign = col.a;
         td.style.maxWidth = col.w + 'px';
-        // Allow wrapping for person columns
         if (col.k === 'composer' || col.k === 'lyricist') td.className = 'wrap-cell';
         td.innerHTML = cellHtml(col, row);
         tr.appendChild(td);
@@ -289,21 +386,42 @@ function render() {
     tb.appendChild(frag);
   }
 
-  var tot = allRows.length, sh = rows.length;
+  var tot = tabRows.length, sh = rows.length;
   document.getElementById('count-display').textContent = lq ? sh + ' av ' + tot + ' poster' : tot + ' poster';
   document.getElementById('status-count').textContent = sh + ' poster';
+}
+
+function personHtml(persons, datesKey, row) {
+  if (!persons || !persons.length) return '<span class="empty">—</span>';
+  // Name with link
+  return persons.map(function(p) {
+    var name = personName(p);
+    if (p.bio_url) {
+      return '<a class="person-link" href="' + p.bio_url + '" target="_blank" rel="noreferrer">' + name + '</a>';
+    }
+    return name;
+  }).join('<br>');
+}
+
+function datesHtml(persons) {
+  if (!persons || !persons.length) return '<span class="empty">—</span>';
+  return persons.map(function(p) {
+    var d = personDates(p);
+    return d ? '<span class="person-dates">' + d + '</span>' : '<span class="empty">—</span>';
+  }).join('<br>');
 }
 
 function cellHtml(col, row) {
   if (col.k === 'row_num') return '<span class="rn">' + row.row_num + '</span>';
   if (col.k === 'title') {
-    if (row.musescore_link) {
-      return '<a class="title-link" href="' + row.musescore_link + '" target="_blank" rel="noreferrer" title="' + row.title.replace(/"/g,'&quot;') + '">' + row.title + '</a>';
-    }
-    return row.title || '<span class="empty">—</span>';
+    var t = row.title || '';
+    if (row.musescore_link) return '<a class="title-link" href="' + row.musescore_link + '" target="_blank" rel="noreferrer" title="' + t.replace(/"/g,'&quot;') + '">' + t + '</a>';
+    return t || '<span class="empty">—</span>';
   }
-  if (col.k === 'composer') return personHtml(row.composers);
-  if (col.k === 'lyricist') return personHtml(row.lyricists);
+  if (col.k === 'composer')   return personHtml(row.composers);
+  if (col.k === 'comp_dates') return datesHtml(row.composers);
+  if (col.k === 'lyricist')   return personHtml(row.lyricists);
+  if (col.k === 'lyr_dates')  return datesHtml(row.lyricists);
   if (col.k === 'year_composed') return row.year_composed || '<span class="empty">—</span>';
   if (col.k === 'notes') {
     if (!row.notes) return '<span class="empty">—</span>';
@@ -325,37 +443,27 @@ function showDetail(row) {
     ? '<a class="title-link" href="' + row.musescore_link + '" target="_blank">' + row.title + ' ↗</a>'
     : row.title;
   document.getElementById('status-sel').textContent = 'Valgt: ' + row.title;
-
   var h = '';
-  if (row.composers.length) {
-    h += '<div class="df"><span class="dl">Komponist: </span>' + personHtml(row.composers) + '</div>';
-  }
-  if (row.lyricists.length) {
-    h += '<div class="df"><span class="dl">Tekstforfatter: </span>' + personHtml(row.lyricists) + '</div>';
-  }
-  if (row.year_composed) h += '<div class="df"><span class="dl">År: </span>' + row.year_composed + '</div>';
-  if (row.notes) h += '<div class="df"><span class="dl">Notat: </span>' + row.notes + '</div>';
-
-  document.getElementById('detail-fields').innerHTML = h || '<span style="color:#999;font-size:12px">Ingen tilleggsinfo</span>';
+  if (row.composers.length) h += '<div><span class="dl">Komponist: </span>' + row.composers.map(function(p){ var n=personName(p); return p.bio_url?'<a class="person-link" href="'+p.bio_url+'" target="_blank">'+n+'</a>':n; }).join(', ') + (row.comp_dates ? ' <span class="person-dates">'+row.comp_dates+'</span>' : '') + '</div>';
+  if (row.lyricists.length) h += '<div><span class="dl">Tekstforfatter: </span>' + row.lyricists.map(function(p){ var n=personName(p); return p.bio_url?'<a class="person-link" href="'+p.bio_url+'" target="_blank">'+n+'</a>':n; }).join(', ') + (row.lyr_dates ? ' <span class="person-dates">'+row.lyr_dates+'</span>' : '') + '</div>';
+  if (row.year_composed) h += '<div><span class="dl">År: </span>' + row.year_composed + '</div>';
+  if (row.notes) h += '<div><span class="dl">Notat: </span>' + row.notes + '</div>';
+  document.getElementById('detail-fields').innerHTML = h || '<span style="color:#999">Ingen tilleggsinfo</span>';
 }
 
 function closeDetail() {
   selId = null;
   document.getElementById('detail').style.display = 'none';
   document.getElementById('status-sel').textContent = '';
-  render();
 }
 
 function doSort(k) {
   if (sortK === k) sortD = sortD === 'asc' ? 'desc' : 'asc';
   else { sortK = k; sortD = 'asc'; }
-  COLS.forEach(function(c) {
-    var el = document.getElementById('ar-' + c.k);
-    if (el) el.textContent = '';
-  });
+  COLS.forEach(function(c) { var el=document.getElementById('ar-'+c.k); if(el) el.textContent=''; });
   var ar = document.getElementById('ar-' + k);
   if (ar) ar.textContent = sortD === 'asc' ? ' ▲' : ' ▼';
-  var col = COLS.find(function(c){ return c.k === k; });
+  var col = COLS.find(function(c){ return c.k===k; });
   document.getElementById('sort-info').textContent = 'Sortert: ' + (col ? col.l : '');
   document.getElementById('reset-sort').style.display = '';
   render();
@@ -363,10 +471,7 @@ function doSort(k) {
 
 function resetSort() {
   sortK = null; sortD = 'asc';
-  COLS.forEach(function(c) {
-    var el = document.getElementById('ar-' + c.k);
-    if (el) el.textContent = '';
-  });
+  COLS.forEach(function(c) { var el=document.getElementById('ar-'+c.k); if(el) el.textContent=''; });
   document.getElementById('sort-info').textContent = '';
   document.getElementById('reset-sort').style.display = 'none';
   render();
@@ -380,8 +485,8 @@ function onSearch() {
 function startResize(e, col, th) {
   e.preventDefault();
   var sx = e.clientX, sw = th.offsetWidth;
-  function mv(ev) { col.w = Math.max(40, sw + ev.clientX - sx); th.style.width = col.w + 'px'; updateWidth(); }
-  function up() { window.removeEventListener('mousemove', mv); window.removeEventListener('mouseup', up); }
+  function mv(ev) { col.w = Math.max(40, sw+ev.clientX-sx); th.style.width=col.w+'px'; updateWidth(); }
+  function up() { window.removeEventListener('mousemove',mv); window.removeEventListener('mouseup',up); }
   window.addEventListener('mousemove', mv);
   window.addEventListener('mouseup', up);
 }
