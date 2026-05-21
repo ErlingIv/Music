@@ -156,23 +156,23 @@ function personDates(p) {
 function load() {
   Promise.all([
     apiFetch('composition'),
-    apiFetch('composition_composer'),
-    apiFetch('composition_lyricist'),
+    apiFetch('composition_person'),
     apiFetch('person')
   ]).then(function(res) {
-    var comp = res[0], cc = res[1], cl = res[2], ppl = res[3];
+    var comp = res[0], cp = res[1], ppl = res[2];
 
     var pmap = {};
     ppl.forEach(function(p) { pmap[p.person_id] = p; });
 
     var cmap = {}, lmap = {};
-    cc.forEach(function(c) {
-      if (!cmap[c.composition_id]) cmap[c.composition_id] = [];
-      if (pmap[c.person_id]) cmap[c.composition_id].push(pmap[c.person_id]);
-    });
-    cl.forEach(function(l) {
-      if (!lmap[l.composition_id]) lmap[l.composition_id] = [];
-      if (pmap[l.person_id]) lmap[l.composition_id].push(pmap[l.person_id]);
+    cp.forEach(function(r) {
+      if (r.role === 'Composer') {
+        if (!cmap[r.composition_id]) cmap[r.composition_id] = [];
+        if (pmap[r.person_id]) cmap[r.composition_id].push(pmap[r.person_id]);
+      } else if (r.role === 'Lyricist') {
+        if (!lmap[r.composition_id]) lmap[r.composition_id] = [];
+        if (pmap[r.person_id]) lmap[r.composition_id].push(pmap[r.person_id]);
+      }
     });
 
     // Only PD
