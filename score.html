@@ -432,20 +432,13 @@ async function translateNotes(btn) {
   btn.textContent = 'Translating…';
   try {
     const plainText = originalText.replace(/<[^>]+>/g, '');
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch('https://libretranslate.com/translate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: `Translate the following text to Norwegian. Return only the translated text, nothing else:\n\n${plainText}`
-        }]
-      })
+      body: JSON.stringify({ q: plainText, source: 'en', target: 'nb', format: 'text' })
     });
     const data = await resp.json();
-    const translated = data.content?.[0]?.text;
+    const translated = data.translatedText;
     if (!translated) throw new Error('No translation returned');
     el.innerHTML = translated.replace(/\n/g, '<br>');
     btn.textContent = 'Show original';
