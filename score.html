@@ -419,14 +419,6 @@ function switchMediaTab(tabId, btn) {
 
 
 
-async function translateChunk(text) {
-  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|no`;
-  const resp = await fetch(url);
-  const data = await resp.json();
-  if (data.responseStatus !== 200) throw new Error('Translation error');
-  return data.responseData.translatedText;
-}
-
 async function translateNotes(btn) {
   const originalText = window._notesRaw || '';
   const el = document.getElementById('notesText');
@@ -440,25 +432,29 @@ async function translateNotes(btn) {
   btn.textContent = 'Translating…';
   try {
     const plainText = originalText.replace(/<[^>]+>/g, '');
-    const sentences = plainText.match(/[^.!?]+[.!?]+/g) || [plainText];
-    let chunks = [], current = '';
-    for (const s of sentences) {
-      if ((current + s).length > 450) {
-        if (current) chunks.push(current.trim());
-        current = s;
-      } else {
-        current += s;
-      }
-    }
-    if (current.trim()) chunks.push(current.trim());
-    const parts = await Promise.all(chunks.map(translateChunk));
-    el.innerHTML = parts.join(' ').replace(/\n/g, '<br>');
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: `Translate the following text to Norwegian. Return only the translated text, nothing else:\n\n${plainText}`
+        }]
+      })
+    });
+    const data = await resp.json();
+    const translated = data.content?.[0]?.text;
+    if (!translated) throw new Error('No translation returned');
+    el.innerHTML = translated.replace(/\n/g, '<br>');
     btn.textContent = 'Show original';
     btn.disabled = false;
     _translated = true;
   } catch(e) {
     btn.textContent = 'Translation failed';
     btn.disabled = false;
+    console.error(e);
   }
 }
 </script>
