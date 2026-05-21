@@ -1565,11 +1565,20 @@ async function loadEditForm(compId) {
   document.getElementById('editSearchResults').innerHTML = '';
   document.getElementById('editSearch').value = '';
 
-  const [comp, cp, scores] = await Promise.all([
+  const [comp, cpRaw, scores] = await Promise.all([
     get(`/composition?composition_id=eq.${compId}&select=*`),
-    get(`/composition_person?composition_id=eq.${compId}&select=person_id,role,credited_as,person(person_id,first_name,last_name,bio_url,pseudonym)`),
+    get(`/composition_person?composition_id=eq.${compId}&select=person_id,role,credited_as`),
     get(`/score?composition_id=eq.${compId}&select=*`)
   ]);
+
+  // Fetch person details separately
+  const personIds = [...new Set(cpRaw.map(r => r.person_id))];
+  let personRows = [];
+  if (personIds.length) {
+    personRows = await get(`/person?person_id=in.(${personIds.join(',')})&select=person_id,first_name,last_name,bio_url,pseudonym`);
+  }
+  const personMap = Object.fromEntries(personRows.map(p => [p.person_id, p]));
+  const cp = cpRaw.map(r => ({ ...r, person: personMap[r.person_id] || null }));
 
   const c = comp[0];
   document.getElementById('e_compId').value  = compId;
