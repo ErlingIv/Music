@@ -418,39 +418,8 @@ function switchMediaTab(tabId, btn) {
 }
 
 
-
-async function translateNotes(btn) {
-  const originalText = window._notesRaw || '';
-  const el = document.getElementById('notesText');
-  if (_translated) {
-    el.innerHTML = originalText.replace(/\n/g, '<br>');
-    btn.textContent = 'Translate to Norwegian';
-    _translated = false;
-    return;
-  }
-  btn.disabled = true;
-  btn.textContent = 'Translating…';
-  try {
-    const plainText = originalText.replace(/<[^>]+>/g, '');
-    const resp = await fetch('https://libretranslate.com/translate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q: plainText, source: 'en', target: 'nb', format: 'text' })
-    });
-    const data = await resp.json();
-    const translated = data.translatedText;
-    if (!translated) throw new Error('No translation returned');
-    el.innerHTML = translated.replace(/\n/g, '<br>');
-    btn.textContent = 'Show original';
-    btn.disabled = false;
-    _translated = true;
-  } catch(e) {
-    btn.textContent = 'Translation failed';
-    btn.disabled = false;
-    console.error(e);
-  }
-}
 </script>
+<script src="translate.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc =
