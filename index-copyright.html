@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Music Scores — Copyright (Private)</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Source+Serif+4:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #f7f4ee;
+    --paper:     #fffef9;
+    --ink:       #1a1814;
+    --muted:     #7a7060;
+    --faint:     #e8e2d4;
+    --accent:    #8b3a1e;
+    --accent2:   #2a5c45;
+    --border:    #d4cdc0;
+    --no-color:  #c0392b;
+    --se-color:  #006aa7;
+    --dk-color:  #c60c30;
+    --fi-color:  #003580;
+    --serif:     'Playfair Display', Georgia, serif;
+    --body:      'Source Serif 4', Georgia, serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--body);
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--paper);
+    border-bottom: 1px solid var(--border);
+    padding: 2.5rem 2rem 2rem;
+    text-align: center;
+    position: relative;
+  }
+  header::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 2px;
+    background: var(--accent);
+    margin: 1.2rem auto 0;
+  }
+  .site-title {
+    font-family: var(--serif);
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    line-height: 1.1;
+  }
+  .site-subtitle {
+    font-family: var(--body);
+    font-size: 0.95rem;
+    color: var(--muted);
+    margin-top: 0.5rem;
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+
+
+  /* ── Nav tabs ── */
+  nav {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    background: var(--paper);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 0.9rem 2rem;
+    font-family: var(--body);
+    font-size: 0.88rem;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-flag { margin-right: 0.4rem; font-size: 1rem; }
+
+  /* ── Main layout ── */
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  /* ── Section panels ── */
+  .section-panel { display: none; }
+  .section-panel.active { display: block; }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-flag { font-size: 1.8rem; line-height: 1; }
+  .section-title {
+    font-family: var(--serif);
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .section-count {
+    font-size: 0.82rem;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Alpha index bar ── */
+  .alpha-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin-bottom: 1.5rem;
+  }
+  .alpha-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    font-family: var(--body);
+    font-weight: 500;
+    color: var(--muted);
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+  .alpha-btn:hover { background: var(--faint); color: var(--ink); }
+  .alpha-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .alpha-btn.disabled { opacity: 0.3; cursor: default; pointer-events: none; }
+
+  /* ── Composer grid ── */
+  .composer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.6rem;
+  }
+  .composer-card {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--border);
+    border-radius: 6px;
+    padding: 0.7rem 0.9rem;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    text-decoration: none;
+    display: block;
+  }
+  .composer-card.tier-1 { border-left-color: #c8c0b0; }
+  .composer-card.tier-2 { border-left-color: #c8902a; }
+  .composer-card.tier-3 { border-left-color: #3a6ea8; }
+  .composer-card.tier-4 { border-left-color: #cc2200; }
+  .composer-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(139,58,30,0.1);
+  }
+  .composer-name {
+    font-family: var(--serif);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--ink);
+    line-height: 1.3;
+  }
+  .composer-meta {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .female-badge {
+    font-size: 0.68rem;
+    background: #f0e6f0;
+    color: #7a3a7a;
+    border: 1px solid #d4b8d4;
+    border-radius: 3px;
+    padding: 1px 5px;
+    letter-spacing: 0.03em;
+  }
+  .score-count {
+    font-size: 0.75rem;
+    color: var(--accent2);
+  }
+
+  /* ── Letter group heading ── */
+  .letter-group { margin-bottom: 1.5rem; }
+  .letter-heading {
+    font-family: var(--serif);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--faint);
+    border-left: 3px solid var(--accent);
+    padding-left: 0.6rem;
+    margin-bottom: 0.6rem;
+    line-height: 1;
+    color: var(--accent);
+    opacity: 0.6;
+  }
+
+  /* ── Loading / empty states ── */
+  .loading-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+  }
+  .loading-dots::after {
+    content: '...';
+    animation: dots 1.2s steps(4, end) infinite;
+  }
+  @keyframes dots {
+    0%, 20% { content: '.'; }
+    40% { content: '..'; }
+    60%, 100% { content: '...'; }
+  }
+
+  /* ── Toggle buttons ── */
+  /* Search bar */
+  .search-bar {
+    max-width: 860px;
+    margin: 1rem auto 0;
+    padding: 0 1.5rem;
+  }
+  .search-wrap {
+    position: relative;
+  }
+  .search-input {
+    width: 100%;
+    padding: 0.6rem 1rem 0.6rem 2.5rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--paper);
+    font-family: var(--body);
+    font-size: 0.95rem;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 1rem;
+    pointer-events: none;
+  }
+  .search-results {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-top: 0.5rem;
+    overflow: hidden;
+    display: none;
+  }
+  .search-result-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--faint);
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.1s;
+  }
+  .search-result-item:last-child { border-bottom: none; }
+  .search-result-item:hover { background: var(--faint); }
+  .search-result-title { font-family: var(--serif); font-size: 0.95rem; color: var(--ink); }
+  .search-result-meta { font-size: 0.8rem; color: var(--muted); }
+  .search-empty { padding: 1rem; text-align: center; color: var(--muted); font-size: 0.9rem; }
+
+  .filter-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  .toggle-btn {
+    padding: 5px 14px;
+    font-size: 0.8rem;
+    font-family: var(--body);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--paper);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.03em;
+  }
+  .toggle-btn:hover { border-color: var(--accent); color: var(--ink); }
+  .toggle-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    padding: 1.5rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    letter-spacing: 0.04em;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 class="site-title" id="siteTitle">Music Collection</h1>
+  <p class="site-subtitle">Popular music — copyright protected</p>
+  <div style="display:flex;align-items:center;justify-content:center;gap:1rem;margin-top:1rem;">
+    <a href="tags.html" style="font-size:0.82rem;color:var(--accent2);text-decoration:none;border:1px solid var(--accent2);border-radius:4px;padding:4px 12px;letter-spacing:0.04em;">🏷 Browse by Tag</a>
+  </div>
+</header>
+
+<div class="search-bar">
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="globalSearch" type="text" placeholder="Search by title or composer…" oninput="handleSearch(this.value)" autocomplete="off">
+  </div>
+  <div class="search-results" id="searchResults"></div>
+</div>
+
+<nav>
+  <div class="tab active" data-section="no" onclick="switchTab('no')">
+    <span class="tab-flag">🇳🇴</span>Norwegian
+  </div>
+  <div class="tab" data-section="nordic" onclick="switchTab('nordic')">
+    <span class="tab-flag">🏴</span>Nordic
+  </div>
+  <div class="tab" data-section="others" onclick="switchTab('others')">
+    <span class="tab-flag">🌍</span>Others
+  </div>
+  <div class="tab" data-section="unknown" onclick="switchTab('unknown')">
+    <span class="tab-flag">❓</span>Unknown
+  </div>
+</nav>
+
+<main>
+  <!-- Norwegian -->
+  <div class="section-panel active" id="panel-no">
+    <div class="section-header">
+      <span class="section-flag">🇳🇴</span>
+      <span class="section-title">Norwegian Composers</span>
+      <span class="section-count" id="count-no"></span>
+    </div>
+    <div class="filter-bar">
+      <button class="toggle-btn" id="toggle-media-no" onclick="toggleFilter('no','media')">🎵 With PDF / MP3</button>
+      <button class="toggle-btn" id="toggle-female-no" onclick="toggleFilter('no','female')">♀ Female composers</button>
+    </div>
+    <div class="alpha-bar" id="alpha-no"></div>
+    <div id="composers-no"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
+  </div>
+
+  <!-- Nordic -->
+  <div class="section-panel" id="panel-nordic">
+    <div class="section-header">
+      <span class="section-flag">🇸🇪 🇩🇰 🇫🇮 🇮🇸</span>
+      <span class="section-title">Nordic Composers</span>
+      <span class="section-count" id="count-nordic"></span>
+    </div>
+    <div class="filter-bar">
+      <button class="toggle-btn" id="toggle-media-nordic" onclick="toggleFilter('nordic','media')">🎵 With PDF / MP3</button>
+      <button class="toggle-btn" id="toggle-female-nordic" onclick="toggleFilter('nordic','female')">♀ Female composers</button>
+    </div>
+    <div class="alpha-bar" id="alpha-nordic"></div>
+    <div id="composers-nordic"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
+  </div>
+
+  <!-- Others -->
+  <div class="section-panel" id="panel-others">
+    <div class="section-header">
+      <span class="section-flag">🌍</span>
+      <span class="section-title">Other Composers</span>
+      <span class="section-count" id="count-others"></span>
+    </div>
+    <div class="filter-bar">
+      <button class="toggle-btn" id="toggle-media-others" onclick="toggleFilter('others','media')">🎵 With PDF / MP3</button>
+      <button class="toggle-btn" id="toggle-female-others" onclick="toggleFilter('others','female')">♀ Female composers</button>
+    </div>
+    <div class="alpha-bar" id="alpha-others"></div>
+    <div id="composers-others"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
+  </div>
+
+  <!-- Unknown nationality -->
+  <div class="section-panel" id="panel-unknown">
+    <div class="section-header">
+      <span class="section-flag">❓</span>
+      <span class="section-title">Nationality Unknown</span>
+      <span class="section-count" id="count-unknown"></span>
+    </div>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;">These composers have no nationality set. Add a country code in the admin tool and they will move to the correct section.</p>
+    <div class="alpha-bar" id="alpha-unknown"></div>
+    <div id="composers-unknown"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
+  </div>
+</main>
+
+<footer>
+  Music Collection · Historical Nordic Sheet Music · Public Domain Scores
+</footer>
+
+<script src="config.js"></script>
+<script>
+document.getElementById('siteTitle').textContent = SITE_NAME;
+const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
+const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
+
+const NORDIC = ['SE', 'DK', 'FI', 'IS'];
+const FLAGS  = { SE: '🇸🇪', DK: '🇩🇰', FI: '🇫🇮', IS: '🇮🇸',
+                 DE: '🇩🇪', US: '🇺🇸', FR: '🇫🇷', GB: '🇬🇧',
+                 IT: '🇮🇹', AT: '🇦🇹', BE: '🇧🇪', HU: '🇭🇺',
+                 AU: '🇦🇺', CZ: '🇨🇿', PL: '🇵🇱', VE: '🇻🇪' };
+
+let allComposers = { no: [], nordic: [], others: [], unknown: [] };
+let activeSection = 'no';
+let activeLetters = { no: 'ALL', nordic: 'ALL', others: 'ALL', unknown: 'ALL' };
+let activeFilters = {
+  no:      { media: false, female: false },
+  nordic:  { media: false, female: false },
+  others:  { media: false, female: false },
+  unknown: { media: false, female: false },
+};
+
+// ── Fetch all composers with at least one public domain score ─────────────────
+
+async function fetchAllComposers(copyrightMode = false) {
+  // 1. Get all person_ids linked to PD (or copyright) compositions
+  let pdIds = new Set();
+  let offset = 0;
+  while (true) {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/composition_person?role=eq.Composer&select=person_id,composition:composition_id(public_domain)&limit=1000&offset=${offset}`,
+      { headers: H }
+    );
+    const rows = await r.json();
+    if (!rows.length) break;
+    rows.forEach(row => {
+      const pd = row.composition?.public_domain;
+      if (copyrightMode ? pd !== 'Yes' : pd === 'Yes') pdIds.add(row.person_id);
+    });
+    if (rows.length < 1000) break;
+    offset += 1000;
+  }
+
+  // Reset sections before refilling
+  allComposers = { no: [], nordic: [], others: [], unknown: [] };
+
+  // 2. Get composition counts per person — count all PD compositions
+  const countMap = {};
+  offset = 0;
+  while (true) {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/composition_person?role=eq.Composer&select=person_id,composition:composition_id(public_domain)&limit=1000&offset=${offset}`,
+      { headers: H }
+    );
+    const rows = await r.json();
+    if (!rows.length) break;
+    rows.forEach(row => {
+      if (row.composition?.public_domain !== 'Yes') {
+        countMap[row.person_id] = (countMap[row.person_id] || 0) + 1;
+      }
+    });
+    if (rows.length < 1000) break;
+    offset += 1000;
+  }
+
+  // 3. Fetch persons — both with and without nationality
+  const pdIdsArr = [...pdIds];
+  let persons = [];
+  for (let i = 0; i < pdIdsArr.length; i += 200) {
+    const chunk = pdIdsArr.slice(i, i + 200).join(',');
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/person?person_id=in.(${chunk})&select=person_id,first_name,last_name,born,died,nationality,gender&order=last_name.asc`,
+      { headers: H }
+    );
+    const rows = await r.json();
+    persons = persons.concat(rows);
+  }
+
+  // 4. Build a set of composition_ids that have pdf or mp3
+  const mediaCompIds = new Set();
+  let mOffset = 0;
+  while (true) {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/score?select=composition_id,pdf_url,mp3_url&limit=1000&offset=${mOffset}`,
+      { headers: H }
+    );
+    const rows = await r.json();
+    if (!rows.length) break;
+    rows.forEach(s => {
+      if (s.pdf_url || s.mp3_url) mediaCompIds.add(s.composition_id);
+    });
+    if (rows.length < 1000) break;
+    mOffset += 1000;
+  }
+
+  // 5. Build set of person_ids who have at least one media composition
+  //    Also add media-only compositions (PDF/MP3 but no musescore link) to countMap
+  const mediaPersonIds = new Set();
+  // Need composition→musescore_link to avoid double-counting
+  const msLinkCompIds = new Set();
+  offset = 0;
+  while (true) {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/composition?select=composition_id&musescore_link=not.is.null&public_domain=neq.Yes&limit=1000&offset=${offset}`,
+      { headers: H }
+    );
+    const rows = await r.json();
+    if (!rows.length) break;
+    rows.forEach(r => msLinkCompIds.add(r.composition_id));
+    if (rows.length < 1000) break;
+    offset += 1000;
+  }
+  let ccOffset = 0;
+  while (true) {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/composition_person?role=eq.Composer&select=person_id,composition_id&limit=1000&offset=${ccOffset}`,
+      { headers: H }
+    );
+    const rows = await r.json();
+    if (!rows.length) break;
+    rows.forEach(row => {
+      if (mediaCompIds.has(row.composition_id)) {
+        mediaPersonIds.add(row.person_id);
+        // Count this composition if it wasn't already counted via musescore_link
+        if (!msLinkCompIds.has(row.composition_id)) {
+          countMap[row.person_id] = (countMap[row.person_id] || 0) + 1;
+        }
+      }
+    });
+    if (rows.length < 1000) break;
+    ccOffset += 1000;
+  }
+
+  // 6. Sort into sections
+  persons.forEach(p => {
+    p.score_count = countMap[p.person_id] || 0;
+    p.has_media   = mediaPersonIds.has(p.person_id);
+    p.is_female   = p.gender === 'F';
+    if (!p.nationality) {
+      allComposers.unknown.push(p);
+    } else if (p.nationality === 'NO') {
+      allComposers.no.push(p);
+    } else if (NORDIC.includes(p.nationality)) {
+      allComposers.nordic.push(p);
+    } else {
+      allComposers.others.push(p);
+    }
+  });
+
+  // Sort each section by last_name
+  ['no', 'nordic', 'others', 'unknown'].forEach(sec => {
+    allComposers[sec].sort((a, b) => a.last_name.localeCompare(b.last_name, 'no'));
+  });
+
+  renderSection('no');
+  renderSection('nordic');
+  renderSection('others');
+  renderSection('unknown');
+}
+
+// ── Render a section ──────────────────────────────────────────────────────────
+
+function renderSection(sec) {
+  const composers = allComposers[sec];
+  const activeLetter = activeLetters[sec];
+
+  // Update count
+  document.getElementById(`count-no`);
+  document.getElementById(`count-${sec}`).textContent =
+    `${composers.length} composer${composers.length !== 1 ? 's' : ''}`;
+
+  // Build alphabet index from available first letters
+  const letters = [...new Set(composers.map(c => c.last_name[0].toUpperCase()))].sort();
+  const alphaBar = document.getElementById(`alpha-${sec}`);
+  const allLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ'.split('');
+
+  alphaBar.innerHTML = `
+    <div class="alpha-btn ${activeLetter === 'ALL' ? 'active' : ''}"
+         onclick="filterLetter('${sec}', 'ALL')">All</div>
+    ${allLetters.map(l => `
+      <div class="alpha-btn ${!letters.includes(l) ? 'disabled' : ''} ${activeLetter === l ? 'active' : ''}"
+           onclick="filterLetter('${sec}', '${l}')">
+        ${l}
+      </div>`).join('')}
+  `;
+
+  // Filter composers
+  let filtered = activeLetter === 'ALL'
+    ? composers
+    : composers.filter(c => c.last_name[0].toUpperCase() === activeLetter);
+
+  // Apply toggles
+  if (activeFilters[sec].media)  filtered = filtered.filter(c => c.has_media);
+  if (activeFilters[sec].female) filtered = filtered.filter(c => c.is_female);
+
+  // Group by first letter
+  const groups = {};
+  filtered.forEach(c => {
+    const letter = c.last_name[0].toUpperCase();
+    if (!groups[letter]) groups[letter] = [];
+    groups[letter].push(c);
+  });
+
+  const container = document.getElementById(`composers-${sec}`);
+  if (!filtered.length) {
+    container.innerHTML = '<div class="loading-state">No composers found</div>';
+    return;
+  }
+
+  container.innerHTML = Object.entries(groups).map(([letter, list]) => `
+    <div class="letter-group" id="letter-${sec}-${letter}">
+      <div class="letter-heading">${letter}</div>
+      <div class="composer-grid">
+        ${list.map(c => composerCard(c)).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function composerCard(c) {
+  const years  = [c.born, c.died].filter(Boolean).join('–');
+  const flag   = c.nationality !== 'NO' ? (FLAGS[c.nationality] || '') : '';
+  const female = c.is_female ? '<span class="female-badge">♀</span>' : '';
+  const media  = c.has_media ? '<span class="female-badge" style="background:#e6f0ea;color:#2a5c45;border-color:#b8d4c0;">🎵</span>' : '';
+  const n = c.score_count;
+  const tier = n >= 20 ? 'tier-4' : n >= 6 ? 'tier-3' : n >= 2 ? 'tier-2' : 'tier-1';
+  return `
+    <a class="composer-card ${tier}" href="composer-copyright.html?id=${c.person_id}">
+      <div class="composer-name">${c.last_name}, ${c.first_name} ${flag}</div>
+      <div class="composer-meta">
+        ${years ? `<span>${years}</span>` : ''}
+        ${female}${media}
+        <span class="score-count">${c.score_count} work${c.score_count !== 1 ? 's' : ''}</span>
+      </div>
+    </a>
+  `;
+}
+
+// ── Toggle filters ────────────────────────────────────────────────────────────
+
+function toggleFilter(sec, type) {
+  activeFilters[sec][type] = !activeFilters[sec][type];
+  const btn = document.getElementById(`toggle-${type}-${sec}`);
+  btn.classList.toggle('active', activeFilters[sec][type]);
+  renderSection(sec);
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+
+function switchTab(sec) {
+  activeSection = sec;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`[data-section="${sec}"]`).classList.add('active');
+  document.querySelectorAll('.section-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`panel-${sec}`).classList.add('active');
+}
+
+// ── Letter filter ─────────────────────────────────────────────────────────────
+
+function filterLetter(sec, letter) {
+  activeLetters[sec] = letter;
+  renderSection(sec);
+  // Scroll to top of section
+  document.getElementById(`panel-${sec}`).scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+fetchAllComposers(true);
+
+// ── Global search ──────────────────────────────────────────────────────────────
+let _allCompositions = null;
+let _searchTimeout   = null;
+
+async function getAllCompositions() {
+  if (_allCompositions) return _allCompositions;
+  // Fetch compositions with their composers
+  let all = [], offset = 0;
+  while (true) {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/composition?select=composition_id,title,year_composed&order=title.asc&offset=${offset}&limit=1000`,
+      { headers: H }
+    );
+    const batch = await r.json();
+    all = all.concat(batch);
+    if (batch.length < 1000) break;
+    offset += 1000;
+  }
+  _allCompositions = all;
+  return all;
+}
+
+function handleSearch(query) {
+  clearTimeout(_searchTimeout);
+  const resultsEl = document.getElementById('searchResults');
+  if (!query.trim()) {
+    resultsEl.style.display = 'none';
+    return;
+  }
+  _searchTimeout = setTimeout(() => doSearch(query.trim()), 250);
+}
+
+async function doSearch(query) {
+  const resultsEl = document.getElementById('searchResults');
+  resultsEl.style.display = 'block';
+  resultsEl.innerHTML = '<div class="search-empty">Searching…</div>';
+
+  const q = query.toLowerCase();
+
+  // Search compositions by title
+  const titleR = await fetch(
+    `${SUPABASE_URL}/rest/v1/composition?title=ilike.*${encodeURIComponent(query)}*&public_domain=neq.Yes&select=composition_id,title,year_composed&order=title.asc&limit=8`,
+    { headers: H }
+  );
+  const titleResults = await titleR.json();
+
+  // Search persons (composers/lyricists) by name
+  const personR = await fetch(
+    `${SUPABASE_URL}/rest/v1/person?or=(last_name.ilike.*${encodeURIComponent(query)}*,first_name.ilike.*${encodeURIComponent(query)}*)&select=person_id,first_name,last_name&order=last_name.asc&limit=5`,
+    { headers: H }
+  );
+  const personResults = await personR.json();
+
+  if (!titleResults.length && !personResults.length) {
+    resultsEl.innerHTML = '<div class="search-empty">No results found</div>';
+    return;
+  }
+
+  let html = '';
+
+  if (titleResults.length) {
+    html += `<div style="padding:0.4rem 1rem;font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;background:var(--bg)">Compositions</div>`;
+    titleResults.forEach(c => {
+      html += `<a class="search-result-item" href="score-copyright.html?id=${c.composition_id}">
+        <span class="search-result-title">${c.title}</span>
+        <span class="search-result-meta">${c.year_composed || ''}</span>
+      </a>`;
+    });
+  }
+
+  if (personResults.length) {
+    html += `<div style="padding:0.4rem 1rem;font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;background:var(--bg)">Composers / Lyricists</div>`;
+    personResults.forEach(p => {
+      const name = `${p.first_name || ''} ${p.last_name || ''}`.trim();
+      html += `<a class="search-result-item" href="composer-copyright.html?id=${p.person_id}">
+        <span class="search-result-title">${name}</span>
+        <span class="search-result-meta">→ composer page</span>
+      </a>`;
+    });
+  }
+
+  resultsEl.innerHTML = html;
+}
+
+// Close search on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-bar')) {
+    document.getElementById('searchResults').style.display = 'none';
+  }
+});
+
+</script>
+</body>
+</html>
