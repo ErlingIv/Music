@@ -1553,6 +1553,7 @@ async function loadEditForm(compId) {
   const el = document.getElementById('e_contributorList');
   if (el) el.innerHTML = '';
   ['e_composerTags','e_lyricistTags','e_illustratorTags'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
+  try {
   // Save search state so we can restore it on Back
   window._savedSearch = {
     query:             document.getElementById('editSearch').value,
@@ -1654,6 +1655,10 @@ async function loadEditForm(compId) {
 
   document.getElementById('editPanelTitle').textContent = c.title;
   document.getElementById('editPanel').classList.add('open');
+  } catch(err) {
+    showMsg('editMsg', 'Feil ved lasting: ' + err.message, 'error');
+    console.error('loadEditForm error:', err);
+  }
 }
 
 function updateApprovalUI(approved) {
