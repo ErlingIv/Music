@@ -344,6 +344,7 @@
 </style>
 </head>
 <body>
+<datalist id="sourceList"></datalist>
 
 <div class="container">
   <header>
@@ -442,7 +443,7 @@
         </div>
         <div class="field">
           <label>Kilde</label>
-          <input type="text" id="n_source" placeholder="Physical score, IMSLP, Nasjonalbiblioteket, PDF, Internet…">
+          <input type="text" id="n_source" list="sourceList" placeholder="Velg eller skriv kilde…" autocomplete="off">
         </div>
       </div>
 
@@ -590,7 +591,7 @@
         </div>
         <div class="field">
           <label>Kilde</label>
-          <input type="text" id="e_source" placeholder="Physical score, IMSLP, Nasjonalbiblioteket, PDF, Internet…">
+          <input type="text" id="e_source" list="sourceList" placeholder="Velg eller skriv kilde…" autocomplete="off">
         </div>
       </div>
 
@@ -1179,6 +1180,23 @@ function personNameOverlap(newFirst, newLast, existing) {
 
 // ── Source cache ──────────────────────────────────────────────────────────────
 
+let knownSources = new Set();
+
+async function loadSources() {
+  const rows = await get('/score?select=source&not.source.is.null');
+  const dl = document.getElementById('sourceList');
+  rows.forEach(r => { if (r.source) knownSources.add(r.source.trim()); });
+  dl.innerHTML = [...knownSources].sort().map(s => `<option value="${s}">`).join('');
+}
+
+function validateSource(inputId) {
+  const val = document.getElementById(inputId).value.trim();
+  if (!val) return true; // empty is fine
+  if (knownSources.has(val)) return true;
+  return confirm(`"${val}" er ikke en kjent kilde.\n\nKlikk OK for å legge den til, eller Avbryt for å velge en eksisterende kilde.`);
+}
+
+loadSources();
 
 // ── NEW ENTRY ─────────────────────────────────────────────────────────────────
 
@@ -1298,6 +1316,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
     }
 
     const source   = document.getElementById('n_source').value;
+    if (!validateSource('n_source')) { btn.disabled = false; btn.innerHTML = 'Lagre'; return; }
 
     // Score duplicate check: same plate number + same title already in DB?
     if (plate) {
@@ -1729,6 +1748,7 @@ async function saveEdit() {
     const plate   = document.getElementById('e_plateNumber').value.trim();
     const catName = cat === 'pd' ? 'Eldre klassisk' : 'Eldre populærmusikk';
     const esource  = document.getElementById('e_source').value;
+    if (!validateSource('e_source')) return;
     const scoreData = { plate_number: plate||null, publisher_id: pubId||null, category: catName, pdf_url: null, mp3_url: null, source: esource||null };
 
     if (scoreId) {
