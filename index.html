@@ -374,7 +374,7 @@
 <body>
 
 <header>
-  <h1 class="site-title">Music Collection</h1>
+  <h1 class="site-title" id="siteTitle">Music Collection</h1>
   <p class="site-subtitle" id="pdSubtitle">Classic compositions — public domain</p>
   <div style="display:flex;align-items:center;justify-content:center;gap:1rem;margin-top:1rem;flex-wrap:wrap;">
     <div class="pd-switch-wrap" title="Toggle between public domain and copyright music">
@@ -475,7 +475,9 @@
   Music Collection · Historical Nordic Sheet Music · Public Domain Scores
 </footer>
 
+<script src="config.js"></script>
 <script>
+document.getElementById('siteTitle').textContent = SITE_NAME;
 const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };

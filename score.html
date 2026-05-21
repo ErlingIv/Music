@@ -203,7 +203,7 @@
 
 <header class="site-header">
   <a class="back-link" id="backLink" href="index.html">← Back</a>
-  <a class="site-name" href="index.html">Norske Musikknoter</a>
+  <a class="site-name" href="index.html" id="siteNameLink">Norske Musikknoter</a>
 </header>
 
 <main>
@@ -212,7 +212,9 @@
   </div>
 </main>
 
+<script src="config.js"></script>
 <script>
+document.getElementById('siteNameLink').textContent = SITE_NAME;
 const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
@@ -256,7 +258,7 @@ async function load() {
     const cl    = cp.filter(r => r.role === 'Lyricist');
     if (!comp) throw new Error('Score not found');
 
-    document.title = `${comp.title} — Norske Musikknoter`;
+    document.title = `${comp.title} — ${SITE_NAME}`;
 
     // Fetch composer details
     const composerDisplayParts = [];
