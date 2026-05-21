@@ -504,7 +504,7 @@ async function fetchAllComposers(copyrightMode = false) {
   let offset = 0;
   while (true) {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition_composer?select=person_id,composition:composition_id(public_domain)&limit=1000&offset=${offset}`,
+      `${SUPABASE_URL}/rest/v1/composition_person?role=eq.Composer&select=person_id,composition:composition_id(public_domain)&limit=1000&offset=${offset}`,
       { headers: H }
     );
     const rows = await r.json();
@@ -525,7 +525,7 @@ async function fetchAllComposers(copyrightMode = false) {
   offset = 0;
   while (true) {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition_composer?select=person_id,composition:composition_id(musescore_link)&limit=1000&offset=${offset}`,
+      `${SUPABASE_URL}/rest/v1/composition_person?role=eq.Composer&select=person_id,composition:composition_id(musescore_link)&limit=1000&offset=${offset}`,
       { headers: H }
     );
     const rows = await r.json();
@@ -590,7 +590,7 @@ async function fetchAllComposers(copyrightMode = false) {
   let ccOffset = 0;
   while (true) {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition_composer?select=person_id,composition_id&limit=1000&offset=${ccOffset}`,
+      `${SUPABASE_URL}/rest/v1/composition_person?role=eq.Composer&select=person_id,composition_id&limit=1000&offset=${ccOffset}`,
       { headers: H }
     );
     const rows = await r.json();

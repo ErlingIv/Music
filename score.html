@@ -242,18 +242,18 @@ async function load() {
   }
 
   try {
-    // Fetch composition, score, composers and lyricists in parallel
-    const [compR, scoreR, ccR, clR] = await Promise.all([
+    // Fetch composition, score, and all contributors in parallel
+    const [compR, scoreR, cpR] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${compId}&select=composition_id,title,year_composed,musescore_link,musescore_notes`, { headers: H }),
       fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=eq.${compId}&select=pdf_url,mp3_url`, { headers: H }),
-      fetch(`${SUPABASE_URL}/rest/v1/composition_composer?composition_id=eq.${compId}&select=person_id,credited_as`, { headers: H }),
-      fetch(`${SUPABASE_URL}/rest/v1/composition_lyricist?composition_id=eq.${compId}&select=person_id,credited_as`, { headers: H }),
+      fetch(`${SUPABASE_URL}/rest/v1/composition_person?composition_id=eq.${compId}&select=person_id,role,credited_as`, { headers: H }),
     ]);
 
     const comp  = (await compR.json())[0];
     const score = (await scoreR.json())[0];
-    const cc    = await ccR.json();
-    const cl    = await clR.json();
+    const cp    = await cpR.json();
+    const cc    = cp.filter(r => r.role === 'Composer');
+    const cl    = cp.filter(r => r.role === 'Lyricist');
     if (!comp) throw new Error('Score not found');
 
     document.title = `${comp.title} — Norske Musikknoter`;

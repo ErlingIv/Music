@@ -246,7 +246,7 @@ async function load() {
 
     // 2. Fetch composition_ids for this composer
     const ccR = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition_composer?person_id=eq.${personId}&select=composition_id`,
+      `${SUPABASE_URL}/rest/v1/composition_person?person_id=eq.${personId}&role=eq.Composer&select=composition_id`,
       { headers: H }
     );
     const cc = await ccR.json();
