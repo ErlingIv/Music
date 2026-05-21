@@ -2023,6 +2023,7 @@ async function loadPersonCompositions(personId) {
       <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
         <tr style="border-bottom:2px solid var(--border)">
           <th style="text-align:left;padding:0.3rem 0.5rem">Tittel</th>
+          <th style="text-align:left;padding:0.3rem">Rolle</th>
           <th style="text-align:center;padding:0.3rem">År</th>
           <th style="text-align:center;padding:0.3rem">PD</th>
           <th style="text-align:center;padding:0.3rem">MS</th>
@@ -2030,6 +2031,7 @@ async function loadPersonCompositions(personId) {
         </tr>
         ${comps.map(c => `<tr style="border-bottom:1px solid var(--border)">
           <td style="padding:0.3rem 0.5rem">${c.title}</td>
+          <td style="padding:0.3rem;color:var(--muted);font-size:0.78rem">${ROLE_NO[c.role]||c.role||''}</td>
           <td style="text-align:center;color:var(--muted);padding:0.3rem">${c.year_composed||'—'}</td>
           <td style="text-align:center;padding:0.3rem">${c.public_domain==='Yes'?'✓':''}</td>
           <td style="text-align:center;padding:0.3rem">${c.musescore_link?`<a href="${c.musescore_link}" target="_blank">🔗</a>`:''}</td>
