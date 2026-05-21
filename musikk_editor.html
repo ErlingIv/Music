@@ -419,36 +419,9 @@
       </div>
 
       <div class="card">
-        <div class="card-title">Komponist(er)</div>
-        <div id="n_composerTags" class="tags"></div>
-        <div class="field">
-          <div class="lookup-wrap">
-            <input type="text" id="n_composerSearch" placeholder="Søk etter person…" autocomplete="off">
-            <div id="n_composerResults" class="lookup-results"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Tekstforfatter (valgfritt)</div>
-        <div id="n_lyricistTags" class="tags"></div>
-        <div class="field">
-          <div class="lookup-wrap">
-            <input type="text" id="n_lyricistSearch" placeholder="Søk etter tekstforfatter…" autocomplete="off">
-            <div id="n_lyricistResults" class="lookup-results"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Illustratør (valgfritt)</div>
-        <div id="n_illustratorTags" class="tags"></div>
-        <div class="field">
-          <div class="lookup-wrap">
-            <input type="text" id="n_illustratorSearch" placeholder="Søk etter illustratør…" autocomplete="off">
-            <div id="n_illustratorResults" class="lookup-results"></div>
-          </div>
-        </div>
+        <div class="card-title">Bidragsytere</div>
+        <div id="n_contributorList"></div>
+        <button type="button" class="btn btn-secondary" onclick="nAddContributorRow()" style="margin-top:0.5rem;font-size:0.85rem">+ Legg til bidragsyter</button>
       </div>
 
       <div class="card">
@@ -593,36 +566,9 @@
       </div>
 
       <div class="card">
-        <div class="card-title">Komponist(er)</div>
-        <div id="e_composerTags" class="tags"></div>
-        <div class="field">
-          <div class="lookup-wrap">
-            <input type="text" id="e_composerSearch" placeholder="Legg til komponist…" autocomplete="off">
-            <div id="e_composerResults" class="lookup-results"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Tekstforfatter</div>
-        <div id="e_lyricistTags" class="tags"></div>
-        <div class="field">
-          <div class="lookup-wrap">
-            <input type="text" id="e_lyricistSearch" placeholder="Legg til tekstforfatter…" autocomplete="off">
-            <div id="e_lyricistResults" class="lookup-results"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Illustratør</div>
-        <div id="e_illustratorTags" class="tags"></div>
-        <div class="field">
-          <div class="lookup-wrap">
-            <input type="text" id="e_illustratorSearch" placeholder="Legg til illustratør…" autocomplete="off">
-            <div id="e_illustratorResults" class="lookup-results"></div>
-          </div>
-        </div>
+        <div class="card-title">Bidragsytere</div>
+        <div id="e_contributorList"></div>
+        <button type="button" class="btn btn-secondary" onclick="eAddContributorRow()" style="margin-top:0.5rem;font-size:0.85rem">+ Legg til bidragsyter</button>
       </div>
 
       <div class="card">
@@ -940,8 +886,9 @@ function switchTab(name) {
 // ── Person lookup factory ─────────────────────────────────────────────────────
 
 async function openComposerScores(personId, name) {
-  const cc = await get(`/composition_composer?person_id=eq.${personId}&select=composition_id,composition(composition_id,title,year_composed,public_domain,musescore_link)&limit=100`);
-  const comps = cc.map(r => r.composition).filter(Boolean).sort((a,b) => (a.title||'').localeCompare(b.title||''));
+  const cc = await get(`/composition_person?person_id=eq.${personId}&select=composition_id&limit=100`);
+  const ids = cc.map(r => r.composition_id).join(',');
+  const comps = ids ? (await get(`/composition?composition_id=in.(${ids})&select=composition_id,title,year_composed,public_domain,musescore_link`)).sort((a,b) => (a.title||'').localeCompare(b.title||'')) : [];
   const modal = document.createElement('div');
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center';
   const box = document.createElement('div');
@@ -1235,14 +1182,74 @@ function personNameOverlap(newFirst, newLast, existing) {
 
 // ── NEW ENTRY ─────────────────────────────────────────────────────────────────
 
-const nComposers  = [];
-const nLyricists  = [];
-const nIllustrators = [];
+const nContributors = [];
 const nPubState   = {};
 
-makeLookup('n_composerSearch', 'n_composerResults', 'n_composerTags', nComposers);
-makeLookup('n_lyricistSearch', 'n_lyricistResults', 'n_lyricistTags', nLyricists);
-makeLookup('n_illustratorSearch', 'n_illustratorResults', 'n_illustratorTags', nIllustrators);
+const ROLES = ['Composer','Lyricist','Arranger','Illustrator'];
+const ROLE_NO = { Composer:'Komponist', Lyricist:'Tekstforfatter', Arranger:'Arrangør', Illustrator:'Illustratør' };
+
+let nRowIdx = 0;
+
+function nAddContributorRow(person, role) {
+  role = role || 'Composer';
+  const idx = nRowIdx++;
+  const list = document.getElementById('n_contributorList');
+  const div = document.createElement('div');
+  div.id = `n_crow_${idx}`;
+  div.style.cssText = 'display:flex;align-items:flex-start;gap:0.5rem;margin-bottom:0.5rem;padding:0.5rem;background:var(--warm);border-radius:5px';
+  div.innerHTML = `
+    <div style="flex:1">
+      <select id="n_crole_${idx}" style="width:100%;margin-bottom:0.3rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;font-family:inherit">
+        ${ROLES.map(r => `<option value="${r}"${r===role?' selected':''}>${ROLE_NO[r]}</option>`).join('')}
+      </select>
+      <div style="position:relative">
+        <input type="text" id="n_csearch_${idx}" placeholder="Søk etter person…" autocomplete="off"
+          style="width:100%;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem"
+          oninput="nContribSearch(${idx}, this.value)">
+        <div id="n_cresults_${idx}" class="lookup-results"></div>
+      </div>
+      <div id="n_cselected_${idx}" style="font-size:0.82rem;color:var(--accent);margin-top:0.2rem;font-weight:500"></div>
+    </div>
+    <button type="button" onclick="nRemoveContributorRow(${idx})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--muted);padding:0.2rem;line-height:1;margin-top:1.8rem">✕</button>`;
+  list.appendChild(div);
+  nContributors.push({ idx, person_id: person?.person_id||null, name: person ? [person.first_name,person.last_name].filter(Boolean).join(' ') : null });
+  if (person) document.getElementById(`n_cselected_${idx}`).textContent = nContributors[nContributors.length-1].name;
+}
+
+function nRemoveContributorRow(idx) {
+  document.getElementById(`n_crow_${idx}`)?.remove();
+  const i = nContributors.findIndex(c => c.idx === idx);
+  if (i !== -1) nContributors.splice(i, 1);
+}
+
+let nContribSearchTimer;
+function nContribSearch(idx, val) {
+  clearTimeout(nContribSearchTimer);
+  const res = document.getElementById(`n_cresults_${idx}`);
+  if (val.length < 2) { res.innerHTML = ''; res.style.display = 'none'; return; }
+  nContribSearchTimer = setTimeout(async () => {
+    const rows = await get(`/person?last_name=ilike.*${encodeURIComponent(val)}*&select=person_id,first_name,last_name,born,died&order=last_name.asc&limit=10`);
+    if (!rows.length) { res.innerHTML = ''; res.style.display = 'none'; return; }
+    res.style.display = 'block';
+    res.innerHTML = rows.map(p => {
+      const name = [p.first_name,p.last_name].filter(Boolean).join(' ');
+      const dates = p.born||p.died ? ` (${[p.born,p.died].filter(Boolean).join('–')})` : '';
+      return `<div class="lookup-item" onclick="nContribSelect(${idx},${p.person_id},'${name.replace(/'/g,"\\'")}')"><span class="lookup-name">${name}</span><span class="lookup-meta">${dates}</span></div>`;
+    }).join('');
+  }, 250);
+}
+
+function nContribSelect(idx, personId, name) {
+  const c = nContributors.find(x => x.idx === idx);
+  if (c) { c.person_id = personId; c.name = name; }
+  document.getElementById(`n_csearch_${idx}`).value = '';
+  document.getElementById(`n_cresults_${idx}`).style.display = 'none';
+  document.getElementById(`n_cselected_${idx}`).textContent = name;
+}
+
+// Add default composer row on load
+nAddContributorRow(null, 'Composer');
+
 makePubLookup('n_publisherSearch', 'n_publisherResults', 'n_publisherId', nPubState, 'id');
 
 function showMsg(tabId, text, type) {
@@ -1284,9 +1291,11 @@ document.getElementById('newForm').addEventListener('submit', async e => {
     const compId = comp.composition_id;
     if (!compId) throw new Error('Feil ved lagring.');
 
-    for (const c of nComposers) await post('composition_composer', { composition_id: compId, person_id: c.person_id, credited_as: c.credited_as || null });
-    for (const l of nLyricists) await post('composition_lyricist', { composition_id: compId, person_id: l.person_id, credited_as: l.credited_as || null });
-    for (const i of nIllustrators) await post('composition_illustrator', { composition_id: compId, person_id: i.person_id, credited_as: i.credited_as || null });
+    for (const c of nContributors) {
+      if (!c.person_id) continue;
+      const role = document.getElementById(`n_crole_${c.idx}`)?.value || 'Composer';
+      await post('composition_person', { composition_id: compId, person_id: c.person_id, role, credited_as: null });
+    }
 
     const source   = document.getElementById('n_source').value;
 
@@ -1339,8 +1348,12 @@ function resetNewForm() {
   document.getElementById('newForm').reset();
   document.getElementById('n_toInvestigate').checked = false;
   nComposers.length = 0; nLyricists.length = 0; nIllustrators.length = 0; nPubState.id = null;
-  ['n_composerTags','n_lyricistTags','n_illustratorTags'].forEach(id => document.getElementById(id).innerHTML = '');
-  ['n_composerSearch','n_lyricistSearch','n_illustratorSearch','n_publisherSearch'].forEach(id => document.getElementById(id).value = '');
+  ['n_composerTags','n_lyricistTags','n_illustratorTags'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
+  nContributors.length = 0;
+  nRowIdx = 0;
+  document.getElementById('n_contributorList').innerHTML = '';
+  nAddContributorRow(null, 'Composer');
+  ['n_composerSearch','n_lyricistSearch','n_illustratorSearch','n_publisherSearch'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   hideDuplicateWarn();
 }
 
@@ -1377,14 +1390,68 @@ document.getElementById('n_title').addEventListener('input', () => {
 
 // ── EDIT TAB ──────────────────────────────────────────────────────────────────
 
-const eComposers = [];
-const eLyricists = [];
-const eIllustrators = [];
+const eContributors = [];
 const ePubState  = {};
 
-makeLookup('e_composerSearch', 'e_composerResults', 'e_composerTags', eComposers);
-makeLookup('e_lyricistSearch', 'e_lyricistResults', 'e_lyricistTags', eLyricists);
-makeLookup('e_illustratorSearch', 'e_illustratorResults', 'e_illustratorTags', eIllustrators);
+let eRowIdx = 0;
+
+function eAddContributorRow(person, role) {
+  role = role || 'Composer';
+  const idx = eRowIdx++;
+  const list = document.getElementById('e_contributorList');
+  const div = document.createElement('div');
+  div.id = `e_crow_${idx}`;
+  div.style.cssText = 'display:flex;align-items:flex-start;gap:0.5rem;margin-bottom:0.5rem;padding:0.5rem;background:var(--warm);border-radius:5px';
+  const name = person ? [person.first_name||'', person.last_name||''].filter(Boolean).join(' ') : null;
+  div.innerHTML = `
+    <div style="flex:1">
+      <select id="e_crole_${idx}" style="width:100%;margin-bottom:0.3rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;font-family:inherit">
+        ${ROLES.map(r => `<option value="${r}"${r===role?' selected':''}>${ROLE_NO[r]}</option>`).join('')}
+      </select>
+      <div style="position:relative">
+        <input type="text" id="e_csearch_${idx}" placeholder="Søk etter person…" autocomplete="off"
+          style="width:100%;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem"
+          oninput="eContribSearch(${idx}, this.value)">
+        <div id="e_cresults_${idx}" class="lookup-results"></div>
+      </div>
+      <div id="e_cselected_${idx}" style="font-size:0.82rem;color:var(--accent);margin-top:0.2rem;font-weight:500">${name||''}</div>
+    </div>
+    <button type="button" onclick="eRemoveContributorRow(${idx})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--muted);padding:0.2rem;line-height:1;margin-top:1.8rem">✕</button>`;
+  list.appendChild(div);
+  eContributors.push({ idx, person_id: person?.person_id||null, name: name });
+}
+
+function eRemoveContributorRow(idx) {
+  document.getElementById(`e_crow_${idx}`)?.remove();
+  const i = eContributors.findIndex(c => c.idx === idx);
+  if (i !== -1) eContributors.splice(i, 1);
+}
+
+let eContribSearchTimer;
+function eContribSearch(idx, val) {
+  clearTimeout(eContribSearchTimer);
+  const res = document.getElementById(`e_cresults_${idx}`);
+  if (val.length < 2) { res.innerHTML = ''; res.style.display = 'none'; return; }
+  eContribSearchTimer = setTimeout(async () => {
+    const rows = await get(`/person?last_name=ilike.*${encodeURIComponent(val)}*&select=person_id,first_name,last_name,born,died&order=last_name.asc&limit=10`);
+    if (!rows.length) { res.innerHTML = ''; res.style.display = 'none'; return; }
+    res.style.display = 'block';
+    res.innerHTML = rows.map(p => {
+      const n = [p.first_name,p.last_name].filter(Boolean).join(' ');
+      const dates = p.born||p.died ? ` (${[p.born,p.died].filter(Boolean).join('–')})` : '';
+      return `<div class="lookup-item" onclick="eContribSelect(${idx},${p.person_id},'${n.replace(/'/g,"\\'")}')"><span class="lookup-name">${n}</span><span class="lookup-meta">${dates}</span></div>`;
+    }).join('');
+  }, 250);
+}
+
+function eContribSelect(idx, personId, name) {
+  const c = eContributors.find(x => x.idx === idx);
+  if (c) { c.person_id = personId; c.name = name; }
+  document.getElementById(`e_csearch_${idx}`).value = '';
+  document.getElementById(`e_cresults_${idx}`).style.display = 'none';
+  document.getElementById(`e_cselected_${idx}`).textContent = name;
+}
+
 makePubLookup('e_publisherSearch', 'e_publisherResults', 'e_publisherId', ePubState, 'id');
 
 let editSearchTimeout;
@@ -1437,12 +1504,15 @@ async function searchCompositions(q) {
     // Composer mode only — find persons, then their compositions
     const persons = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name&limit=10&order=last_name`);
     for (const p of persons) {
-      const cc = await get(`/composition_composer?person_id=eq.${p.person_id}&select=composition_id,composition(composition_id,title,year_composed,public_domain,approved,musescore_link,to_investigate)`);
-      cc.forEach(row => {
-        if (row.composition && !results.find(r => r.composition_id === row.composition.composition_id)) {
-          row.composition._composer = [p.first_name, p.last_name].filter(Boolean).join(' ');
-          row.composition._composer_id = p.person_id;
-          results.push(row.composition);
+      const cc = await get(`/composition_person?person_id=eq.${p.person_id}&role=eq.Composer&select=composition_id`);
+      if (!cc.length) continue;
+      const ids = cc.map(r => r.composition_id).join(',');
+      const comps = await get(`/composition?composition_id=in.(${ids})&select=composition_id,title,year_composed,public_domain,approved,musescore_link,to_investigate`);
+      comps.forEach(c => {
+        if (!results.find(r => r.composition_id === c.composition_id)) {
+          c._composer = [p.first_name, p.last_name].filter(Boolean).join(' ');
+          c._composer_id = p.person_id;
+          results.push(c);
         }
       });
     }
@@ -1493,12 +1563,10 @@ async function loadEditForm(compId) {
   document.getElementById('editSearchResults').innerHTML = '';
   document.getElementById('editSearch').value = '';
 
-  const [comp, cc, cl, scores, ci] = await Promise.all([
+  const [comp, cp, scores] = await Promise.all([
     get(`/composition?composition_id=eq.${compId}&select=*`),
-    get(`/composition_composer?composition_id=eq.${compId}&select=person_id,credited_as,person(person_id,first_name,last_name,bio_url,pseudonym)`),
-    get(`/composition_lyricist?composition_id=eq.${compId}&select=person_id,credited_as,person(person_id,first_name,last_name,pseudonym)`),
-    get(`/score?composition_id=eq.${compId}&select=*`),
-    get(`/composition_illustrator?composition_id=eq.${compId}&select=person_id,credited_as,person(person_id,first_name,last_name,pseudonym)`)
+    get(`/composition_person?composition_id=eq.${compId}&select=person_id,role,credited_as,person(person_id,first_name,last_name,bio_url,pseudonym)`),
+    get(`/score?composition_id=eq.${compId}&select=*`)
   ]);
 
   const c = comp[0];
@@ -1514,16 +1582,13 @@ async function loadEditForm(compId) {
   document.getElementById('e_msNotes').value = c.musescore_notes || '';
   document.getElementById('e_toInvestigate').checked = c.to_investigate || false;
 
-  eComposers.length = 0;
-  cc.forEach(row => eComposers.push({ person_id: row.person.person_id, name: [row.person.first_name, row.person.last_name].filter(Boolean).join(' '), credited_as: row.credited_as || '', pseudonyms: row.person.pseudonym || '' }));
-  renderTags('e_composerTags', eComposers);
-
-  eLyricists.length = 0;
-  cl.forEach(row => eLyricists.push({ person_id: row.person.person_id, name: [row.person.first_name, row.person.last_name].filter(Boolean).join(' '), credited_as: row.credited_as || '', pseudonyms: row.person.pseudonym || '' }));
-  renderTags('e_lyricistTags', eLyricists);
-  eIllustrators.length = 0;
-  ci.forEach(row => eIllustrators.push({ person_id: row.person.person_id, name: [row.person.first_name, row.person.last_name].filter(Boolean).join(' '), credited_as: row.credited_as || '', pseudonyms: row.person.pseudonym || '' }));
-  renderTags('e_illustratorTags', eIllustrators);
+  eContributors.length = 0;
+  eRowIdx = 0;
+  document.getElementById('e_contributorList').innerHTML = '';
+  for (const row of cp) {
+    eAddContributorRow(row.person, row.role || 'Composer');
+  }
+  if (!cp.length) eAddContributorRow(null, 'Composer');
 
   const score = scores[0];
   document.getElementById('e_scoreId').value = score ? score.score_id : '';
@@ -1629,17 +1694,13 @@ async function saveEdit() {
       to_investigate:    document.getElementById('e_toInvestigate').checked,
     });
 
-    // Update composers
-    await del('composition_composer', `composition_id=eq.${compId}`);
-    for (const c of eComposers) await post('composition_composer', { composition_id: parseInt(compId), person_id: c.person_id, credited_as: c.credited_as || null });
-
-    // Update lyricists
-    await del('composition_lyricist', `composition_id=eq.${compId}`);
-    for (const l of eLyricists) await post('composition_lyricist', { composition_id: parseInt(compId), person_id: l.person_id, credited_as: l.credited_as || null });
-
-    // Update illustrators
-    await del('composition_illustrator', `composition_id=eq.${compId}`);
-    for (const i of eIllustrators) await post('composition_illustrator', { composition_id: parseInt(compId), person_id: i.person_id, credited_as: i.credited_as || null });
+    // Update contributors
+    await del('composition_person', `composition_id=eq.${compId}`);
+    for (const c of eContributors) {
+      if (!c.person_id) continue;
+      const role = document.getElementById(`e_crole_${c.idx}`)?.value || 'Composer';
+      await post('composition_person', { composition_id: parseInt(compId), person_id: c.person_id, role, credited_as: null });
+    }
 
     // Update tags
     await del('composition_tag', `composition_id=eq.${compId}`);
@@ -1672,8 +1733,7 @@ async function deleteComposition() {
   const title  = document.getElementById('e_title').value;
   if (!confirm(`Slette "${title}"? Dette kan ikke angres.`)) return;
   try {
-    await del('composition_composer', `composition_id=eq.${compId}`);
-    await del('composition_lyricist', `composition_id=eq.${compId}`);
+    await del('composition_person',  `composition_id=eq.${compId}`);
     await del('score',                `composition_id=eq.${compId}`);
     await del('composition',          `composition_id=eq.${compId}`);
     closeEditPanel();
@@ -1685,7 +1745,8 @@ async function deleteComposition() {
 
 function closeEditPanel() {
   document.getElementById('editPanel').classList.remove('open');
-  eComposers.length = 0; eLyricists.length = 0; eIllustrators.length = 0; ePubState.id = null;
+  eContributors.length = 0; eRowIdx = 0; ePubState.id = null;
+  document.getElementById('e_contributorList').innerHTML = '';
   ['e_composerTags','e_lyricistTags','e_illustratorTags'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
 
   // Reset tag dropdown
@@ -1891,26 +1952,15 @@ async function savePerson() {
       if (choice) {
         showMsg('personMsg', 'Slår sammen…', '');
         try {
-          // Move composition_composer links
-          const cc = await get(`/composition_composer?person_id=eq.${personId}&select=composition_id,credited_as`);
-          for (const row of cc) {
-            // Check if target already has this composition to avoid duplicates
-            const exists = await get(`/composition_composer?person_id=eq.${match.person_id}&composition_id=eq.${row.composition_id}&select=id`);
+          // Move composition_person links
+          const cp = await get(`/composition_person?person_id=eq.${personId}&select=id,composition_id,role,credited_as`);
+          for (const row of cp) {
+            const exists = await get(`/composition_person?person_id=eq.${match.person_id}&composition_id=eq.${row.composition_id}&role=eq.${row.role}&select=id`);
             if (!exists.length) {
-              await post('composition_composer', { composition_id: row.composition_id, person_id: match.person_id, credited_as: row.credited_as||null });
+              await post('composition_person', { composition_id: row.composition_id, person_id: match.person_id, role: row.role, credited_as: row.credited_as||null });
             }
           }
-          await del('composition_composer', `person_id=eq.${personId}`);
-
-          // Move composition_lyricist links
-          const cl = await get(`/composition_lyricist?person_id=eq.${personId}&select=composition_id,credited_as`);
-          for (const row of cl) {
-            const exists = await get(`/composition_lyricist?person_id=eq.${match.person_id}&composition_id=eq.${row.composition_id}&select=id`);
-            if (!exists.length) {
-              await post('composition_lyricist', { composition_id: row.composition_id, person_id: match.person_id, credited_as: row.credited_as||null });
-            }
-          }
-          await del('composition_lyricist', `person_id=eq.${personId}`);
+          await del('composition_person', `person_id=eq.${personId}`);
 
           // Add old name as pseudonym on target
           const newPseudo = match.pseudonym
@@ -1957,8 +2007,13 @@ async function savePerson() {
 async function loadPersonCompositions(personId) {
   const container = document.getElementById('personCompositions');
   container.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Laster komposisjoner…</div>';
-  const cc = await get(`/composition_composer?person_id=eq.${personId}&select=composition_id,composition(composition_id,title,year_composed,public_domain,musescore_link)&limit=200`);
-  const comps = cc.map(r => r.composition).filter(Boolean).sort((a,b) => (a.title||'').localeCompare(b.title||''));
+  const cc = await get(`/composition_person?person_id=eq.${personId}&select=composition_id,role&limit=200`);
+  if (!cc.length) { container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:0.5rem 0">Ingen komposisjoner funnet.</div>'; return; }
+  const ids = cc.map(r => r.composition_id).join(',');
+  const roleMap = Object.fromEntries(cc.map(r => [r.composition_id, r.role]));
+  const comps = (await get(`/composition?composition_id=in.(${ids})&select=composition_id,title,year_composed,public_domain,musescore_link`))
+    .map(c => ({ ...c, role: roleMap[c.composition_id] }))
+    .sort((a,b) => (a.title||'').localeCompare(b.title||''));
   if (!comps.length) { container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:0.5rem 0">Ingen komposisjoner funnet.</div>'; return; }
   container.innerHTML = `
     <div class="card">
@@ -2408,12 +2463,9 @@ async function biToggleScores(pid, btn) {
     // Also find persons whose last_name matches any pseudonym
     const allPids = new Set([pid]);
 
-    // Fetch compositions as composer
-    const cc = await get(`/composition_composer?person_id=eq.${pid}&select=composition_id,credited_as`);
-    // Fetch compositions as lyricist
-    const cl = await get(`/composition_lyricist?person_id=eq.${pid}&select=composition_id,credited_as`);
-
-    const compIds = [...new Set([...cc.map(r => r.composition_id), ...cl.map(r => r.composition_id)])];
+    // Fetch all compositions for this person regardless of role
+    const cc = await get(`/composition_person?person_id=eq.${pid}&select=composition_id,role`);
+    const compIds = [...new Set(cc.map(r => r.composition_id))];
 
     if (compIds.length === 0) {
       scoresDiv.innerHTML = '<em style="color:var(--muted)">Ingen komposisjoner funnet</em>';
