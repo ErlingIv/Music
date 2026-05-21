@@ -1347,13 +1347,13 @@ document.getElementById('newForm').addEventListener('submit', async e => {
 function resetNewForm() {
   document.getElementById('newForm').reset();
   document.getElementById('n_toInvestigate').checked = false;
-  nComposers.length = 0; nLyricists.length = 0; nIllustrators.length = 0; nPubState.id = null;
-  ['n_composerTags','n_lyricistTags','n_illustratorTags'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
+  nPubState.id = null;
   nContributors.length = 0;
   nRowIdx = 0;
   document.getElementById('n_contributorList').innerHTML = '';
   nAddContributorRow(null, 'Composer');
-  ['n_composerSearch','n_lyricistSearch','n_illustratorSearch','n_publisherSearch'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const pubSearch = document.getElementById('n_publisherSearch');
+  if (pubSearch) pubSearch.value = '';
   hideDuplicateWarn();
 }
 
@@ -1548,8 +1548,10 @@ async function searchCompositions(q) {
 
 async function loadEditForm(compId) {
   showMsg('editMsg', '', '');
-  // Clear tag containers immediately so stale tags don't show during async fetch
-  eComposers.length = 0; eLyricists.length = 0; eIllustrators.length = 0;
+  // Clear contributors immediately so stale data doesn't show during async fetch
+  eContributors.length = 0; eRowIdx = 0;
+  const el = document.getElementById('e_contributorList');
+  if (el) el.innerHTML = '';
   ['e_composerTags','e_lyricistTags','e_illustratorTags'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
   // Save search state so we can restore it on Back
   window._savedSearch = {
