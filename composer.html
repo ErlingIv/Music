@@ -223,7 +223,7 @@ function wordCount(text) {
 
 function msInfoBadge(notes) {
   const wc = wordCount(notes);
-  if (wc === 0)  return '';
+  if (wc === 0)  return '<span class="ms-dot ms-low" style="visibility:hidden"></span>';
   if (wc <= 100) return '<span class="ms-dot ms-low"  title="MuseScore info: ~' + wc + ' words"></span>';
   if (wc <= 300) return '<span class="ms-dot ms-med"  title="MuseScore info: ~' + wc + ' words"></span>';
                  return '<span class="ms-dot ms-high" title="MuseScore info: ~' + wc + ' words"></span>';
@@ -262,13 +262,7 @@ async function load() {
       { headers: H }
     );
     const compositions = await cR.json();
-    // Sort by year numerically (year_composed is a text field)
-    compositions.sort((a, b) => {
-      const ya = parseInt(a.year_composed) || 0;
-      const yb = parseInt(b.year_composed) || 0;
-      if (ya !== yb) return ya - yb;
-      return (a.title || '').localeCompare(b.title || '', 'no');
-    });
+    // Compositions already ordered by title from API
 
     // 4. Fetch scores (pdf_url, mp3_url) and tags for these compositions
     const [scoreR, ctR, tagR] = await Promise.all([
