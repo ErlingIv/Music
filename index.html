@@ -580,7 +580,7 @@ async function fetchAllComposers(copyrightMode = false) {
   offset = 0;
   while (true) {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition?select=composition_id&musescore_link=not.is.null&limit=1000&offset=${offset}`,
+      `${SUPABASE_URL}/rest/v1/composition?select=composition_id&musescore_link=not.is.null&public_domain=eq.Yes&limit=1000&offset=${offset}`,
       { headers: H }
     );
     const rows = await r.json();
@@ -808,7 +808,7 @@ async function doSearch(query) {
 
   // Search compositions by title
   const titleR = await fetch(
-    `${SUPABASE_URL}/rest/v1/composition?title=ilike.*${encodeURIComponent(query)}*&select=composition_id,title,year_composed&order=title.asc&limit=8`,
+    `${SUPABASE_URL}/rest/v1/composition?title=ilike.*${encodeURIComponent(query)}*&public_domain=eq.Yes&select=composition_id,title,year_composed&order=title.asc&limit=8`,
     { headers: H }
   );
   const titleResults = await titleR.json();

@@ -258,7 +258,7 @@ async function load() {
 
     // 3. Fetch public domain compositions
     const cR = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&select=composition_id,title,year_composed,musescore_link,public_domain,musescore_notes&order=title.asc`,
+      `${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&public_domain=eq.Yes&select=composition_id,title,year_composed,musescore_link,public_domain,musescore_notes&order=title.asc`,
       { headers: H }
     );
     const compositions = await cR.json();
