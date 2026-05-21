@@ -522,19 +522,19 @@ async function fetchAllComposers(copyrightMode = false) {
   // Reset sections before refilling
   allComposers = { no: [], nordic: [], others: [], unknown: [] };
 
-  // 2. Get composition counts per person — only compositions with musescore_link or media
+  // 2. Get composition counts per person — only PD compositions with musescore_link or media
   const countMap = {};
   offset = 0;
   while (true) {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition_person?role=eq.Composer&select=person_id,composition:composition_id(musescore_link)&limit=1000&offset=${offset}`,
+      `${SUPABASE_URL}/rest/v1/composition_person?role=eq.Composer&select=person_id,composition:composition_id(musescore_link,public_domain)&limit=1000&offset=${offset}`,
       { headers: H }
     );
     const rows = await r.json();
     if (!rows.length) break;
     rows.forEach(row => {
-      // Count compositions with a musescore link — media (PDF/MP3) added in step 5 below
-      if (row.composition?.musescore_link) {
+      // Count only PD compositions with a musescore link — media (PDF/MP3) added in step 5 below
+      if (row.composition?.musescore_link && row.composition?.public_domain === 'Yes') {
         countMap[row.person_id] = (countMap[row.person_id] || 0) + 1;
       }
     });

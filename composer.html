@@ -350,7 +350,7 @@ async function load() {
                   <div class="score-icons">
                     ${s?.pdf_url ? '<span class="icon-badge has-pdf">PDF</span>' : ''}
                     ${s?.mp3_url ? '<span class="icon-badge has-mp3">MP3</span>' : ''}
-                    ${c.musescore_link ? '<span class="icon-badge">♪</span>' : '<span class="icon-badge" style="visibility:hidden">♪</span>'}
+                    ${c.musescore_link ? '<span class="icon-badge">♪</span>' : ''}
                     ${c.public_domain === 'Yes' ? '<span class="icon-badge" style="color:var(--accent2);border-color:var(--accent2)">PD</span>' : ''}
                     ${msInfoBadge(c.musescore_notes)}
                   </div>
