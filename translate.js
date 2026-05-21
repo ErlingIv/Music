@@ -1,5 +1,4 @@
 // Translation utility for score.html
-// Uses MyMemory free translation API (no key required)
 
 let _translated = false;
 
@@ -20,12 +19,11 @@ async function translateNotes(btn) {
 
   try {
     const plainText = originalText.replace(/<[^>]+>/g, '');
-    const resp = await fetch(
-      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(plainText)}&langpair=en|nb`
-    );
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=no&dt=t&q=${encodeURIComponent(plainText)}`;
+    const resp = await fetch(url);
     const data = await resp.json();
-    if (data.responseStatus !== 200) throw new Error('Translation error: ' + data.responseStatus);
-    const translated = data.responseData.translatedText;
+    const translated = data[0].map(x => x[0]).join('');
+    if (!translated) throw new Error('No translation returned');
     el.innerHTML = translated.replace(/\n/g, '<br>');
     btn.textContent = 'Show original';
     _translated = true;
