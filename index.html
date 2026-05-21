@@ -67,47 +67,6 @@
   }
 
 
-  /* ── PD / Copyright toggle switch ── */
-  .pd-switch-wrap {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-  }
-  .pd-switch-label {
-    font-family: var(--body);
-    font-size: 0.82rem;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    transition: color 0.2s, font-weight 0.2s;
-  }
-  .pd-switch {
-    position: relative;
-    display: inline-block;
-    width: 42px;
-    height: 22px;
-  }
-  .pd-switch input { opacity: 0; width: 0; height: 0; }
-  .pd-slider {
-    position: absolute;
-    cursor: pointer;
-    inset: 0;
-    background: var(--accent);
-    border-radius: 22px;
-    transition: background 0.3s;
-  }
-  .pd-slider::before {
-    content: '';
-    position: absolute;
-    height: 16px;
-    width: 16px;
-    left: 3px;
-    bottom: 3px;
-    background: white;
-    border-radius: 50%;
-    transition: transform 0.3s;
-  }
-  .pd-switch input:checked + .pd-slider { background: #5a6e3e; }
-  .pd-switch input:checked + .pd-slider::before { transform: translateX(20px); }
 
   /* ── Nav tabs ── */
   nav {
@@ -375,16 +334,8 @@
 
 <header>
   <h1 class="site-title" id="siteTitle">Music Collection</h1>
-  <p class="site-subtitle" id="pdSubtitle">Classic compositions — public domain</p>
-  <div style="display:flex;align-items:center;justify-content:center;gap:1rem;margin-top:1rem;flex-wrap:wrap;">
-    <div class="pd-switch-wrap" title="Toggle between public domain and copyright music">
-      <span class="pd-switch-label" id="pdLabelLeft" style="font-weight:600;color:var(--accent)">Public Domain</span>
-      <label class="pd-switch">
-        <input type="checkbox" id="pdToggle" onchange="togglePD(this.checked)">
-        <span class="pd-slider"></span>
-      </label>
-      <span class="pd-switch-label" id="pdLabelRight" style="color:var(--muted)">Copyright</span>
-    </div>
+  <p class="site-subtitle">Classic compositions — public domain</p>
+  <div style="display:flex;align-items:center;justify-content:center;gap:1rem;margin-top:1rem;">
     <a href="tags.html" style="font-size:0.82rem;color:var(--accent2);text-decoration:none;border:1px solid var(--accent2);border-radius:4px;padding:4px 12px;letter-spacing:0.04em;">🏷 Browse by Tag</a>
   </div>
 </header>
@@ -743,26 +694,6 @@ function filterLetter(sec, letter) {
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-
-let _copyrightMode = false;
-
-function togglePD(checked) {
-  _copyrightMode = checked;
-  // Update labels
-  document.getElementById('pdLabelLeft').style.fontWeight  = checked ? '' : '600';
-  document.getElementById('pdLabelLeft').style.color       = checked ? 'var(--muted)' : 'var(--accent)';
-  document.getElementById('pdLabelRight').style.fontWeight = checked ? '600' : '';
-  document.getElementById('pdLabelRight').style.color      = checked ? '#5a6e3e' : 'var(--muted)';
-  document.getElementById('pdSubtitle').textContent        = checked
-    ? 'Popular music — copyright protected'
-    : 'Classic compositions — public domain';
-  // Clear grids and reload
-  ['no','nordic','others','unknown'].forEach(sec => {
-    document.getElementById(`composers-${sec}`).innerHTML =
-      '<div class="loading-state"><span class="loading-dots">Loading</span></div>';
-  });
-  fetchAllComposers(checked);
-}
 
 fetchAllComposers();
 
