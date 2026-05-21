@@ -1641,7 +1641,7 @@ async function loadEditForm(compId) {
   linksDiv.appendChild(msBtn);
 
   // Composer bio links
-  for (const row of cc) {
+  for (const row of cp) {
     const bioUrl = row.person?.bio_url;
     const name = [row.person?.first_name, row.person?.last_name].filter(Boolean).join(' ');
     const bioBtn = document.createElement('a');
@@ -2492,8 +2492,10 @@ async function biToggleScores(pid, btn) {
 
     // Build role map
     const roleMap = {};
-    cc.forEach(r => { roleMap[r.composition_id] = (roleMap[r.composition_id] || []).concat('Komponist' + (r.credited_as ? ` (${r.credited_as})` : '')); });
-    cl.forEach(r => { roleMap[r.composition_id] = (roleMap[r.composition_id] || []).concat('Tekstforfatter' + (r.credited_as ? ` (${r.credited_as})` : '')); });
+    cc.forEach(r => {
+      if (!roleMap[r.composition_id]) roleMap[r.composition_id] = [];
+      roleMap[r.composition_id].push(ROLE_NO[r.role] || r.role);
+    });
 
     scoresDiv.innerHTML = `
       <div style="font-weight:600;margin-bottom:0.5rem;color:var(--muted);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em">${comps.length} komposisjon${comps.length !== 1 ? 'er' : ''}</div>
