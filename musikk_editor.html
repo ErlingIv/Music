@@ -696,6 +696,8 @@
       <div class="actions">
         <button class="btn btn-primary" onclick="savePerson()">Lagre endringer</button>
         <button class="btn btn-secondary" onclick="closePerson()">Avbryt</button>
+        <button class="btn btn-danger" id="deletePersonBtn" onclick="deletePerson()" disabled title="Laster…">Slett</button>
+        <span id="p_compositionCount" style="font-size:0.82rem;color:var(--muted);align-self:center"></span>
       </div>
       <div id="personCompositions" style="margin-top:1rem"></div>
     </div>
