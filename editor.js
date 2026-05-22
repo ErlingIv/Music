@@ -413,6 +413,8 @@ loadSources();
 
 const nContributors = [];
 const nPubState   = {};
+const nRowIdxRef  = { value: 0 };
+function nAddContributorRow(person, role) { addContributorRow('n', nContributors, nRowIdxRef, person, role, ''); }
 
 const ROLES = ['Composer','Lyricist','Arranger','Illustrator'];
 const ROLE_NO = { Composer:'Komponist', Lyricist:'Tekstforfatter', Arranger:'Arrangør', Illustrator:'Illustratør' };
@@ -638,11 +640,7 @@ document.getElementById('n_title').addEventListener('input', () => {
 const eContributors = [];
 const ePubState  = {};
 
-// ── e (Edit tab) wrappers ─────────────────────────────────────────────────────
-
-const nRowIdxRef = { value: 0 };
-function nAddContributorRow(person, role)              { addContributorRow('n', nContributors, nRowIdxRef, person, role, ''); }
-
+// ── e (Edit tab) ─────────────────────────────────────────────────────────────
 const eRowIdxRef = { value: 0 };
 function eAddContributorRow(person, role, creditedAs)  { addContributorRow('e', eContributors, eRowIdxRef, person, role, creditedAs); }
 
