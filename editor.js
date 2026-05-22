@@ -1172,6 +1172,31 @@ async function loadPersonForm(personId) {
   document.getElementById('personSearchResults').innerHTML = '';
   document.getElementById('personSearch').value = '';
   document.getElementById('personCompositions').innerHTML = '';
+
+  // Fetch composition count and set delete button state
+  const deleteBtn   = document.getElementById('deletePersonBtn');
+  const countSpan   = document.getElementById('p_compositionCount');
+  deleteBtn.disabled = true;
+  deleteBtn.title    = 'Laster…';
+  countSpan.textContent = '';
+  try {
+    const cc = await get(`/composition_person?person_id=eq.${p.person_id}&select=composition_id`);
+    const count = cc.length;
+    if (count === 0) {
+      deleteBtn.disabled = false;
+      deleteBtn.title    = 'Slett denne personen';
+      countSpan.textContent = 'Ingen komposisjoner — kan slettes';
+      countSpan.style.color = 'var(--muted)';
+    } else {
+      deleteBtn.disabled = true;
+      deleteBtn.title    = `Kan ikke slettes — bidrar til ${count} komposisjon${count !== 1 ? 'er' : ''}`;
+      countSpan.textContent = `${count} komposisjon${count !== 1 ? 'er' : ''} — kan ikke slettes`;
+      countSpan.style.color = 'var(--muted)';
+    }
+  } catch(e) {
+    deleteBtn.disabled = true;
+    countSpan.textContent = '';
+  }
 }
 
 async function savePerson() {
@@ -1305,6 +1330,21 @@ async function loadPersonCompositions(personId) {
 function closePerson() {
   document.getElementById('personPanel').style.display = 'none';
   document.getElementById('newPersonCard').style.display = 'block';
+}
+
+async function deletePerson() {
+  const personId = document.getElementById('p_personId').value;
+  const first    = document.getElementById('p_firstName').value.trim();
+  const last     = document.getElementById('p_lastName').value.trim();
+  const name     = [first, last].filter(Boolean).join(' ');
+  if (!confirm(`Slette "${name}"? Dette kan ikke angres.`)) return;
+  try {
+    await del('person', `person_id=eq.${personId}`);
+    showMsg('personMsg', `✓ "${name}" er slettet.`, 'success');
+    closePerson();
+  } catch(err) {
+    showMsg('personMsg', 'Feil: ' + err.message, 'error');
+  }
 }
 
 
