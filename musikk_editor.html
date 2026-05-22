@@ -543,6 +543,14 @@
           <label>MuseScore-info</label>
           <textarea id="e_msNotes" style="font-size:0.85rem;min-height:6rem;line-height:1.6;resize:vertical;font-family:inherit"></textarea>
         </div>
+        <div class="field">
+          <label>Visningsland (overstyrer automatisk nasjonalitet)</label>
+          <div style="display:flex;gap:0.5rem;align-items:center">
+            <input type="text" id="e_displayCountry" placeholder="NO, DE, SE… (blank = automatisk)" style="width:14rem;flex:none">
+            <span id="e_displayCountryFlag" style="font-size:1.8rem"></span>
+          </div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem">La stå blankt for automatisk logikk (blandede komponister → tekstforfatterens nasjonalitet; ukjent komponist → tekstforfatterens nasjonalitet; ellers komponentens nasjonalitet)</div>
+        </div>
         <div class="field" style="display:flex;align-items:center;gap:0.6rem;margin-top:0.25rem">
           <input type="checkbox" id="e_toInvestigate" style="width:auto;margin:0;accent-color:var(--accent)">
           <label for="e_toInvestigate" style="margin:0;text-transform:none;font-size:0.88rem;letter-spacing:0;font-weight:500;color:#4a4035;cursor:pointer">Merk som interessant å undersøke</label>

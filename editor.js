@@ -785,6 +785,9 @@ async function loadEditForm(compId) {
   document.getElementById('e_dedication').value  = c.dedication || '';
   document.getElementById('e_msNotes').value = c.musescore_notes || '';
   document.getElementById('e_toInvestigate').checked = c.to_investigate || false;
+  const dcEl = document.getElementById('e_displayCountry');
+  dcEl.value = c.display_country || '';
+  document.getElementById('e_displayCountryFlag').textContent = c.display_country ? countryCodeToFlag(c.display_country) : '';
 
   eContributors.length = 0;
   eRowIdxRef.value = 0;
@@ -900,6 +903,7 @@ async function saveEdit() {
       musescore_notes:    document.getElementById('e_msNotes').value.trim() || null,
       dedication:        document.getElementById('e_dedication').value.trim() || null,
       to_investigate:    document.getElementById('e_toInvestigate').checked,
+      display_country:   document.getElementById('e_displayCountry').value.trim().toUpperCase() || null,
     });
 
     // Update contributors
@@ -1048,6 +1052,10 @@ document.getElementById('p_nationality').addEventListener('input', function() {
 document.getElementById('np_nationality').addEventListener('input', function() {
   this.value = this.value.toUpperCase();
   document.getElementById('np_flag').textContent = countryCodeToFlag(this.value);
+});
+document.getElementById('e_displayCountry').addEventListener('input', function() {
+  this.value = this.value.toUpperCase();
+  document.getElementById('e_displayCountryFlag').textContent = countryCodeToFlag(this.value);
 });
 document.getElementById('p_bioUrl').addEventListener('input', function() {
   const link = document.getElementById('p_bioLink');
