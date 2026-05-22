@@ -2,7 +2,7 @@
 <html lang="no">
 <head>
 <meta charset="UTF-8">
-<title>Musikk Database</title>
+<title>Music Database</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Calibri','Segoe UI',Arial,sans-serif; font-size: 14px; background: #f0f0f0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -26,6 +26,7 @@ body { font-family: 'Calibri','Segoe UI',Arial,sans-serif; font-size: 14px; back
 #reset-sort { font-size: 11px; padding: 2px 8px; background: #fff; border: 1px solid #bbb; border-radius: 3px; cursor: pointer; color: #555; display: none; }
 
 #grid-wrap { flex: 1; overflow: auto; }
+#grid-inner { padding-bottom: 20px; }
 table { border-collapse: collapse; table-layout: fixed; }
 thead tr { background: #217346; color: #fff; position: sticky; top: 0; z-index: 10; }
 th { padding: 6px 7px; font-weight: 600; font-size: 13px; border: 1px solid #1a5c38; user-select: none; position: relative; white-space: nowrap; overflow: hidden; cursor: pointer; }
@@ -64,8 +65,8 @@ td.wrap-cell { white-space: normal; line-height: 1.4; }
 <body>
 
 <div id="titlebar">
-  <h1>♩ Musikk Database</h1>
-  <span class="sub">Norwegian music scores — public domain</span>
+  <h1>♩ Music Database</h1>
+  <span class="sub">Music scores — public domain</span>
   <span id="count-display">Loading…</span>
 </div>
 
@@ -81,12 +82,14 @@ td.wrap-cell { white-space: normal; line-height: 1.4; }
 </div>
 
 <div id="grid-wrap">
-  <div id="loading"><div class="spin">♩</div><br><br>Loading data from Supabase…</div>
+  <div id="loading"><div class="spin">♩</div><br><br>Loading…</div>
   <div id="errmsg"></div>
-  <table id="grid" style="display:none">
-    <thead><tr id="hrow"></tr></thead>
-    <tbody id="tbody"></tbody>
-  </table>
+  <div id="grid-inner">
+    <table id="grid" style="display:none">
+      <thead><tr id="hrow"></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
 </div>
 
 <div id="detail">
@@ -100,7 +103,7 @@ td.wrap-cell { white-space: normal; line-height: 1.4; }
 <div id="statusbar">
   <span id="status-count">0 scores</span>
   <span id="status-sel"></span>
-  <span id="status-right">Musikk Database · Supabase</span>
+  <span id="status-right">Music Database · Public domain</span>
 </div>
 
 <script>
@@ -413,7 +416,7 @@ function render() {
   }
 
   var tot = tabRows.length, sh = rows.length;
-  document.getElementById('count-display').textContent = lq ? sh + ' av ' + tot + ' scores' : tot + ' scores';
+  document.getElementById('count-display').textContent = lq ? sh + ' of ' + tot + ' scores' : tot + ' scores';
   document.getElementById('status-count').textContent = sh + ' scores';
 }
 
