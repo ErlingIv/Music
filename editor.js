@@ -417,70 +417,83 @@ const nPubState   = {};
 const ROLES = ['Composer','Lyricist','Arranger','Illustrator'];
 const ROLE_NO = { Composer:'Komponist', Lyricist:'Tekstforfatter', Arranger:'Arrangør', Illustrator:'Illustratør' };
 
-let nRowIdx = 0;
 
-function nAddContributorRow(person, role) {
+// ── Shared contributor row factory ────────────────────────────────────────────
+
+function addContributorRow(prefix, contributors, rowIdxRef, person, role, creditedAs) {
   role = role || 'Composer';
-  const idx = nRowIdx++;
-  const list = document.getElementById('n_contributorList');
+  const idx = rowIdxRef.value++;
+  const name = person ? [person.first_name||'', person.last_name||''].filter(Boolean).join(' ') : null;
+  const list = document.getElementById(`${prefix}_contributorList`);
   const div = document.createElement('div');
-  div.id = `n_crow_${idx}`;
+  div.id = `${prefix}_crow_${idx}`;
   div.style.cssText = 'display:flex;align-items:flex-start;gap:0.5rem;margin-bottom:0.5rem;padding:0.5rem;background:var(--warm);border-radius:5px';
   div.innerHTML = `
     <div style="flex:1">
-      <select id="n_crole_${idx}" style="width:100%;margin-bottom:0.3rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;font-family:inherit">
+      <select id="${prefix}_crole_${idx}" style="width:100%;margin-bottom:0.3rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;font-family:inherit">
         ${ROLES.map(r => `<option value="${r}"${r===role?' selected':''}>${ROLE_NO[r]}</option>`).join('')}
       </select>
       <div style="position:relative">
-        <input type="text" id="n_csearch_${idx}" placeholder="Søk etter person…" autocomplete="off"
+        <input type="text" id="${prefix}_csearch_${idx}" placeholder="Søk etter person…" autocomplete="off"
           style="width:100%;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem"
-          oninput="nContribSearch(${idx}, this.value)">
-        <div id="n_cresults_${idx}" class="lookup-results"></div>
+          oninput="${prefix}ContribSearch(${idx}, this.value)">
+        <div id="${prefix}_cresults_${idx}" class="lookup-results"></div>
       </div>
-      <div id="n_cselected_${idx}" style="font-size:0.82rem;color:var(--accent);margin-top:0.2rem;font-weight:500"></div>
-      <div id="n_ccredited_wrap_${idx}" style="margin-top:0.3rem"></div>
+      <div id="${prefix}_cselected_${idx}" style="font-size:0.82rem;color:var(--accent);margin-top:0.2rem;font-weight:500">${name||''}</div>
+      <div id="${prefix}_ccredited_wrap_${idx}" style="margin-top:0.3rem"></div>
     </div>
-    <button type="button" onclick="nRemoveContributorRow(${idx})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--muted);padding:0.2rem;line-height:1;margin-top:1.8rem">✕</button>`;
+    <button type="button" onclick="${prefix}RemoveContributorRow(${idx})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--muted);padding:0.2rem;line-height:1;margin-top:1.8rem">✕</button>`;
   list.appendChild(div);
-  nContributors.push({ idx, person_id: person?.person_id||null, name: person ? [person.first_name,person.last_name].filter(Boolean).join(' ') : null, credited_as: '' });
-  if (person) document.getElementById(`n_cselected_${idx}`).textContent = nContributors[nContributors.length-1].name;
+  contributors.push({ idx, person_id: person?.person_id||null, name, credited_as: creditedAs||'' });
+  if (person) {
+    renderCreditedAsField(prefix, idx, person.pseudonym||'', creditedAs||'');
+  }
 }
 
-function nRemoveContributorRow(idx) {
-  document.getElementById(`n_crow_${idx}`)?.remove();
-  const i = nContributors.findIndex(c => c.idx === idx);
-  if (i !== -1) nContributors.splice(i, 1);
+function removeContributorRow(prefix, contributors, idx) {
+  document.getElementById(`${prefix}_crow_${idx}`)?.remove();
+  const i = contributors.findIndex(c => c.idx === idx);
+  if (i !== -1) contributors.splice(i, 1);
 }
 
 let nContribSearchTimer;
-function nContribSearch(idx, val) {
-  clearTimeout(nContribSearchTimer);
-  const res = document.getElementById(`n_cresults_${idx}`);
+let eContribSearchTimer;
+function contribSearch(prefix, contributors, idx, val, timerRef) {
+  clearTimeout(timerRef.value);
+  const res = document.getElementById(`${prefix}_cresults_${idx}`);
   if (val.length < 2) { res.innerHTML = ''; res.style.display = 'none'; return; }
-  nContribSearchTimer = setTimeout(async () => {
+  timerRef.value = setTimeout(async () => {
     const rows = await get(`/person?last_name=ilike.*${encodeURIComponent(val)}*&select=person_id,first_name,last_name,born,died&order=last_name.asc&limit=10`);
     if (!rows.length) { res.innerHTML = ''; res.style.display = 'none'; return; }
     res.style.display = 'block';
     res.innerHTML = rows.map(p => {
       const name = [p.first_name,p.last_name].filter(Boolean).join(' ');
       const dates = p.born||p.died ? ` (${[p.born,p.died].filter(Boolean).join('–')})` : '';
-      return `<div class="lookup-item" onclick="nContribSelect(${idx},${p.person_id},'${name.replace(/'/g,"\\'")}')"><span class="lookup-name">${name}</span><span class="lookup-meta">${dates}</span></div>`;
+      return `<div class="lookup-item" onclick="${prefix}ContribSelect(${idx},${p.person_id},'${name.replace(/'/g,"\\'")}')"><span class="lookup-name">${name}</span><span class="lookup-meta">${dates}</span></div>`;
     }).join('');
   }, 250);
 }
 
-async function nContribSelect(idx, personId, name) {
-  const c = nContributors.find(x => x.idx === idx);
+async function contribSelect(prefix, contributors, idx, personId, name) {
+  const c = contributors.find(x => x.idx === idx);
   if (c) { c.person_id = personId; c.name = name; c.credited_as = ''; }
-  document.getElementById(`n_csearch_${idx}`).value = '';
-  document.getElementById(`n_cresults_${idx}`).style.display = 'none';
-  document.getElementById(`n_cselected_${idx}`).textContent = name;
-  // Fetch pseudonyms for this person and render credited_as field
+  document.getElementById(`${prefix}_csearch_${idx}`).value = '';
+  document.getElementById(`${prefix}_cresults_${idx}`).style.display = 'none';
+  document.getElementById(`${prefix}_cselected_${idx}`).textContent = name;
   try {
     const rows = await get(`/person?person_id=eq.${personId}&select=pseudonym`);
-    renderCreditedAsField('n', idx, rows[0]?.pseudonym||'', '');
-  } catch(e) { renderCreditedAsField('n', idx, '', ''); }
+    renderCreditedAsField(prefix, idx, rows[0]?.pseudonym||'', '');
+  } catch(e) { renderCreditedAsField(prefix, idx, '', ''); }
 }
+
+// ── n (New tab) wrappers ──────────────────────────────────────────────────────
+
+const nRowIdxRef = { value: 0 };
+function nAddContributorRow(person, role)          { addContributorRow('n', nContributors, nRowIdxRef, person, role, ''); }
+function nRemoveContributorRow(idx)                { removeContributorRow('n', nContributors, idx); }
+const nContribSearchTimerRef = { value: null };
+function nContribSearch(idx, val)                  { contribSearch('n', nContributors, idx, val, nContribSearchTimerRef); }
+async function nContribSelect(idx, personId, name) { await contribSelect('n', nContributors, idx, personId, name); }
 
 // Add default composer row on load
 nAddContributorRow(null, 'Composer');
@@ -585,7 +598,7 @@ function resetNewForm() {
   document.getElementById('n_toInvestigate').checked = false;
   nPubState.id = null;
   nContributors.length = 0;
-  nRowIdx = 0;
+  nRowIdxRef.value = 0;
   document.getElementById('n_contributorList').innerHTML = '';
   nAddContributorRow(null, 'Composer');
   const pubSearch = document.getElementById('n_publisherSearch');
@@ -629,74 +642,14 @@ document.getElementById('n_title').addEventListener('input', () => {
 const eContributors = [];
 const ePubState  = {};
 
-let eRowIdx = 0;
+// ── e (Edit tab) wrappers ─────────────────────────────────────────────────────
 
-function eAddContributorRow(person, role, creditedAs) {
-  role = role || 'Composer';
-  const idx = eRowIdx++;
-  const list = document.getElementById('e_contributorList');
-  const div = document.createElement('div');
-  div.id = `e_crow_${idx}`;
-  div.style.cssText = 'display:flex;align-items:flex-start;gap:0.5rem;margin-bottom:0.5rem;padding:0.5rem;background:var(--warm);border-radius:5px';
-  const name = person ? [person.first_name||'', person.last_name||''].filter(Boolean).join(' ') : null;
-  div.innerHTML = `
-    <div style="flex:1">
-      <select id="e_crole_${idx}" style="width:100%;margin-bottom:0.3rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;font-family:inherit">
-        ${ROLES.map(r => `<option value="${r}"${r===role?' selected':''}>${ROLE_NO[r]}</option>`).join('')}
-      </select>
-      <div style="position:relative">
-        <input type="text" id="e_csearch_${idx}" placeholder="Søk etter person…" autocomplete="off"
-          style="width:100%;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem"
-          oninput="eContribSearch(${idx}, this.value)">
-        <div id="e_cresults_${idx}" class="lookup-results"></div>
-      </div>
-      <div id="e_cselected_${idx}" style="font-size:0.82rem;color:var(--accent);margin-top:0.2rem;font-weight:500">${name||''}</div>
-      <div id="e_ccredited_wrap_${idx}" style="margin-top:0.3rem"></div>
-    </div>
-    <button type="button" onclick="eRemoveContributorRow(${idx})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--muted);padding:0.2rem;line-height:1;margin-top:1.8rem">✕</button>`;
-  list.appendChild(div);
-  eContributors.push({ idx, person_id: person?.person_id||null, name: name, credited_as: creditedAs||'' });
-  // If loading an existing person, render their credited_as field immediately
-  if (person) {
-    renderCreditedAsField('e', idx, person.pseudonym||'', creditedAs||'');
-  }
-}
-
-function eRemoveContributorRow(idx) {
-  document.getElementById(`e_crow_${idx}`)?.remove();
-  const i = eContributors.findIndex(c => c.idx === idx);
-  if (i !== -1) eContributors.splice(i, 1);
-}
-
-let eContribSearchTimer;
-function eContribSearch(idx, val) {
-  clearTimeout(eContribSearchTimer);
-  const res = document.getElementById(`e_cresults_${idx}`);
-  if (val.length < 2) { res.innerHTML = ''; res.style.display = 'none'; return; }
-  eContribSearchTimer = setTimeout(async () => {
-    const rows = await get(`/person?last_name=ilike.*${encodeURIComponent(val)}*&select=person_id,first_name,last_name,born,died&order=last_name.asc&limit=10`);
-    if (!rows.length) { res.innerHTML = ''; res.style.display = 'none'; return; }
-    res.style.display = 'block';
-    res.innerHTML = rows.map(p => {
-      const n = [p.first_name,p.last_name].filter(Boolean).join(' ');
-      const dates = p.born||p.died ? ` (${[p.born,p.died].filter(Boolean).join('–')})` : '';
-      return `<div class="lookup-item" onclick="eContribSelect(${idx},${p.person_id},'${n.replace(/'/g,"\\'")}')"><span class="lookup-name">${n}</span><span class="lookup-meta">${dates}</span></div>`;
-    }).join('');
-  }, 250);
-}
-
-async function eContribSelect(idx, personId, name) {
-  const c = eContributors.find(x => x.idx === idx);
-  if (c) { c.person_id = personId; c.name = name; c.credited_as = ''; }
-  document.getElementById(`e_csearch_${idx}`).value = '';
-  document.getElementById(`e_cresults_${idx}`).style.display = 'none';
-  document.getElementById(`e_cselected_${idx}`).textContent = name;
-  // Fetch pseudonyms for this person and render credited_as field
-  try {
-    const rows = await get(`/person?person_id=eq.${personId}&select=pseudonym`);
-    renderCreditedAsField('e', idx, rows[0]?.pseudonym||'', '');
-  } catch(e) { renderCreditedAsField('e', idx, '', ''); }
-}
+const eRowIdxRef = { value: 0 };
+function eAddContributorRow(person, role, creditedAs)  { addContributorRow('e', eContributors, eRowIdxRef, person, role, creditedAs); }
+function eRemoveContributorRow(idx)                    { removeContributorRow('e', eContributors, idx); }
+const eContribSearchTimerRef = { value: null };
+function eContribSearch(idx, val)                      { contribSearch('e', eContributors, idx, val, eContribSearchTimerRef); }
+async function eContribSelect(idx, personId, name)     { await contribSelect('e', eContributors, idx, personId, name); }
 
 makePubLookup('e_publisherSearch', 'e_publisherResults', 'e_publisherId', ePubState, 'id');
 
@@ -795,7 +748,7 @@ async function searchCompositions(q) {
 async function loadEditForm(compId) {
   showMsg('editMsg', '', '');
   // Clear contributors immediately so stale data doesn't show during async fetch
-  eContributors.length = 0; eRowIdx = 0;
+  eContributors.length = 0; eRowIdxRef.value = 0;
   const el = document.getElementById('e_contributorList');
   if (el) el.innerHTML = '';
   ['e_composerTags','e_lyricistTags','e_illustratorTags'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
@@ -841,7 +794,7 @@ async function loadEditForm(compId) {
   document.getElementById('e_toInvestigate').checked = c.to_investigate || false;
 
   eContributors.length = 0;
-  eRowIdx = 0;
+  eRowIdxRef.value = 0;
   document.getElementById('e_contributorList').innerHTML = '';
   for (const row of cp) {
     eAddContributorRow(row.person, row.role || 'Composer', row.credited_as || '');
@@ -1008,7 +961,7 @@ async function deleteComposition() {
 
 function closeEditPanel() {
   document.getElementById('editPanel').classList.remove('open');
-  eContributors.length = 0; eRowIdx = 0; ePubState.id = null;
+  eContributors.length = 0; eRowIdxRef.value = 0; ePubState.id = null;
   document.getElementById('e_contributorList').innerHTML = '';
   ['e_composerTags','e_lyricistTags','e_illustratorTags'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
 
