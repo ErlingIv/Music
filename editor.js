@@ -1348,6 +1348,15 @@ async function deletePerson() {
 }
 
 
+// ── New person form reset ─────────────────────────────────────────────────────
+function resetNewPersonForm() {
+  ['np_firstName','np_lastName','np_born','np_died','np_nationality','np_bioUrl'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('np_gender').value = '';
+  document.getElementById('np_bioUrlVerified').checked = false;
+  document.getElementById('np_bioLink').style.display = 'none';
+  document.getElementById('np_flag').textContent = '';
+}
+
 // ── Person duplicate helpers (called from inline warning buttons) ─────────────
 async function addAsPseudonym(matchId, fullName, yrs, btn) {
   const last  = document.getElementById('np_lastName').value.trim();
@@ -1359,11 +1368,7 @@ async function addAsPseudonym(matchId, fullName, yrs, btn) {
   const updatedPseudo = curPseudo ? curPseudo + ', ' + newPseudo : newPseudo;
   await patch('person', `person_id=eq.${matchId}`, { pseudonym: updatedPseudo });
   showMsg('personMsg', `✓ "${newPseudo}" lagt til som pseudonym på ${fullName} (ID ${matchId})`, 'success');
-  ['np_firstName','np_lastName','np_born','np_died','np_nationality','np_bioUrl'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('np_gender').value = '';
-  document.getElementById('np_bioUrlVerified').checked = false;
-  document.getElementById('np_bioLink').style.display = 'none';
-  document.getElementById('np_flag').textContent = '';
+  resetNewPersonForm();
 }
 
 async function forceAddPerson(btn) {
@@ -1384,11 +1389,7 @@ async function forceAddPerson(btn) {
       bio_url_verified: document.getElementById('np_bioUrlVerified').checked || false,
     });
     showMsg('personMsg', `✓ ${first} ${last} lagt til som ny person (id=${p.person_id})`, 'success');
-    ['np_firstName','np_lastName','np_born','np_died','np_nationality','np_bioUrl'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('np_gender').value = '';
-    document.getElementById('np_bioUrlVerified').checked = false;
-    document.getElementById('np_bioLink').style.display = 'none';
-    document.getElementById('np_flag').textContent = '';
+    resetNewPersonForm();
   } catch(err) {
     showMsg('personMsg', 'Feil: ' + err.message, 'error');
   }
@@ -1430,11 +1431,7 @@ async function addNewPerson() {
       bio_url_verified:    document.getElementById('np_bioUrlVerified').checked || false,
     });
     showMsg('personMsg', `✓ ${document.getElementById('np_firstName').value} ${last} lagt til (id=${p.person_id})`, 'success');
-    ['np_firstName','np_lastName','np_born','np_died','np_nationality','np_bioUrl'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('np_gender').value = '';
-    document.getElementById('np_bioUrlVerified').checked = false;
-    document.getElementById('np_bioLink').style.display = 'none';
-    document.getElementById('np_flag').textContent = '';
+    resetNewPersonForm();
   } catch(err) {
     showMsg('personMsg', 'Feil: ' + err.message, 'error');
   }
