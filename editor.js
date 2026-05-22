@@ -435,65 +435,61 @@ function addContributorRow(prefix, contributors, rowIdxRef, person, role, credit
       </select>
       <div style="position:relative">
         <input type="text" id="${prefix}_csearch_${idx}" placeholder="Søk etter person…" autocomplete="off"
-          style="width:100%;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem"
-          oninput="${prefix}ContribSearch(${idx}, this.value)">
+          style="width:100%;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem">
         <div id="${prefix}_cresults_${idx}" class="lookup-results"></div>
       </div>
       <div id="${prefix}_cselected_${idx}" style="font-size:0.82rem;color:var(--accent);margin-top:0.2rem;font-weight:500">${name||''}</div>
       <div id="${prefix}_ccredited_wrap_${idx}" style="margin-top:0.3rem"></div>
     </div>
-    <button type="button" onclick="${prefix}RemoveContributorRow(${idx})" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--muted);padding:0.2rem;line-height:1;margin-top:1.8rem">✕</button>`;
+    <button type="button" id="${prefix}_cremove_${idx}" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--muted);padding:0.2rem;line-height:1;margin-top:1.8rem">✕</button>`;
   list.appendChild(div);
   contributors.push({ idx, person_id: person?.person_id||null, name, credited_as: creditedAs||'' });
   if (person) {
     renderCreditedAsField(prefix, idx, person.pseudonym||'', creditedAs||'');
   }
+
+  // Remove button
+  document.getElementById(`${prefix}_cremove_${idx}`).addEventListener('click', () => {
+    document.getElementById(`${prefix}_crow_${idx}`)?.remove();
+    const i = contributors.findIndex(c => c.idx === idx);
+    if (i !== -1) contributors.splice(i, 1);
+  });
+
+  // Search input
+  let searchTimer;
+  document.getElementById(`${prefix}_csearch_${idx}`).addEventListener('input', function() {
+    clearTimeout(searchTimer);
+    const val = this.value;
+    const res = document.getElementById(`${prefix}_cresults_${idx}`);
+    if (val.length < 2) { res.innerHTML = ''; res.style.display = 'none'; return; }
+    searchTimer = setTimeout(async () => {
+      const rows = await get(`/person?last_name=ilike.*${encodeURIComponent(val)}*&select=person_id,first_name,last_name,born,died&order=last_name.asc&limit=10`);
+      if (!rows.length) { res.innerHTML = ''; res.style.display = 'none'; return; }
+      res.style.display = 'block';
+      res.innerHTML = rows.map(p => {
+        const pname = [p.first_name,p.last_name].filter(Boolean).join(' ');
+        const dates = p.born||p.died ? ` (${[p.born,p.died].filter(Boolean).join('–')})` : '';
+        return `<div class="lookup-item" data-pid="${p.person_id}" data-name="${pname.replace(/"/g,'&quot;')}"><span class="lookup-name">${pname}</span><span class="lookup-meta">${dates}</span></div>`;
+      }).join('');
+      // Wire result clicks
+      res.querySelectorAll('.lookup-item').forEach(item => {
+        item.addEventListener('click', async () => {
+          const personId = parseInt(item.dataset.pid);
+          const pname    = item.dataset.name;
+          const c = contributors.find(x => x.idx === idx);
+          if (c) { c.person_id = personId; c.name = pname; c.credited_as = ''; }
+          document.getElementById(`${prefix}_csearch_${idx}`).value = '';
+          res.style.display = 'none';
+          document.getElementById(`${prefix}_cselected_${idx}`).textContent = pname;
+          try {
+            const pr = await get(`/person?person_id=eq.${personId}&select=pseudonym`);
+            renderCreditedAsField(prefix, idx, pr[0]?.pseudonym||'', '');
+          } catch(e) { renderCreditedAsField(prefix, idx, '', ''); }
+        });
+      });
+    }, 250);
+  });
 }
-
-function removeContributorRow(prefix, contributors, idx) {
-  document.getElementById(`${prefix}_crow_${idx}`)?.remove();
-  const i = contributors.findIndex(c => c.idx === idx);
-  if (i !== -1) contributors.splice(i, 1);
-}
-
-let nContribSearchTimer;
-let eContribSearchTimer;
-function contribSearch(prefix, contributors, idx, val, timerRef) {
-  clearTimeout(timerRef.value);
-  const res = document.getElementById(`${prefix}_cresults_${idx}`);
-  if (val.length < 2) { res.innerHTML = ''; res.style.display = 'none'; return; }
-  timerRef.value = setTimeout(async () => {
-    const rows = await get(`/person?last_name=ilike.*${encodeURIComponent(val)}*&select=person_id,first_name,last_name,born,died&order=last_name.asc&limit=10`);
-    if (!rows.length) { res.innerHTML = ''; res.style.display = 'none'; return; }
-    res.style.display = 'block';
-    res.innerHTML = rows.map(p => {
-      const name = [p.first_name,p.last_name].filter(Boolean).join(' ');
-      const dates = p.born||p.died ? ` (${[p.born,p.died].filter(Boolean).join('–')})` : '';
-      return `<div class="lookup-item" onclick="${prefix}ContribSelect(${idx},${p.person_id},'${name.replace(/'/g,"\\'")}')"><span class="lookup-name">${name}</span><span class="lookup-meta">${dates}</span></div>`;
-    }).join('');
-  }, 250);
-}
-
-async function contribSelect(prefix, contributors, idx, personId, name) {
-  const c = contributors.find(x => x.idx === idx);
-  if (c) { c.person_id = personId; c.name = name; c.credited_as = ''; }
-  document.getElementById(`${prefix}_csearch_${idx}`).value = '';
-  document.getElementById(`${prefix}_cresults_${idx}`).style.display = 'none';
-  document.getElementById(`${prefix}_cselected_${idx}`).textContent = name;
-  try {
-    const rows = await get(`/person?person_id=eq.${personId}&select=pseudonym`);
-    renderCreditedAsField(prefix, idx, rows[0]?.pseudonym||'', '');
-  } catch(e) { renderCreditedAsField(prefix, idx, '', ''); }
-}
-
-// ── n (New tab) wrappers ──────────────────────────────────────────────────────
-
-const nRowIdxRef = { value: 0 };
-function nAddContributorRow(person, role)          { addContributorRow('n', nContributors, nRowIdxRef, person, role, ''); }
-function nRemoveContributorRow(idx)                { removeContributorRow('n', nContributors, idx); }
-const nContribSearchTimerRef = { value: null };
-function nContribSearch(idx, val)                  { contribSearch('n', nContributors, idx, val, nContribSearchTimerRef); }
-async function nContribSelect(idx, personId, name) { await contribSelect('n', nContributors, idx, personId, name); }
 
 // Add default composer row on load
 nAddContributorRow(null, 'Composer');
@@ -644,12 +640,11 @@ const ePubState  = {};
 
 // ── e (Edit tab) wrappers ─────────────────────────────────────────────────────
 
+const nRowIdxRef = { value: 0 };
+function nAddContributorRow(person, role)              { addContributorRow('n', nContributors, nRowIdxRef, person, role, ''); }
+
 const eRowIdxRef = { value: 0 };
 function eAddContributorRow(person, role, creditedAs)  { addContributorRow('e', eContributors, eRowIdxRef, person, role, creditedAs); }
-function eRemoveContributorRow(idx)                    { removeContributorRow('e', eContributors, idx); }
-const eContribSearchTimerRef = { value: null };
-function eContribSearch(idx, val)                      { contribSearch('e', eContributors, idx, val, eContribSearchTimerRef); }
-async function eContribSelect(idx, personId, name)     { await contribSelect('e', eContributors, idx, personId, name); }
 
 makePubLookup('e_publisherSearch', 'e_publisherResults', 'e_publisherId', ePubState, 'id');
 
