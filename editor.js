@@ -886,6 +886,11 @@ async function toggleApproval() {
 
 async function saveEdit() {
   const btn = document.getElementById('editSaveBtn');
+
+  // Validate source BEFORE touching the database or showing the spinner
+  const esource = document.getElementById('e_source').value;
+  if (!validateSource('e_source')) return;
+
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Lagrer…';
   showMsg('editMsg', '', '');
   try {
@@ -924,8 +929,6 @@ async function saveEdit() {
     const pubId   = await resolvePublisher('e_publisherSearch', ePubState, 'id');
     const plate   = document.getElementById('e_plateNumber').value.trim();
     const catName = cat === 'pd' ? 'Eldre klassisk' : 'Eldre populærmusikk';
-    const esource  = document.getElementById('e_source').value;
-    if (!validateSource('e_source')) return;
     const scoreData = { plate_number: plate||null, publisher_id: pubId||null, category: catName, pdf_url: null, mp3_url: null, source: esource||null };
 
     if (scoreId) {
