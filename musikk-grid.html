@@ -185,7 +185,26 @@ function load() {
       var lyricists = lmap[c.composition_id] || [];
       var firstComp = composers[0] || null;
       var firstLyr  = lyricists[0] || null;
-      var compNat = firstComp ? (firstComp.nationality || '') : '';
+
+      // Effective nationality: display_country overrides, else infer
+      var effectiveNat;
+      if (c.display_country) {
+        effectiveNat = c.display_country;
+      } else {
+        // Inference logic:
+        // 1. Single composer with known nationality → use it
+        // 2. Multiple composers with mixed nationalities → lyricist decides
+        // 3. Unknown/no composer → lyricist decides
+        // 4. No lyricist either → ''
+        var compNats = composers.map(function(p) { return p.nationality || ''; }).filter(Boolean);
+        var uniqueNats = compNats.filter(function(n, i, a) { return a.indexOf(n) === i; });
+        if (uniqueNats.length === 1) {
+          effectiveNat = uniqueNats[0];
+        } else {
+          // Mixed composers or unknown — use lyricist nationality
+          effectiveNat = firstLyr ? (firstLyr.nationality || '') : '';
+        }
+      }
 
       return {
         row_num: i + 1,
@@ -200,7 +219,7 @@ function load() {
         lyr_dates:  firstLyr  ? personDates(firstLyr)  : '',
         year_composed: c.year_composed || '',
         notes: c.composition_notes || '',
-        nationality: compNat,
+        nationality: effectiveNat,
         sort_last: firstComp ? ((firstComp.last_name || '') + ', ' + (firstComp.first_name || '')) : ''
       };
     });
