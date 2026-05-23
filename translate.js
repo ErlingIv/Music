@@ -1,4 +1,5 @@
 // Translation utility for score.html
+// Uses Claude API for English → Norwegian translation
 
 let _translated = false;
 
@@ -19,11 +20,24 @@ async function translateNotes(btn) {
 
   try {
     const plainText = originalText.replace(/<[^>]+>/g, '');
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=no&dt=t&q=${encodeURIComponent(plainText)}`;
-    const resp = await fetch(url);
-    const data = await resp.json();
-    const translated = data[0].map(x => x[0]).join('');
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: `Translate the following text from English to Norwegian (Bokmål). Return only the translated text, nothing else.\n\n${plainText}`
+        }]
+      })
+    });
+
+    const data = await response.json();
+    const translated = data.content?.[0]?.text;
     if (!translated) throw new Error('No translation returned');
+
     el.innerHTML = translated.replace(/\n/g, '<br>');
     btn.textContent = 'Show original';
     _translated = true;
