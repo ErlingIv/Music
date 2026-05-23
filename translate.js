@@ -18,7 +18,6 @@ async function loadCorrections() {
     const data = await resp.json();
     _corrections = Array.isArray(data) ? data : [];
   } catch (e) {
-    console.warn('Could not load translation corrections:', e);
     _corrections = [];
   }
   return _corrections;
@@ -27,7 +26,9 @@ async function loadCorrections() {
 function applyCorrections(text, corrections) {
   let result = text;
   for (const { wrong, correct } of corrections) {
-    result = result.replace(new RegExp(wrong, 'gi'), correct);
+    try {
+      result = result.replace(new RegExp(wrong, 'gi'), correct);
+    } catch(e) { /* skip bad regex */ }
   }
   return result;
 }
@@ -35,6 +36,8 @@ function applyCorrections(text, corrections) {
 async function translateNotes(btn) {
   const originalText = window._notesRaw || '';
   const el = document.getElementById('notesText');
+
+  if (!originalText) return;
 
   if (_translated) {
     el.innerHTML = originalText.replace(/\n/g, '<br>');
@@ -47,14 +50,15 @@ async function translateNotes(btn) {
   btn.disabled = true;
   btn.textContent = 'Translating…';
 
+  const corrections = await loadCorrections();
+
   try {
-    const corrections = await loadCorrections();
     const plainText = originalText.replace(/<[^>]+>/g, '');
     const resp = await fetch(
       `https://api.mymemory.translated.net/get?q=${encodeURIComponent(plainText)}&langpair=en|nb`
     );
     const data = await resp.json();
-    if (data.responseStatus !== 200) throw new Error('Translation error: ' + data.responseStatus);
+    if (data.responseStatus !== 200) throw new Error('Status ' + data.responseStatus);
     const translated = applyCorrections(data.responseData.translatedText, corrections);
     if (!translated) throw new Error('No translation returned');
     el.innerHTML = translated.replace(/\n/g, '<br>');
