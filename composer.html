@@ -256,13 +256,12 @@ async function load() {
 
     const compIds = cc.map(r => r.composition_id).join(',');
 
-    // 3. Fetch public domain compositions
+    // 3. Fetch public domain compositions that have a MuseScore link
     const cR = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&public_domain=eq.Yes&select=composition_id,title,year_composed,musescore_link,public_domain,musescore_notes&order=title.asc`,
+      `${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&public_domain=eq.Yes&musescore_link=not.is.null&select=composition_id,title,year_composed,musescore_link,public_domain,musescore_notes&order=title.asc`,
       { headers: H }
     );
     const compositions = await cR.json();
-    // Compositions already ordered by title from API
 
     // 4. Fetch scores (pdf_url, mp3_url) and tags for these compositions
     const [scoreR, ctR, tagR] = await Promise.all([
