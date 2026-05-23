@@ -10,10 +10,11 @@ async function loadCorrections() {
   try {
     const resp = await fetch(
       `${SUPABASE_URL}/rest/v1/translation_corrections?select=wrong,correct`,
-      { headers: { apikey: API_KEY, Authorization: `Bearer ${API_KEY}` } }
+      { headers: H }
     );
     const data = await resp.json();
-    _corrections = Array.isArray(data) ? data : [];
+    const rows = Array.isArray(data) ? data : [];
+    _corrections = rows.sort((a, b) => b.wrong.length - a.wrong.length);
   } catch (e) {
     _corrections = [];
   }
@@ -79,7 +80,7 @@ async function translateNotes(btn) {
     for (const chunk of chunks) {
       const t = await translateChunk(chunk);
       parts.push(t);
-      await new Promise(r => setTimeout(r, 300)); // small delay between requests
+      await new Promise(r => setTimeout(r, 300));
     }
 
     const translated = applyCorrections(parts.join(' '), corrections);
