@@ -1,5 +1,5 @@
 // Translation utility for score.html
-// Uses Claude API for English → Norwegian translation
+// Uses MyMemory free translation API (no key required)
 
 let _translated = false;
 
@@ -20,24 +20,13 @@ async function translateNotes(btn) {
 
   try {
     const plainText = originalText.replace(/<[^>]+>/g, '');
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: `Translate the following text from English to Norwegian (Bokmål). Return only the translated text, nothing else.\n\n${plainText}`
-        }]
-      })
-    });
-
-    const data = await response.json();
-    const translated = data.content?.[0]?.text;
+    const resp = await fetch(
+      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(plainText)}&langpair=en|nb`
+    );
+    const data = await resp.json();
+    if (data.responseStatus !== 200) throw new Error('Translation error: ' + data.responseStatus);
+    const translated = data.responseData.translatedText;
     if (!translated) throw new Error('No translation returned');
-
     el.innerHTML = translated.replace(/\n/g, '<br>');
     btn.textContent = 'Show original';
     _translated = true;
