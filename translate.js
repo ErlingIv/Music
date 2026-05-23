@@ -2,8 +2,6 @@
 // Uses MyMemory free translation API (no key required)
 // Corrections loaded dynamically from Supabase
 
-const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
-const API_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 
 let _translated = false;
 let _corrections = null;
