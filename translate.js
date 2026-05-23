@@ -2,7 +2,6 @@
 // Uses MyMemory free translation API (no key required)
 // Corrections loaded dynamically from Supabase
 
-
 let _translated = false;
 let _corrections = null;
 
@@ -31,6 +30,15 @@ function applyCorrections(text, corrections) {
   return result;
 }
 
+async function translateChunk(text) {
+  const resp = await fetch(
+    `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|nb`
+  );
+  const data = await resp.json();
+  if (data.responseStatus !== 200) throw new Error('Status ' + data.responseStatus);
+  return data.responseData.translatedText;
+}
+
 async function translateNotes(btn) {
   const originalText = window._notesRaw || '';
   const el = document.getElementById('notesText');
@@ -52,13 +60,29 @@ async function translateNotes(btn) {
 
   try {
     const plainText = originalText.replace(/<[^>]+>/g, '');
-    const resp = await fetch(
-      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(plainText)}&langpair=en|nb`
-    );
-    const data = await resp.json();
-    if (data.responseStatus !== 200) throw new Error('Status ' + data.responseStatus);
-    const translated = applyCorrections(data.responseData.translatedText, corrections);
-    if (!translated) throw new Error('No translation returned');
+
+    // Split into ~400 char chunks on sentence boundaries
+    const sentences = plainText.match(/[^.!?]+[.!?]+/g) || [plainText];
+    const chunks = [];
+    let current = '';
+    for (const s of sentences) {
+      if ((current + s).length > 400) {
+        if (current) chunks.push(current.trim());
+        current = s;
+      } else {
+        current += s;
+      }
+    }
+    if (current.trim()) chunks.push(current.trim());
+
+    const parts = [];
+    for (const chunk of chunks) {
+      const t = await translateChunk(chunk);
+      parts.push(t);
+      await new Promise(r => setTimeout(r, 300)); // small delay between requests
+    }
+
+    const translated = applyCorrections(parts.join(' '), corrections);
     el.innerHTML = translated.replace(/\n/g, '<br>');
     btn.textContent = 'Show original';
     _translated = true;
