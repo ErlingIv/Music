@@ -394,7 +394,7 @@ function personNameOverlap(newFirst, newLast, existing) {
 let knownSources = new Set();
 
 async function loadSources() {
-  const rows = await get('/score?select=source&not.source.is.null');
+  const rows = await get('/score?select=source&source=not.is.null');
   const dl = document.getElementById('sourceList');
   rows.forEach(r => { if (r.source) knownSources.add(r.source.trim()); });
   dl.innerHTML = [...knownSources].sort().map(s => `<option value="${s}">`).join('');
