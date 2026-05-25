@@ -391,26 +391,25 @@ function personNameOverlap(newFirst, newLast, existing) {
 
 // ── Source cache ──────────────────────────────────────────────────────────────
 
-let knownSources = new Set();
+// name -> id map for source lookup
+const sourceMap = new Map();
 
 async function loadSources() {
-  const rows = await get('/source?select=source_name&order=source_name');
+  const rows = await get('/source?select=source_id,source_name&order=source_name');
   const dl = document.getElementById('sourceList');
-  rows.forEach(r => { if (r.source_name) knownSources.add(r.source_name.trim()); });
-  dl.innerHTML = [...knownSources].sort().map(s => `<option value="${s}">`).join('');
+  rows.forEach(r => { if (r.source_name) sourceMap.set(r.source_name.trim(), r.source_id); });
+  dl.innerHTML = [...sourceMap.keys()].sort().map(s => `<option value="${s}">`).join('');
+}
+
+function getSourceId(name) {
+  return sourceMap.get(name.trim()) || null;
 }
 
 function validateSource(inputId) {
   const val = document.getElementById(inputId).value.trim();
   if (!val) return true; // empty is fine
-  if (knownSources.has(val)) return true;
-  const ok = confirm(`"${val}" er ikke en kjent kilde.\n\nKlikk OK for å legge den til, eller Avbryt for å velge en eksisterende kilde.`);
-  if (ok) {
-    knownSources.add(val);
-    const dl = document.getElementById('sourceList');
-    if (dl) dl.innerHTML = [...knownSources].sort().map(s => `<option value="${s}">`).join('');
-  }
-  return ok;
+  if (sourceMap.has(val)) return true;
+  return confirm(`"${val}" er ikke en kjent kilde.\n\nKlikk OK for å lagre likevel, eller Avbryt for å velge en eksisterende kilde.`);
 }
 loadSources();
 
@@ -578,7 +577,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
         document.getElementById('scoreDupConfirm').onclick = async () => {
           msgEl.innerHTML = '';
           btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Lagrer…';
-          await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, pdf_url: null, mp3_url: null, source: source||null });
+          await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, pdf_url: null, mp3_url: null, source_id: getSourceId(source)||null });
           showMsg('newMsg', `✓ "${title}" er lagret (id=${compId})`, 'success');
           resetNewForm();
           btn.disabled = false; btn.textContent = 'Lagre innføring';
@@ -587,7 +586,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
       }
     }
 
-    await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, pdf_url: null, mp3_url: null, source: source||null });
+    await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, pdf_url: null, mp3_url: null, source_id: getSourceId(source)||null });
 
     showMsg('newMsg', `✓ "${title}" er lagret (id=${compId})`, 'success');
     resetNewForm();
@@ -824,7 +823,9 @@ async function loadEditForm(compId) {
     document.getElementById('e_publisherId').value     = '';
     ePubState.id = null;
   }
-  document.getElementById('e_source').value  = score?.source || '';
+  // Look up source name from source_id for display
+  const srcEntry = score?.source_id ? [...sourceMap.entries()].find(([,id]) => id === score.source_id) : null;
+  document.getElementById('e_source').value = srcEntry ? srcEntry[0] : '';
 
   // Approval state
   const approved = c.approved || false;
@@ -935,7 +936,7 @@ async function saveEdit() {
     const pubId   = await resolvePublisher('e_publisherSearch', ePubState, 'id');
     const plate   = document.getElementById('e_plateNumber').value.trim();
     const catName = cat === 'pd' ? 'Eldre klassisk' : 'Eldre populærmusikk';
-    const scoreData = { plate_number: plate||null, publisher_id: pubId||null, category: catName, pdf_url: null, mp3_url: null, source: esource||null };
+    const scoreData = { plate_number: plate||null, publisher_id: pubId||null, category: catName, pdf_url: null, mp3_url: null, source_id: getSourceId(esource)||null };
 
     if (scoreId) {
       await patch('score', `score_id=eq.${scoreId}`, scoreData);
