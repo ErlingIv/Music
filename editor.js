@@ -404,9 +404,14 @@ function validateSource(inputId) {
   const val = document.getElementById(inputId).value.trim();
   if (!val) return true; // empty is fine
   if (knownSources.has(val)) return true;
-  return confirm(`"${val}" er ikke en kjent kilde.\n\nKlikk OK for å legge den til, eller Avbryt for å velge en eksisterende kilde.`);
+  const ok = confirm(`"${val}" er ikke en kjent kilde.\n\nKlikk OK for å legge den til, eller Avbryt for å velge en eksisterende kilde.`);
+  if (ok) {
+    knownSources.add(val);
+    const dl = document.getElementById('sourceList');
+    if (dl) dl.innerHTML = [...knownSources].sort().map(s => `<option value="${s}">`).join('');
+  }
+  return ok;
 }
-
 loadSources();
 
 // ── NEW ENTRY ─────────────────────────────────────────────────────────────────
@@ -533,6 +538,10 @@ document.getElementById('newForm').addEventListener('submit', async e => {
     const catName   = cat === 'pd' ? 'Eldre klassisk' : 'Eldre populærmusikk';
     const pubId     = await resolvePublisher('n_publisherSearch', nPubState, 'id');
 
+    // Validate source BEFORE writing anything to the database
+    const source   = document.getElementById('n_source').value;
+    if (!validateSource('n_source')) { btn.disabled = false; btn.textContent = 'Lagre innføring'; return; }
+
     const comp = await post('composition', { title, public_domain: pubDomain, year_composed: year||null, opus_number: document.getElementById('n_opus').value.trim()||null, composition_notes: notes||null, musescore_link: msLink||null, dedication: dedication||null, to_investigate: toInvestigate||null });
     const compId = comp.composition_id;
     if (!compId) throw new Error('Feil ved lagring.');
@@ -542,9 +551,6 @@ document.getElementById('newForm').addEventListener('submit', async e => {
       const role = document.getElementById(`n_crole_${c.idx}`)?.value || 'Composer';
       await post('composition_person', { composition_id: compId, person_id: c.person_id, role, credited_as: c.credited_as || null });
     }
-
-    const source   = document.getElementById('n_source').value;
-    if (!validateSource('n_source')) { btn.disabled = false; btn.innerHTML = 'Lagre'; return; }
 
     // Score duplicate check: same plate number + same title already in DB?
     if (plate) {
