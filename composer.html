@@ -90,6 +90,7 @@
   }
   .badge-female { background: #f0e6f0; color: #7a3a7a; border-color: #d4b8d4; }
   .badge-nation { background: #eaf0f6; color: #1a4a6e; border-color: #b8cfe0; }
+  .badge-lyricist { background: #f0f4e8; color: #3a5c1e; border-color: #c0d4a0; }
 
   .bio-text {
     font-size: 0.95rem;
@@ -112,6 +113,31 @@
     padding: 5px 12px;
   }
   .bio-link:hover { background: var(--accent); color: #fff; }
+
+  /* ── Role switcher ── */
+  .role-switcher {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .role-btn {
+    font-family: var(--body);
+    font-size: 0.82rem;
+    padding: 5px 14px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: var(--paper);
+    color: var(--muted);
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .role-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+  .role-btn.active {
+    background: var(--accent2);
+    border-color: var(--accent2);
+    color: #fff;
+  }
 
   /* ── Scores section ── */
   .scores-heading {
@@ -215,6 +241,7 @@ const FLAGS = { NO:'🇳🇴', SE:'🇸🇪', DK:'🇩🇰', FI:'🇫🇮', IS:'
 
 const params    = new URLSearchParams(window.location.search);
 const personId  = params.get('id');
+const roleParam = params.get('role') || 'Composer'; // 'Composer' or 'Lyricist'
 
 function wordCount(text) {
   if (!text || !text.trim()) return 0;
@@ -232,7 +259,7 @@ function msInfoBadge(notes) {
 async function load() {
   const el = document.getElementById('content');
   if (!personId) {
-    el.innerHTML = '<p class="error-state">No composer ID specified.</p>';
+    el.innerHTML = '<p class="error-state">No person ID specified.</p>';
     return;
   }
 
@@ -243,54 +270,76 @@ async function load() {
       { headers: H }
     );
     const person = (await pR.json())[0];
-    if (!person) throw new Error('Composer not found');
+    if (!person) throw new Error('Person not found');
     document.title = `${person.first_name} ${person.last_name} — ${SITE_NAME}`;
 
-    // 2. Fetch composition_ids for this composer
+    // 2. Check which roles this person has (to show switcher if both)
+    const rolesR = await fetch(
+      `${SUPABASE_URL}/rest/v1/composition_person?person_id=eq.${personId}&select=role`,
+      { headers: H }
+    );
+    const rolesData = await rolesR.json();
+    const roleSet = new Set(rolesData.map(r => r.role));
+    const hasComposer = roleSet.has('Composer');
+    const hasLyricist = roleSet.has('Lyricist');
+
+    // 3. Fetch composition_ids for this person in the active role
     const ccR = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition_person?person_id=eq.${personId}&role=eq.Composer&select=composition_id`,
+      `${SUPABASE_URL}/rest/v1/composition_person?person_id=eq.${personId}&role=eq.${roleParam}&select=composition_id`,
       { headers: H }
     );
     const cc = await ccR.json();
-    if (!cc.length) throw new Error('No compositions found');
 
-    const compIds = cc.map(r => r.composition_id).join(',');
-
-    // 3. Fetch public domain compositions that have a MuseScore link
-    const cR = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&public_domain=eq.Yes&musescore_link=not.is.null&select=composition_id,title,year_composed,musescore_link,public_domain,musescore_notes&order=title.asc`,
-      { headers: H }
-    );
-    const compositions = await cR.json();
-
-    // 4. Fetch scores (pdf_url, mp3_url) and tags for these compositions
-    const [scoreR, ctR, tagR] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=in.(${compIds})&select=composition_id,pdf_url,mp3_url`, { headers: H }),
-      fetch(`${SUPABASE_URL}/rest/v1/composition_tag?composition_id=in.(${compIds})&select=composition_id,tag_id`, { headers: H }),
-      fetch(`${SUPABASE_URL}/rest/v1/tag?select=tag_id,tag_name`, { headers: H }),
-    ]);
-    const scores = await scoreR.json();
+    // 4. Fetch public domain compositions that have a MuseScore link
+    let compositions = [];
     const scoreMap = {};
-    scores.forEach(s => { scoreMap[s.composition_id] = s; });
+    const tagMap   = {};
+    if (cc.length) {
+      const compIds = cc.map(r => r.composition_id).join(',');
+      const cR = await fetch(
+        `${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&public_domain=eq.Yes&musescore_link=not.is.null&select=composition_id,title,year_composed,musescore_link,public_domain,musescore_notes&order=title.asc`,
+        { headers: H }
+      );
+      compositions = await cR.json();
 
-    const ctRows  = await ctR.json();
-    const allTags = await tagR.json();
-    const tagNameMap = Object.fromEntries(allTags.map(t => [t.tag_id, t.tag_name]));
-    const tagMap = {};  // composition_id → [tag names]
-    ctRows.forEach(row => {
-      if (!tagMap[row.composition_id]) tagMap[row.composition_id] = [];
-      const name = tagNameMap[row.tag_id];
-      if (name) tagMap[row.composition_id].push(name);
-    });
+      // 5. Fetch scores (pdf_url, mp3_url) and tags for these compositions
+      const allCompIds = cc.map(r => r.composition_id).join(',');
+      const [scoreR, ctR, tagR] = await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=in.(${allCompIds})&select=composition_id,pdf_url,mp3_url`, { headers: H }),
+        fetch(`${SUPABASE_URL}/rest/v1/composition_tag?composition_id=in.(${allCompIds})&select=composition_id,tag_id`, { headers: H }),
+        fetch(`${SUPABASE_URL}/rest/v1/tag?select=tag_id,tag_name`, { headers: H }),
+      ]);
+      const scores = await scoreR.json();
+      scores.forEach(s => { scoreMap[s.composition_id] = s; });
+
+      const ctRows  = await ctR.json();
+      const allTags = await tagR.json();
+      const tagNameMap = Object.fromEntries(allTags.map(t => [t.tag_id, t.tag_name]));
+      ctRows.forEach(row => {
+        if (!tagMap[row.composition_id]) tagMap[row.composition_id] = [];
+        const name = tagNameMap[row.tag_id];
+        if (name) tagMap[row.composition_id].push(name);
+      });
+    }
 
     // ── Render ──────────────────────────────────────────────────────────────
 
     const years  = [person.born, person.died].filter(Boolean).join('–');
     const flag   = FLAGS[person.nationality] || '';
     const female = person.gender === 'F';
-
-    // bio_text: newlines → <br> for clean display
     const bioHtml = person.bio_text ? person.bio_text.replace(/\n/g, '<br>') : '';
+
+    // Role switcher: only show if person appears in multiple roles
+    const showSwitcher = hasComposer && hasLyricist;
+    const switcherHtml = showSwitcher ? `
+      <div class="role-switcher">
+        <a class="role-btn ${roleParam === 'Composer' ? 'active' : ''}"
+           href="composer.html?id=${personId}&role=Composer">As composer</a>
+        <a class="role-btn ${roleParam === 'Lyricist' ? 'active' : ''}"
+           href="composer.html?id=${personId}&role=Lyricist">As lyricist</a>
+      </div>` : '';
+
+    const scoresHeading = roleParam === 'Lyricist' ? 'Scores as lyricist' : 'Scores';
 
     el.innerHTML = `
       <div class="composer-hero">
@@ -301,6 +350,7 @@ async function load() {
             <div class="badges">
               ${female ? '<span class="badge badge-female">♀ Female composer</span>' : ''}
               ${person.nationality ? `<span class="badge badge-nation">${person.nationality}</span>` : ''}
+              ${roleParam === 'Lyricist' && !hasComposer ? '<span class="badge badge-lyricist">Lyricist</span>' : ''}
             </div>
           </div>
         </div>
@@ -316,8 +366,10 @@ async function load() {
           </a>` : ''}
       </div>
 
+      ${switcherHtml}
+
       <div class="scores-heading">
-        Scores
+        ${scoresHeading}
         <span class="scores-heading-count">${compositions.length} work${compositions.length !== 1 ? 's' : ''}</span>
         <label style="margin-left:auto;font-size:0.78rem;color:var(--muted);display:flex;align-items:center;gap:0.4rem;font-weight:400;cursor:pointer;">
           <input type="checkbox" id="filterMedia" onchange="filterScores()" style="width:auto;margin:0;accent-color:var(--accent);">
@@ -326,7 +378,7 @@ async function load() {
       </div>
 
       ${compositions.length === 0
-        ? '<div class="loading-state">No scores found.</div>'
+        ? `<div class="loading-state">No public domain scores found${roleParam === 'Lyricist' ? ' as lyricist' : ''}.</div>`
         : `<div class="score-list" id="scoreList">
             ${compositions.map(c => {
               const s = scoreMap[c.composition_id];

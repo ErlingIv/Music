@@ -296,7 +296,7 @@ async function load() {
         const displayName = row.credited_as || `${p.first_name} ${p.last_name}`;
         const years = [p.born, p.died].filter(Boolean);
         const yearsStr = years.length ? ` <span style="color:var(--muted);font-size:0.88rem">(${years.join('–')})</span>` : '';
-        lyricistDisplayParts.push(`<a class="composer-link" href="composer.html?id=${p.person_id}">${displayName}</a>${yearsStr}`);
+        lyricistDisplayParts.push(`<a class="composer-link" href="composer.html?id=${p.person_id}&role=Lyricist">${displayName}</a>${yearsStr}`);
       }
     }
     const lyricistDisplay = lyricistDisplayParts.length ? lyricistDisplayParts.join(', ') : null;
