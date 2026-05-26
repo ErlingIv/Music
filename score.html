@@ -301,8 +301,22 @@ async function load() {
     }
     const lyricistDisplay = lyricistDisplayParts.length ? lyricistDisplayParts.join(', ') : null;
 
-    // Render notes: newlines → <br>, escape backticks for inline JS
-    const notesHtml = comp.musescore_notes ? comp.musescore_notes.replace(/\n/g, '<br>') : '';
+    // Convert BBCode [url=...]text[/url] and plain https:// links to <a> tags
+    function linkify(text) {
+      if (!text) return '';
+      // BBCode: [url=https://...]text[/url]
+      text = text.replace(/\[url=(https?:\/\/[^\]]+)\]([^\[]*)\[\/url\]/gi,
+        '<a href="$1" target="_blank" style="color:var(--accent);text-decoration:underline">$2</a>');
+      // Plain URLs not already inside an href
+      text = text.replace(/(?<!["=])(https?:\/\/[^\s<\[]+)/g,
+        '<a href="$1" target="_blank" style="color:var(--accent);text-decoration:underline">$1</a>');
+      return text;
+    }
+
+    // Render notes: newlines → <br>, linkify URLs
+    const notesHtml = comp.musescore_notes
+      ? linkify(comp.musescore_notes.replace(/\n/g, '<br>'))
+      : '';
     // Store raw notes in a JS variable — never inline into HTML attributes
     window._notesRaw = comp.musescore_notes || '';
 
