@@ -219,6 +219,18 @@ const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
+// Global linkify — also used by translate.js
+function linkify(text) {
+  if (!text) return '';
+  // BBCode: [url=https://...]text[/url]
+  text = text.replace(/\[url=(https?:\/\/[^\]]+)\]([^\[]*)\[\/url\]/gi,
+    '<a href="$1" target="_blank" style="color:var(--accent);text-decoration:underline">$2</a>');
+  // Plain URLs not already inside an href or BBCode
+  text = text.replace(/(?<!["=])(https?:\/\/[^\s<\[]+)/g,
+    '<a href="$1" target="_blank" style="color:var(--accent);text-decoration:underline">$1</a>');
+  return text;
+}
+
 const params = new URLSearchParams(window.location.search);
 const compId = params.get('id');
 
@@ -301,19 +313,7 @@ async function load() {
     }
     const lyricistDisplay = lyricistDisplayParts.length ? lyricistDisplayParts.join(', ') : null;
 
-    // Convert BBCode [url=...]text[/url] and plain https:// links to <a> tags
-    function linkify(text) {
-      if (!text) return '';
-      // BBCode: [url=https://...]text[/url]
-      text = text.replace(/\[url=(https?:\/\/[^\]]+)\]([^\[]*)\[\/url\]/gi,
-        '<a href="$1" target="_blank" style="color:var(--accent);text-decoration:underline">$2</a>');
-      // Plain URLs not already inside an href
-      text = text.replace(/(?<!["=])(https?:\/\/[^\s<\[]+)/g,
-        '<a href="$1" target="_blank" style="color:var(--accent);text-decoration:underline">$1</a>');
-      return text;
-    }
-
-    // Render notes: newlines → <br>, linkify URLs
+    // Render notes: linkify URLs, newlines → <br>
     const notesHtml = comp.musescore_notes
       ? linkify(comp.musescore_notes.replace(/\n/g, '<br>'))
       : '';

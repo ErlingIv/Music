@@ -47,7 +47,8 @@ async function translateNotes(btn) {
   if (!originalText) return;
 
   if (_translated) {
-    el.innerHTML = originalText.replace(/\n/g, '<br>');
+    // Restore original — run through linkify so links are still clickable
+    el.innerHTML = linkify(originalText.replace(/\n/g, '<br>'));
     btn.textContent = 'Translate to Norwegian';
     _translated = false;
     btn.disabled = false;
@@ -60,10 +61,15 @@ async function translateNotes(btn) {
   const corrections = await loadCorrections();
 
   try {
-    const plainText = originalText.replace(/<[^>]+>/g, '');
+    // Strip BBCode links before sending to translation API
+    // [url=https://...]label[/url] → keep label text only for translation
+    // Plain URLs → remove entirely (we'll re-linkify after)
+    const strippedText = originalText
+      .replace(/\[url=[^\]]+\]([^\[]*)\[\/url\]/gi, '$1')  // BBCode: keep label
+      .replace(/https?:\/\/[^\s<\[]+/g, '');               // bare URLs: remove
 
     // Split into ~400 char chunks on sentence boundaries
-    const sentences = plainText.match(/[^.!?]+[.!?]+/g) || [plainText];
+    const sentences = strippedText.match(/[^.!?]+[.!?]+/g) || [strippedText];
     const chunks = [];
     let current = '';
     for (const s of sentences) {
@@ -84,7 +90,8 @@ async function translateNotes(btn) {
     }
 
     const translated = applyCorrections(parts.join(' '), corrections);
-    el.innerHTML = translated.replace(/\n/g, '<br>');
+    // Run through linkify in case any URLs survived stripping
+    el.innerHTML = linkify(translated.replace(/\n/g, '<br>'));
     btn.textContent = 'Show original';
     _translated = true;
   } catch (e) {
