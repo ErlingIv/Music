@@ -469,7 +469,7 @@ function addContributorRow(prefix, contributors, rowIdxRef, person, role, credit
     const res = document.getElementById(`${prefix}_cresults_${idx}`);
     if (val.length < 2) { res.innerHTML = ''; res.style.display = 'none'; return; }
     searchTimer = setTimeout(async () => {
-      const rows = await get(`/person?last_name=ilike.*${encodeURIComponent(val)}*&select=person_id,first_name,last_name,born,died&order=last_name.asc&limit=10`);
+      const rows = await get(`/person?last_name=ilike.${encodeURIComponent(val)}*&select=person_id,first_name,last_name,born,died&order=last_name.asc&limit=10`);
       if (!rows.length) { res.innerHTML = ''; res.style.display = 'none'; return; }
       res.style.display = 'block';
       res.innerHTML = rows.map(p => {
