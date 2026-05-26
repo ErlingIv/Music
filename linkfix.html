@@ -31,80 +31,36 @@
     align-items: center;
     gap: 1rem;
   }
-  .back-link {
-    font-size: 0.82rem; color: var(--muted); text-decoration: none;
-    letter-spacing: 0.05em; text-transform: uppercase;
-  }
+  .back-link { font-size: 0.82rem; color: var(--muted); text-decoration: none; letter-spacing: 0.05em; text-transform: uppercase; }
   .back-link:hover { color: var(--accent); }
-  .site-name {
-    font-family: var(--serif); font-size: 1rem; font-weight: 500;
-    color: var(--ink); text-decoration: none;
-  }
-  .header-right {
-    margin-left: auto;
-    font-size: 0.82rem;
-    color: var(--muted);
-  }
+  .site-name { font-family: var(--serif); font-size: 1rem; font-weight: 500; color: var(--ink); text-decoration: none; }
+  .header-right { margin-left: auto; font-size: 0.82rem; color: var(--muted); }
 
   main { max-width: 760px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
 
-  .page-title {
-    font-family: var(--serif);
-    font-size: clamp(1.4rem, 3vw, 1.9rem);
-    font-weight: 700;
-    margin-bottom: 0.3rem;
-  }
+  .page-title { font-family: var(--serif); font-size: clamp(1.4rem, 3vw, 1.9rem); font-weight: 700; margin-bottom: 0.3rem; }
   .page-sub { font-size: 0.88rem; color: var(--muted); margin-bottom: 2rem; }
 
-  /* ── Progress bar ── */
-  .progress-wrap {
-    background: var(--faint);
-    border-radius: 4px;
-    height: 6px;
-    margin-bottom: 2rem;
-    overflow: hidden;
-  }
-  .progress-bar {
-    height: 100%;
-    background: var(--accent2);
-    border-radius: 4px;
-    transition: width 0.4s ease;
-  }
-  .progress-label {
-    font-size: 0.78rem;
-    color: var(--muted);
-    margin-bottom: 0.5rem;
-    display: flex;
-    justify-content: space-between;
-  }
+  .progress-wrap { background: var(--faint); border-radius: 4px; height: 6px; margin-bottom: 2rem; overflow: hidden; }
+  .progress-bar { height: 100%; background: var(--accent2); border-radius: 4px; transition: width 0.4s ease; }
+  .progress-label { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.5rem; display: flex; justify-content: space-between; }
 
-  /* ── Card ── */
-  .card {
-    background: var(--paper);
-    border: 1px solid var(--border);
+  .card { background: var(--paper); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 1.5rem; }
+  .card-header { padding: 1rem 1.25rem 0.75rem; border-bottom: 1px solid var(--faint); display: flex; align-items: baseline; gap: 0.75rem; }
+  .card-title { font-family: var(--serif); font-size: 1.15rem; font-weight: 600; color: var(--ink); }
+  .card-id { font-size: 0.75rem; color: var(--muted); }
+  .card-phase {
+    margin-left: auto;
+    font-size: 0.72rem;
+    padding: 2px 9px;
     border-radius: 10px;
-    overflow: hidden;
-    margin-bottom: 1.5rem;
-  }
-  .card-header {
-    padding: 1rem 1.25rem 0.75rem;
-    border-bottom: 1px solid var(--faint);
-    display: flex;
-    align-items: baseline;
-    gap: 0.75rem;
-  }
-  .card-title {
-    font-family: var(--serif);
-    font-size: 1.15rem;
-    font-weight: 600;
-    color: var(--ink);
-  }
-  .card-id {
-    font-size: 0.75rem;
+    border: 1px solid var(--border);
     color: var(--muted);
+    background: var(--bg);
+    letter-spacing: 0.03em;
   }
+  .card-phase.edit-phase { background: #eaf3ee; color: var(--accent2); border-color: var(--accent2); }
 
-  /* ── Notes display ── */
   .notes-display {
     padding: 1rem 1.25rem;
     font-size: 0.92rem;
@@ -132,108 +88,82 @@
     box-shadow: 0 0 0 2px rgba(204,136,0,0.25);
   }
 
-  /* ── URL input section ── */
-  .url-section {
-    padding: 1rem 1.25rem;
-  }
-  .url-label-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-  }
+  .url-section { padding: 1rem 1.25rem; }
+  .url-label-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
   .url-pill {
-    font-family: monospace;
-    font-size: 0.78rem;
-    background: var(--faint);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 4px 10px;
-    color: var(--muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 420px;
+    font-family: monospace; font-size: 0.78rem;
+    background: var(--faint); border: 1px solid var(--border);
+    border-radius: 4px; padding: 4px 10px; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 420px;
   }
-  .url-open {
-    font-size: 0.75rem;
-    color: var(--accent);
-    text-decoration: none;
-    flex-shrink: 0;
-  }
+  .url-open { font-size: 0.75rem; color: var(--accent); text-decoration: none; flex-shrink: 0; }
   .url-open:hover { text-decoration: underline; }
 
-  .input-row {
-    display: flex;
-    gap: 0.6rem;
-    align-items: center;
-  }
+  .input-row { display: flex; gap: 0.6rem; align-items: center; }
   .label-field {
-    flex: 1;
+    flex: 1; font-family: var(--body); font-size: 0.92rem;
+    padding: 8px 12px; border: 1.5px solid var(--border);
+    border-radius: 6px; background: var(--bg); color: var(--ink);
+    outline: none; transition: border-color 0.15s;
+  }
+  .label-field:focus { border-color: var(--accent2); }
+  .label-field::placeholder { color: var(--muted); }
+
+  /* Edit textarea */
+  .edit-section { padding: 1rem 1.25rem; }
+  .edit-label {
+    font-size: 0.78rem; color: var(--muted);
+    margin-bottom: 0.5rem; letter-spacing: 0.03em; text-transform: uppercase;
+  }
+  .edit-textarea {
+    width: 100%;
+    min-height: 180px;
     font-family: var(--body);
-    font-size: 0.92rem;
-    padding: 8px 12px;
+    font-size: 0.88rem;
+    line-height: 1.7;
+    padding: 10px 12px;
     border: 1.5px solid var(--border);
     border-radius: 6px;
     background: var(--bg);
     color: var(--ink);
     outline: none;
+    resize: vertical;
     transition: border-color 0.15s;
   }
-  .label-field:focus { border-color: var(--accent2); }
-  .label-field::placeholder { color: var(--muted); }
+  .edit-textarea:focus { border-color: var(--accent2); }
+  .edit-actions {
+    display: flex;
+    gap: 0.6rem;
+    margin-top: 0.75rem;
+    align-items: center;
+  }
+  .edit-hint {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-left: auto;
+  }
 
   .btn {
-    font-family: var(--body);
-    font-size: 0.85rem;
-    padding: 8px 18px;
-    border-radius: 6px;
-    border: 1.5px solid;
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s;
-    white-space: nowrap;
+    font-family: var(--body); font-size: 0.85rem;
+    padding: 8px 18px; border-radius: 6px; border: 1.5px solid;
+    cursor: pointer; transition: background 0.15s, color 0.15s; white-space: nowrap;
   }
-  .btn-save {
-    background: var(--accent2);
-    border-color: var(--accent2);
-    color: #fff;
-  }
+  .btn-save { background: var(--accent2); border-color: var(--accent2); color: #fff; }
   .btn-save:hover { background: #1e4433; border-color: #1e4433; }
   .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn-skip {
-    background: transparent;
-    border-color: var(--border);
-    color: var(--muted);
-  }
+  .btn-skip { background: transparent; border-color: var(--border); color: var(--muted); }
   .btn-skip:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-continue { background: transparent; border-color: var(--border); color: var(--muted); }
+  .btn-continue:hover { border-color: var(--accent2); color: var(--accent2); }
 
-  .multi-notice {
-    font-size: 0.78rem;
-    color: var(--muted);
-    margin-top: 0.5rem;
-    padding: 0.4rem 0.75rem;
-    background: var(--faint);
-    border-radius: 4px;
-  }
+  .multi-notice { font-size: 0.78rem; color: var(--muted); margin-top: 0.5rem; padding: 0.4rem 0.75rem; background: var(--faint); border-radius: 4px; }
 
-  /* ── States ── */
-  .loading-state {
-    text-align: center; padding: 4rem 2rem; color: var(--muted); font-size: 0.95rem;
-  }
-  .done-state {
-    text-align: center; padding: 4rem 2rem;
-  }
+  .loading-state { text-align: center; padding: 4rem 2rem; color: var(--muted); font-size: 0.95rem; }
+  .done-state { text-align: center; padding: 4rem 2rem; }
   .done-icon { font-size: 2.5rem; margin-bottom: 1rem; }
-  .done-title {
-    font-family: var(--serif); font-size: 1.4rem; font-weight: 700;
-    margin-bottom: 0.5rem;
-  }
+  .done-title { font-family: var(--serif); font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem; }
   .done-sub { font-size: 0.9rem; color: var(--muted); }
-  .error-msg {
-    font-size: 0.82rem; color: #a32d2d;
-    margin-top: 0.5rem; padding: 0.4rem 0.75rem;
-    background: #fdf0f0; border: 1px solid #e8c0c0; border-radius: 4px;
-  }
+  .error-msg { font-size: 0.82rem; color: #a32d2d; margin-top: 0.5rem; padding: 0.4rem 0.75rem; background: #fdf0f0; border: 1px solid #e8c0c0; border-radius: 4px; }
 </style>
 </head>
 <body>
@@ -247,7 +177,6 @@
 <main>
   <h1 class="page-title">🔗 Link Label Tool</h1>
   <p class="page-sub">Finds bare URLs in score notes and lets you give each one a readable label.</p>
-
   <div id="app"><div class="loading-state">Scanning database…</div></div>
 </main>
 
@@ -260,17 +189,13 @@ const H = {
   'Content-Type': 'application/json'
 };
 
-// Each work item: { composition_id, title, notes, url, urlIndex }
-// urlIndex = which bare URL in this notes field we're currently handling
 let queue = [];
 let current = null;
 let totalFound = 0;
 let savedCount = 0;
 
-// Find all bare https:// URLs not already in [url=...] BBCode
 function findBareUrls(text) {
   if (!text) return [];
-  // Negative lookbehind: not preceded by [url= or href="
   const re = /(?<!\[url=)(?<!href=")(https?:\/\/[^\s<\[]+)/g;
   const matches = [];
   let m;
@@ -280,15 +205,12 @@ function findBareUrls(text) {
   return matches;
 }
 
-// Highlight all bare URLs in the notes text, marking the current one distinctly
 function buildNotesHtml(notes, bareUrls, currentUrl) {
   if (!notes) return '';
   let result = '';
   let pos = 0;
-  // Sort by index just in case
   const sorted = [...bareUrls].sort((a, b) => a.index - b.index);
   for (const { url, index } of sorted) {
-    // Escape text before this URL
     result += escHtml(notes.slice(pos, index));
     const isCurrent = url === currentUrl;
     result += `<span class="bare-url ${isCurrent ? 'current' : ''}">${escHtml(url)}</span>`;
@@ -299,18 +221,24 @@ function buildNotesHtml(notes, bareUrls, currentUrl) {
 }
 
 function escHtml(str) {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function progressHtml() {
+  const done = totalFound - queue.length;
+  const pct  = totalFound > 0 ? (done / totalFound) * 100 : 0;
+  return `
+    <div class="progress-label">
+      <span>${done} of ${totalFound} done</span>
+      <span>${queue.length} remaining</span>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-bar" style="width:${pct}%"></div>
+    </div>`;
 }
 
 async function fetchAll() {
-  // Fetch all compositions with musescore_notes containing 'http'
-  // Use pagination to handle large datasets
-  let all = [];
-  let offset = 0;
+  let all = [], offset = 0;
   const limit = 1000;
   while (true) {
     const r = await fetch(
@@ -328,12 +256,10 @@ async function fetchAll() {
 async function init() {
   try {
     const rows = await fetchAll();
-
-    // Build queue: one entry per bare URL found
     queue = [];
     for (const row of rows) {
       const bareUrls = findBareUrls(row.musescore_notes);
-      if (bareUrls.length === 0) continue;
+      if (!bareUrls.length) continue;
       for (const { url } of bareUrls) {
         queue.push({
           composition_id: row.composition_id,
@@ -344,16 +270,10 @@ async function init() {
         });
       }
     }
-
     totalFound = queue.length;
     document.getElementById('headerCount').textContent =
       `${totalFound} bare URL${totalFound !== 1 ? 's' : ''} found`;
-
-    if (queue.length === 0) {
-      showDone(true);
-      return;
-    }
-
+    if (!queue.length) { showDone(true); return; }
     advance();
   } catch(e) {
     document.getElementById('app').innerHTML =
@@ -362,17 +282,13 @@ async function init() {
 }
 
 function advance() {
-  if (queue.length === 0) {
-    showDone(false);
-    return;
-  }
+  if (!queue.length) { showDone(false); return; }
   current = queue[0];
-  render();
+  renderUrl();
 }
 
-function render() {
-  const done = totalFound - queue.length;
-  const pct  = totalFound > 0 ? (done / totalFound) * 100 : 0;
+// ── Phase 1: label a single URL ──────────────────────────────────────────────
+function renderUrl() {
   const bareUrls = findBareUrls(current.notes);
   const notesHtml = buildNotesHtml(current.notes, bareUrls, current.url);
   const multiNote = current.totalInScore > 1
@@ -380,18 +296,12 @@ function render() {
     : '';
 
   document.getElementById('app').innerHTML = `
-    <div class="progress-label">
-      <span>${done} of ${totalFound} done</span>
-      <span>${queue.length} remaining</span>
-    </div>
-    <div class="progress-wrap">
-      <div class="progress-bar" style="width:${pct}%"></div>
-    </div>
-
+    ${progressHtml()}
     <div class="card">
       <div class="card-header">
         <span class="card-title">${escHtml(current.title)}</span>
         <span class="card-id">#${current.composition_id}</span>
+        <span class="card-phase">Label URL</span>
       </div>
       <div class="notes-display">${notesHtml}</div>
       <div class="url-section">
@@ -400,45 +310,38 @@ function render() {
           <a class="url-open" href="${escHtml(current.url)}" target="_blank">↗ open</a>
         </div>
         <div class="input-row">
-          <input
-            class="label-field"
-            id="labelInput"
-            type="text"
-            placeholder="Enter link label…"
-            autocomplete="off"
-            onkeydown="handleKey(event)"
-          >
-          <button class="btn btn-save" id="saveBtn" onclick="save()">Save</button>
-          <button class="btn btn-skip" onclick="skip()">Skip</button>
+          <input class="label-field" id="labelInput" type="text"
+            placeholder="Enter link label…" autocomplete="off"
+            onkeydown="handleUrlKey(event)">
+          <button class="btn btn-save" id="saveBtn" onclick="saveUrl()">Save</button>
+          <button class="btn btn-skip" onclick="skipUrl()">Skip</button>
         </div>
         ${multiNote}
         <div id="errMsg"></div>
       </div>
-    </div>
-  `;
+    </div>`;
 
   document.getElementById('labelInput').focus();
 }
 
-function handleKey(e) {
-  if (e.key === 'Enter') save();
-  if (e.key === 'Escape') skip();
+function handleUrlKey(e) {
+  if (e.key === 'Enter') saveUrl();
+  if (e.key === 'Escape') skipUrl();
 }
 
-async function save() {
+async function saveUrl() {
   const label = document.getElementById('labelInput').value.trim();
   if (!label) {
     document.getElementById('errMsg').innerHTML =
-      '<div class="error-msg">Please enter a label, or click Skip to leave this URL as-is.</div>';
+      '<div class="error-msg">Please enter a label, or click Skip.</div>';
     return;
   }
-
   const btn = document.getElementById('saveBtn');
   btn.disabled = true;
   btn.textContent = 'Saving…';
 
   try {
-    // Fetch the latest notes from DB in case a previous save on this score changed them
+    // Re-fetch latest notes in case a prior save on this score changed them
     const r = await fetch(
       `${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${current.composition_id}&select=musescore_notes`,
       { headers: H }
@@ -446,10 +349,6 @@ async function save() {
     const fresh = (await r.json())[0];
     let notes = fresh?.musescore_notes || current.notes;
 
-    // Replace only the first occurrence of this bare URL that isn't already in BBCode
-    // We re-find bare URLs in the (potentially updated) notes
-    const re = /(?<!\[url=)(?<!href=")(https?:\/\/[^\s<\[]+)/;
-    // Find and replace just the first match of current.url
     const escapedUrl = current.url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const replaceRe = new RegExp(`(?<!\\[url=)(?<!href=")(${escapedUrl})`);
     const updated = notes.replace(replaceRe, `[url=${current.url}]${label}[/url]`);
@@ -458,19 +357,27 @@ async function save() {
       `${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${current.composition_id}`,
       { method: 'PATCH', headers: H, body: JSON.stringify({ musescore_notes: updated }) }
     );
-
     if (!upR.ok) throw new Error(`HTTP ${upR.status}`);
 
-    // Update notes in remaining queue items for same composition
+    // Update notes in all remaining queue items for this score
     queue.forEach(item => {
-      if (item.composition_id === current.composition_id) {
-        item.notes = updated;
-      }
+      if (item.composition_id === current.composition_id) item.notes = updated;
     });
 
     savedCount++;
     queue.shift();
-    advance();
+
+    // Check if remaining queue items belong to a different score
+    const nextSameScore = queue.length > 0 && queue[0].composition_id === current.composition_id;
+
+    if (nextSameScore) {
+      // More URLs in this score — keep labelling
+      current = queue[0];
+      renderUrl();
+    } else {
+      // All URLs in this score are done — show edit step
+      renderEdit(current.composition_id, current.title, updated);
+    }
   } catch(e) {
     document.getElementById('errMsg').innerHTML =
       `<div class="error-msg">Save failed: ${escHtml(e.message)}</div>`;
@@ -479,9 +386,67 @@ async function save() {
   }
 }
 
-function skip() {
+function skipUrl() {
+  const skippedId = current.composition_id;
   queue.shift();
-  advance();
+  // If next item is same score, keep going with that score's next URL
+  if (queue.length > 0 && queue[0].composition_id === skippedId) {
+    current = queue[0];
+    renderUrl();
+  } else {
+    // No more URLs for this score — go to edit step using latest known notes
+    renderEdit(skippedId, current.title, current.notes);
+  }
+}
+
+// ── Phase 2: review & edit full notes text ───────────────────────────────────
+function renderEdit(compositionId, title, notes) {
+  document.getElementById('app').innerHTML = `
+    ${progressHtml()}
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">${escHtml(title)}</span>
+        <span class="card-id">#${compositionId}</span>
+        <span class="card-phase edit-phase">Review &amp; edit</span>
+      </div>
+      <div class="edit-section">
+        <div class="edit-label">Full notes text — edit freely before continuing</div>
+        <textarea class="edit-textarea" id="editArea" spellcheck="true">${escHtml(notes)}</textarea>
+        <div class="edit-actions">
+          <button class="btn btn-save" id="editSaveBtn" onclick="saveEdit(${compositionId})">Save &amp; continue</button>
+          <button class="btn btn-continue" onclick="advance()">Continue without saving</button>
+          <span class="edit-hint">Ctrl+Enter to save</span>
+        </div>
+        <div id="editErrMsg"></div>
+      </div>
+    </div>`;
+
+  const ta = document.getElementById('editArea');
+  ta.focus();
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) saveEdit(compositionId);
+  });
+}
+
+async function saveEdit(compositionId) {
+  const text = document.getElementById('editArea').value;
+  const btn = document.getElementById('editSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  try {
+    const upR = await fetch(
+      `${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${compositionId}`,
+      { method: 'PATCH', headers: H, body: JSON.stringify({ musescore_notes: text }) }
+    );
+    if (!upR.ok) throw new Error(`HTTP ${upR.status}`);
+    advance();
+  } catch(e) {
+    document.getElementById('editErrMsg').innerHTML =
+      `<div class="error-msg">Save failed: ${escHtml(e.message)}</div>`;
+    btn.disabled = false;
+    btn.textContent = 'Save & continue';
+  }
 }
 
 function showDone(wasClean) {
@@ -492,11 +457,10 @@ function showDone(wasClean) {
       <div class="done-sub">
         ${wasClean
           ? 'All links in the database already use BBCode labels.'
-          : `${savedCount} URL${savedCount !== 1 ? 's' : ''} labelled. ${totalFound - savedCount > 0 ? (totalFound - savedCount) + ' skipped.' : ''}`
+          : `${savedCount} URL${savedCount !== 1 ? 's' : ''} labelled.${totalFound - savedCount > 0 ? ' ' + (totalFound - savedCount) + ' skipped.' : ''}`
         }
       </div>
-    </div>
-  `;
+    </div>`;
   document.getElementById('headerCount').textContent = wasClean ? 'Nothing to do' : `${savedCount} saved`;
 }
 
