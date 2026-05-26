@@ -61,15 +61,21 @@ async function translateNotes(btn) {
   const corrections = await loadCorrections();
 
   try {
-    // Strip BBCode links before sending to translation API
-    // [url=https://...]label[/url] → keep label text only for translation
-    // Plain URLs → remove entirely (we'll re-linkify after)
-    const strippedText = originalText
-      .replace(/\[url=[^\]]+\]([^\[]*)\[\/url\]/gi, '$1')  // BBCode: keep label
-      .replace(/https?:\/\/[^\s<\[]+/g, '');               // bare URLs: remove
+    // Replace all links with placeholders before translating, restore after.
+    // Uses «L0», «L1» etc — unusual chars the translation API won't touch.
+    const linkStore = [];
+    const tokenised = originalText
+      .replace(/\[url=(https?:\/\/[^\]]+)\]([^\[]*)\[\/url\]/gi, (match) => {
+        linkStore.push(match);
+        return `\u00abL${linkStore.length - 1}\u00bb`;
+      })
+      .replace(/(?<!\[url=)(?<!href=")(https?:\/\/[^\s<\[]+)/g, (match) => {
+        linkStore.push(match);
+        return `\u00abL${linkStore.length - 1}\u00bb`;
+      });
 
     // Split into ~400 char chunks on sentence boundaries
-    const sentences = strippedText.match(/[^.!?]+[.!?]+/g) || [strippedText];
+    const sentences = tokenised.match(/[^.!?]+[.!?]+/g) || [tokenised];
     const chunks = [];
     let current = '';
     for (const s of sentences) {
@@ -89,8 +95,12 @@ async function translateNotes(btn) {
       await new Promise(r => setTimeout(r, 300));
     }
 
-    const translated = applyCorrections(parts.join(' '), corrections);
-    // Run through linkify in case any URLs survived stripping
+    // Restore placeholders back to original BBCode, then linkify
+    const withLinks = parts.join(' ').replace(/\u00abL(\d+)\u00bb/g, (_, i) => {
+      return linkStore[parseInt(i)] || '';
+    });
+
+    const translated = applyCorrections(withLinks, corrections);
     el.innerHTML = linkify(translated.replace(/\n/g, '<br>'));
     btn.textContent = 'Show original';
     _translated = true;
