@@ -222,6 +222,9 @@ const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 // Global linkify — also used by translate.js
 function linkify(text) {
   if (!text) return '';
+  // Tag links: [tag=ID]name[/tag]
+  text = text.replace(/\[tag=(\d+)\]([^\[]*)\[\/tag\]/gi,
+    '<a href="tags.html?tag=$1" style="color:var(--accent2);text-decoration:underline;font-size:0.88em;border:1px solid var(--accent2);border-radius:3px;padding:1px 7px;">🏷 $2</a>');
   // BBCode: [url=https://...]text[/url]
   text = text.replace(/\[url=(https?:\/\/[^\]]+)\]([^\[]*)\[\/url\]/gi,
     '<a href="$1" target="_blank" style="color:var(--accent);text-decoration:underline">$2</a>');
