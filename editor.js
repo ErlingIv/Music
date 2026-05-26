@@ -677,7 +677,8 @@ document.getElementById('editSearchMode').addEventListener('change', () => {
 document.getElementById('editSearch').addEventListener('input', () => {
   clearTimeout(editSearchTimeout);
   const q = document.getElementById('editSearch').value.trim();
-  if (q.length < 2) { document.getElementById('editSearchResults').innerHTML = ''; return; }
+  document.getElementById('editSearchResults').innerHTML = '';
+  if (q.length < 2) return;
   editSearchTimeout = setTimeout(() => searchCompositions(q), 300);
 });
 
