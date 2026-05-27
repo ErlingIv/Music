@@ -266,36 +266,39 @@ const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 const STYLE = ', painterly vintage illustration, muted earthy tones with deep blues and greens, 1890s Norway aesthetic, wide cinematic landscape format, highly detailed, no text, no watermark';
 
 const TAG_PROMPTS = {
-  'polar':              'Norwegian polar ship Fram trapped in arctic pack ice 1895, three-masted wooden schooner, aurora borealis green sky, Fridtjof Nansen expedition, dramatic frozen ocean, moonlight on ice floes' + STYLE,
-  'arktis':             'Norwegian polar ship Fram trapped in arctic pack ice 1895, three-masted wooden schooner, aurora borealis green sky, Fridtjof Nansen expedition' + STYLE,
-  'norge 1905':         'Norway independence 1905, jubilant crowds in Christiania, Norwegian flags, historic celebration' + STYLE,
-  '1905':               'Norway independence 1905, jubilant crowds in Christiania, Norwegian flags, historic celebration' + STYLE,
-  'norsk-amerikansk':   'Norwegian immigrants arriving America 1900, steamship dock, Ellis Island, hopeful emigrants' + STYLE,
-  'norsk-american':     'Norwegian immigrants arriving America 1900, steamship dock, hopeful emigrants' + STYLE,
-  'norwegian-american': 'Norwegian immigrants arriving America 1900, steamship dock, hopeful emigrants' + STYLE,
-  'kongefamilie':       'Norwegian royal family ceremony Oslo 1905, King Haakon VII coronation, grand cathedral' + STYLE,
-  'royal':              'Norwegian royal family ceremony Oslo 1905, King Haakon VII coronation, grand cathedral' + STYLE,
-  'bergen':             'Bergen Norway harbour 1890s, wooden Hanseatic wharf Bryggen, fishing boats, dramatic mountains' + STYLE,
-  'hefte':              'ornate Victorian music salon Norway 1890s, grand piano, sheet music, candlelight' + STYLE,
-  'carl warmuth':       'elegant Norwegian music publisher office 1890s, stacked sheet music, printing press' + STYLE,
-  'folk':               'Norwegian folk musicians playing Hardanger fiddle, mountain valley, traditional bunad costumes' + STYLE,
-  'church':             'medieval Norwegian stave church Borgund, misty forest, dramatic sky' + STYLE,
-  'hymn':               'Norwegian church interior 1890s, pipe organ, congregation, winter light through windows' + STYLE,
-  'grieg':              'Edvard Grieg composing at piano, Troldhaugen villa Bergen, Norwegian fjord view' + STYLE,
-  'national':           'majestic Norwegian mountain landscape Jotunheimen, romantic nationalism painting style' + STYLE,
-  'march':              'Norwegian military parade Christiania 1900, brass band, cobblestone street, national day' + STYLE,
-  'waltz':              'elegant ballroom Norway 1890s, couples dancing waltz, chandelier, formal dress' + STYLE,
-  'dance':              'Norwegian Halling folk dance celebration, village square, fiddle player, midsummer' + STYLE,
-  'children':           'Norwegian children playing outdoors 1900, snow, traditional clothing, winter landscape' + STYLE,
-  'christmas':          'Norwegian Christmas Eve 1890s, candlelit tree, family gathering, snow outside window' + STYLE,
-  'sea':                'Norwegian fishing village fjord 1890s, wooden boats, dramatic cliffs, northern light' + STYLE,
-  'mountain':           'Norwegian mountain Jotunheimen peaks, hikers 1890s, romantic sublime landscape' + STYLE,
-  'piano':              'Victorian concert hall Norway 1890s, grand piano on stage, attentive audience, gaslight' + STYLE,
-  'violin':             'Ole Bull Norwegian violinist concert, dramatic stage lighting, romantic era' + STYLE,
-  'opera':              'Norwegian opera performance 1890s, ornate theatre, costumed singers, audience' + STYLE,
-  'serenade':           'evening garden serenade Norway 1890s, moonlight, string quartet, summer terrace' + STYLE,
-  'lullaby':            'Norwegian mother singing lullaby to child, cozy timber farmhouse interior, candlelight' + STYLE,
-  'patriotic':          'Norway national day 17 May 1900, children procession, flags, Christiania street' + STYLE,
+  // ── Exact tag names from database (lowercase) ──
+  'polarmusikk':
+    'Norwegian polar ship Fram trapped in arctic pack ice 1895, three-masted wooden schooner, ' +
+    'aurora borealis filling green sky, Fridtjof Nansen expedition, moonlight on frozen ocean, ice floes in foreground' + STYLE,
+
+  'norge 1905':
+    'Norway independence day 1905 Christiania, jubilant crowds filling Karl Johans gate, ' +
+    'Norwegian flags draped from every window, trams and top hats, summer sunshine, historic city street' + STYLE,
+
+  'norsk-amerikansk':
+    'Norwegian emigrants on deck of transatlantic steamship 1900, crowded with hopeful families, ' +
+    'luggage and trunks, foggy Atlantic ocean, Statue of Liberty faint on horizon, emotional farewell' + STYLE,
+
+  'musikk til norges kongefamilie':
+    'King Haakon VII and Queen Maud of Norway coronation ceremony Nidaros Cathedral Trondheim 1906, ' +
+    'grand interior candlelight, orchestra playing, formal court dress, Norwegian royal regalia' + STYLE,
+
+  'royal events':
+    'Norwegian royal palace Christiania 1905, grand ceremonial balcony, cheering crowds below, ' +
+    'royal guard in uniform, Norwegian flag flying, golden afternoon light' + STYLE,
+
+  'bergen-sanger':
+    'Bergen Norway harbour Bryggen wharf 1890s, male choral society singing outdoors, ' +
+    'wooden Hanseatic buildings behind, fishing boats in harbour, dramatic Fløyen mountain, ' +
+    'men in dark formal suits, torchlight evening concert' + STYLE,
+
+  "carl warmuth's jubileums album":
+    'elegant Victorian music publishing house interior Christiania 1890s, ornate shelves of sheet music, ' +
+    'engraved music covers displayed, mahogany counter, gaslit shopfront, well-dressed customers browsing' + STYLE,
+
+  'hefte':
+    'Norwegian music salon 1890s, open collection of sheet music folios spread on table, ' +
+    'grand piano in background, oil lamp light, velvet curtains, bouquet of flowers, intimate domestic scene' + STYLE,
 };
 
 // Default prompt for unmatched tags
@@ -303,9 +306,11 @@ const DEFAULT_PROMPT = 'Norwegian music score concert hall 1890s, ornate Victori
 
 function getPrompt(tagName) {
   const lower = tagName.toLowerCase();
+  // Exact match
   if (TAG_PROMPTS[lower]) return TAG_PROMPTS[lower];
+  // Substring fallback
   for (const [key, prompt] of Object.entries(TAG_PROMPTS)) {
-    if (lower.includes(key)) return prompt;
+    if (lower.includes(key) || key.includes(lower)) return prompt;
   }
   return DEFAULT_PROMPT;
 }
