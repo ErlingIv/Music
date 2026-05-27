@@ -104,20 +104,33 @@
     overflow: hidden;
     position: relative;
     background: var(--faint);
-    display: none;
   }
-  .tag-hero.loaded { display: block; }
-
   .tag-hero img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     object-position: center 35%;
     display: block;
-    transition: opacity 0.4s;
+    transition: opacity 0.5s;
     opacity: 0;
   }
   .tag-hero img.ready { opacity: 1; }
+
+  /* Shimmer while loading */
+  .tag-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, var(--faint) 25%, var(--border) 50%, var(--faint) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s infinite;
+    z-index: 0;
+  }
+  .tag-hero img.ready ~ .tag-hero::before { display: none; }
+  @keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
 
   .tag-hero-overlay {
     position: absolute;
@@ -125,8 +138,9 @@
     background: linear-gradient(
       to bottom,
       rgba(0,0,0,0.02) 40%,
-      rgba(26,24,20,0.6) 100%
+      rgba(26,24,20,0.65) 100%
     );
+    z-index: 1;
   }
   .tag-hero-label {
     position: absolute;
@@ -136,30 +150,27 @@
     font-size: 1.6rem;
     font-weight: 700;
     color: #fff;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+    z-index: 2;
   }
-  .tag-hero-caption {
+  .tag-hero-credit {
     position: absolute;
     bottom: 0.5rem;
     right: 0.8rem;
-    font-size: 0.62rem;
-    color: rgba(255,255,255,0.5);
+    font-size: 0.6rem;
+    color: rgba(255,255,255,0.4);
     font-style: italic;
-    text-align: right;
-    max-width: 55%;
-    line-height: 1.3;
+    z-index: 2;
   }
-  .tag-hero-caption a { color: rgba(255,255,255,0.55); text-decoration: underline; }
 
-  /* ── Panel heading (below hero or standalone) ── */
+  /* ── Panel ── */
   .panel-box {
     background: var(--paper);
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-top: none;
+    border-radius: 0 0 10px 10px;
     overflow: hidden;
   }
-  .panel-box.has-hero { border-radius: 0 0 10px 10px; border-top: none; }
-
   .panel-heading {
     font-family: var(--serif);
     font-size: 1.1rem;
@@ -169,7 +180,6 @@
     display: flex;
     align-items: baseline;
     gap: 0.75rem;
-    background: var(--paper);
   }
   .panel-count {
     font-family: var(--body);
@@ -178,12 +188,7 @@
     font-weight: 400;
   }
 
-  /* ── Composition list ── */
-  .comp-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
+  .comp-list { display: flex; flex-direction: column; }
   .comp-row {
     padding: 0.75rem 1.1rem;
     display: flex;
@@ -196,23 +201,14 @@
   }
   .comp-row:last-child { border-bottom: none; }
   .comp-row:hover { background: var(--bg); }
-  .comp-title {
-    font-family: var(--serif);
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: var(--ink);
-  }
-  .comp-meta { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+  .comp-title { font-family: var(--serif); font-size: 0.95rem; font-weight: 500; color: var(--ink); }
+  .comp-meta  { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
   .comp-icons { display: flex; gap: 0.35rem; flex-shrink: 0; }
   .icon-badge {
-    font-size: 0.68rem;
-    padding: 2px 7px;
-    border-radius: 3px;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    background: var(--bg);
+    font-size: 0.68rem; padding: 2px 7px; border-radius: 3px;
+    border: 1px solid var(--border); color: var(--muted); background: var(--bg);
   }
-  .icon-badge.pdf { color: var(--accent); border-color: var(--accent); }
+  .icon-badge.pdf { color: var(--accent);  border-color: var(--accent); }
   .icon-badge.mp3 { color: var(--accent2); border-color: var(--accent2); }
 
   .loading-state { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.9rem; }
@@ -228,7 +224,6 @@
 
 <main>
 
-  <!-- ── Tag cloud view ── -->
   <div id="tagsView">
     <h1 class="page-title">🏷 Browse by Tag</h1>
     <p class="page-sub">Select a tag to see all compositions in that category.</p>
@@ -237,20 +232,17 @@
     </div>
   </div>
 
-  <!-- ── Tag detail view ── -->
   <div id="tagView">
     <button class="tag-back-btn" onclick="showTagCloud()">← All tags</button>
 
-    <!-- Hero image (shown when a matching image is found) -->
     <div class="tag-hero" id="tagHero">
       <img id="tagHeroImg" src="" alt="">
       <div class="tag-hero-overlay"></div>
       <div class="tag-hero-label" id="tagHeroLabel"></div>
-      <div class="tag-hero-caption" id="tagHeroCaption"></div>
+      <div class="tag-hero-credit">AI-generated image</div>
     </div>
 
-    <!-- Composition list panel -->
-    <div class="panel-box" id="panelBox">
+    <div class="panel-box">
       <div class="panel-heading">
         <span id="panelTagName"></span>
         <span class="panel-count" id="panelCount"></span>
@@ -270,114 +262,82 @@ const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
-// ── Tag name → Wikimedia Commons search query ─────────────────────────────────
+// ── Tag → image generation prompt ────────────────────────────────────────────
 // Keys matched as lowercase substrings of tag name.
-// Add new entries here as new tags are created.
-const TAG_IMAGE_QUERIES = {
-  'polar':              'Nansen Fram arctic expedition photograph',
-  'arktis':             'Nansen Fram arctic expedition photograph',
-  '1905':               'Norway 1905 independence union dissolution',
-  'norge 1905':         'Norway 1905 independence procession photograph',
-  'norsk-amerikansk':   'Norwegian emigrants America steamship 1900s',
-  'norsk-american':     'Norwegian emigrants America steamship 1900s',
-  'norwegian-american': 'Norwegian emigrants America steamship 1900s',
-  'kongefamilie':       'Norwegian royal family King Haakon 1905 photograph',
-  'royal':              'Norwegian royal family King Haakon 1905 photograph',
-  'bergen':             'Bergen Norway harbour 1900 vintage photograph',
-  'hefte':              'music score sheet vintage Norway',
-  'carl warmuth':       'music score sheet vintage Norway',
-  'folk':               'Hardanger fiddle Norway traditional folk',
-  'church':             'Norwegian stave church medieval',
-  'hymn':               'Norwegian church organ interior',
-  'grieg':              'Edvard Grieg composer Norway',
-  'national':           'Norway mountain landscape Romanticism painting',
-  'march':              'Norwegian military procession parade 1900s',
-  'waltz':              'ballroom dance Vienna 1900s vintage',
-  'dance':              'Norwegian folk dance Halling vintage',
-  'children':           'Norwegian children vintage illustration',
-  'christmas':          'Norway Christmas vintage jul illustration',
-  'sea':                'Norwegian fishing boat fjord vintage photograph',
-  'mountain':           'Norwegian mountain Jotunheimen vintage',
-  'piano':              'grand piano concert hall vintage',
-  'violin':             'Ole Bull violin Norway portrait',
-  'opera':              'opera stage Norway vintage',
-  'serenade':           'evening concert garden vintage Norway',
+// Style suffix is appended to every prompt for visual consistency.
+const STYLE = ', vintage engraving illustration style, muted earthy tones, 1890s Norway aesthetic, wide landscape format, no text';
+
+const TAG_PROMPTS = {
+  'polar':              'dramatic arctic expedition Norway 1895, Fram ship in pack ice, aurora borealis, heroic exploration' + STYLE,
+  'arktis':             'dramatic arctic expedition Norway 1895, Fram ship in pack ice, aurora borealis' + STYLE,
+  'norge 1905':         'Norway independence 1905, jubilant crowds in Christiania, Norwegian flags, historic celebration' + STYLE,
+  '1905':               'Norway independence 1905, jubilant crowds in Christiania, Norwegian flags, historic celebration' + STYLE,
+  'norsk-amerikansk':   'Norwegian immigrants arriving America 1900, steamship dock, Ellis Island, hopeful emigrants' + STYLE,
+  'norsk-american':     'Norwegian immigrants arriving America 1900, steamship dock, hopeful emigrants' + STYLE,
+  'norwegian-american': 'Norwegian immigrants arriving America 1900, steamship dock, hopeful emigrants' + STYLE,
+  'kongefamilie':       'Norwegian royal family ceremony Oslo 1905, King Haakon VII coronation, grand cathedral' + STYLE,
+  'royal':              'Norwegian royal family ceremony Oslo 1905, King Haakon VII coronation, grand cathedral' + STYLE,
+  'bergen':             'Bergen Norway harbour 1890s, wooden Hanseatic wharf Bryggen, fishing boats, dramatic mountains' + STYLE,
+  'hefte':              'ornate Victorian music salon Norway 1890s, grand piano, sheet music, candlelight' + STYLE,
+  'carl warmuth':       'elegant Norwegian music publisher office 1890s, stacked sheet music, printing press' + STYLE,
+  'folk':               'Norwegian folk musicians playing Hardanger fiddle, mountain valley, traditional bunad costumes' + STYLE,
+  'church':             'medieval Norwegian stave church Borgund, misty forest, dramatic sky' + STYLE,
+  'hymn':               'Norwegian church interior 1890s, pipe organ, congregation, winter light through windows' + STYLE,
+  'grieg':              'Edvard Grieg composing at piano, Troldhaugen villa Bergen, Norwegian fjord view' + STYLE,
+  'national':           'majestic Norwegian mountain landscape Jotunheimen, romantic nationalism painting style' + STYLE,
+  'march':              'Norwegian military parade Christiania 1900, brass band, cobblestone street, national day' + STYLE,
+  'waltz':              'elegant ballroom Norway 1890s, couples dancing waltz, chandelier, formal dress' + STYLE,
+  'dance':              'Norwegian Halling folk dance celebration, village square, fiddle player, midsummer' + STYLE,
+  'children':           'Norwegian children playing outdoors 1900, snow, traditional clothing, winter landscape' + STYLE,
+  'christmas':          'Norwegian Christmas Eve 1890s, candlelit tree, family gathering, snow outside window' + STYLE,
+  'sea':                'Norwegian fishing village fjord 1890s, wooden boats, dramatic cliffs, northern light' + STYLE,
+  'mountain':           'Norwegian mountain Jotunheimen peaks, hikers 1890s, romantic sublime landscape' + STYLE,
+  'piano':              'Victorian concert hall Norway 1890s, grand piano on stage, attentive audience, gaslight' + STYLE,
+  'violin':             'Ole Bull Norwegian violinist concert, dramatic stage lighting, romantic era' + STYLE,
+  'opera':              'Norwegian opera performance 1890s, ornate theatre, costumed singers, audience' + STYLE,
+  'serenade':           'evening garden serenade Norway 1890s, moonlight, string quartet, summer terrace' + STYLE,
+  'lullaby':            'Norwegian mother singing lullaby to child, cozy timber farmhouse interior, candlelight' + STYLE,
+  'patriotic':          'Norway national day 17 May 1900, children procession, flags, Christiania street' + STYLE,
 };
 
-function getImageQuery(tagName) {
+// Default prompt for unmatched tags
+const DEFAULT_PROMPT = 'Norwegian music score concert hall 1890s, ornate Victorian interior, sheet music, candlelight' + STYLE;
+
+function getPrompt(tagName) {
   const lower = tagName.toLowerCase();
-  // Exact match first
-  if (TAG_IMAGE_QUERIES[lower]) return TAG_IMAGE_QUERIES[lower];
-  // Substring match
-  for (const [key, query] of Object.entries(TAG_IMAGE_QUERIES)) {
-    if (lower.includes(key)) return query;
+  if (TAG_PROMPTS[lower]) return TAG_PROMPTS[lower];
+  for (const [key, prompt] of Object.entries(TAG_PROMPTS)) {
+    if (lower.includes(key)) return prompt;
   }
-  return null;
+  return DEFAULT_PROMPT;
 }
 
-// ── Wikimedia Commons image fetch ─────────────────────────────────────────────
-// Uses generator=search with prop=pageimages for a direct thumbnail URL.
-async function fetchWikimediaImage(searchQuery) {
-  const params = new URLSearchParams({
-    action:       'query',
-    generator:    'search',
-    gsrsearch:    searchQuery,
-    gsrnamespace: '6',       // File namespace only
-    gsrlimit:     '12',
-    prop:         'imageinfo',
-    iiprop:       'url|extmetadata|mime|size',
-    iiurlwidth:   '900',
-    format:       'json',
-    origin:       '*',
-  });
-  try {
-    const r = await fetch(`https://commons.wikimedia.org/w/api.php?${params}`);
-    const data = await r.json();
-    const pages = Object.values(data?.query?.pages || {});
-
-    // Sort by page id (relevance order) and pick first usable photo
-    pages.sort((a, b) => (a.index || a.pageid) - (b.index || b.pageid));
-
-    for (const page of pages) {
-      const ii = page.imageinfo?.[0];
-      if (!ii) continue;
-      const url = ii.url || '';
-      const mime = ii.mime || '';
-      const w = ii.width || 0;
-      const h = ii.height || 0;
-      // Skip non-photos, very tall/narrow (portrait orientation badly distorted), small images
-      if (!mime.startsWith('image/jpeg') && !mime.startsWith('image/png')) continue;
-      if (w < 600 || h < 300) continue;
-      if (h > w * 1.2) continue; // skip portrait-dominant images
-      const thumbUrl = ii.thumburl || url; // iiurlwidth gives thumburl
-
-      // Attribution
-      const meta   = ii.extmetadata || {};
-      const artist = meta.Artist?.value   ? stripHtml(meta.Artist.value)   : '';
-      const credit = meta.Credit?.value   ? stripHtml(meta.Credit.value)   : '';
-      const desc   = meta.ImageDescription?.value ? stripHtml(meta.ImageDescription.value).slice(0, 80) : '';
-      const caption = artist || credit || desc || '';
-      const pageLink = `https://commons.wikimedia.org/wiki/${encodeURIComponent(page.title)}`;
-
-      return { url: thumbUrl, caption, pageLink, title: page.title };
-    }
-  } catch (e) { /* silent — no image */ }
-  return null;
+function pollinationsUrl(prompt) {
+  // seed derived from prompt for stable/consistent image on repeated loads
+  const seed = prompt.split('').reduce((a, c) => (a * 31 + c.charCodeAt(0)) & 0xfffffff, 0);
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1200&height=400&seed=${seed}&nologo=true`;
 }
 
-function stripHtml(html) {
-  const d = document.createElement('div');
-  d.innerHTML = html;
-  return (d.textContent || d.innerText || '').trim();
+// ── Hero image ────────────────────────────────────────────────────────────────
+function loadHeroImage(tagName) {
+  const img   = document.getElementById('tagHeroImg');
+  const label = document.getElementById('tagHeroLabel');
+
+  img.classList.remove('ready');
+  label.textContent = tagName;
+
+  const url = pollinationsUrl(getPrompt(tagName));
+
+  img.onload  = () => img.classList.add('ready');
+  img.onerror = () => { /* keep shimmer, no crash */ };
+  img.src = url;
+  img.alt = tagName;
 }
 
-// ── Show/hide views ───────────────────────────────────────────────────────────
+// ── View switching ────────────────────────────────────────────────────────────
 function showTagCloud() {
   document.getElementById('tagsView').classList.remove('hidden');
   document.getElementById('tagView').classList.remove('visible');
-  document.getElementById('tagHero').classList.remove('loaded');
-  // Clear active pill
-  document.querySelectorAll('.tag-pill').forEach(p => p.classList.remove('active'));
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -387,49 +347,7 @@ function showTagDetail() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ── Load hero image for tag ───────────────────────────────────────────────────
-async function loadHeroImage(tagName) {
-  const hero    = document.getElementById('tagHero');
-  const img     = document.getElementById('tagHeroImg');
-  const label   = document.getElementById('tagHeroLabel');
-  const caption = document.getElementById('tagHeroCaption');
-  const panelBox = document.getElementById('panelBox');
-
-  // Reset
-  hero.classList.remove('loaded');
-  img.classList.remove('ready');
-  panelBox.classList.remove('has-hero');
-
-  const query = getImageQuery(tagName);
-  if (!query) return;
-
-  const result = await fetchWikimediaImage(query);
-  if (!result) return;
-
-  label.textContent = tagName;
-
-  if (result.caption) {
-    caption.innerHTML = result.caption +
-      (result.pageLink ? ` · <a href="${result.pageLink}" target="_blank" rel="noopener">Wikimedia Commons</a>` : '');
-  } else {
-    caption.innerHTML = result.pageLink
-      ? `<a href="${result.pageLink}" target="_blank" rel="noopener">Wikimedia Commons</a>` : '';
-  }
-
-  img.onload = () => {
-    hero.classList.add('loaded');
-    panelBox.classList.add('has-hero');
-    img.classList.add('ready');
-  };
-  img.onerror = () => {
-    hero.classList.remove('loaded');
-    panelBox.classList.remove('has-hero');
-  };
-  img.src = result.url;
-  img.alt = tagName;
-}
-
-// ── Tags loading ──────────────────────────────────────────────────────────────
+// ── Tags ──────────────────────────────────────────────────────────────────────
 let allTags = [];
 
 async function loadTags() {
@@ -439,10 +357,7 @@ async function loadTags() {
   );
   allTags = await r.json();
 
-  const ctR = await fetch(
-    `${SUPABASE_URL}/rest/v1/composition_tag?select=tag_id`,
-    { headers: H }
-  );
+  const ctR = await fetch(`${SUPABASE_URL}/rest/v1/composition_tag?select=tag_id`, { headers: H });
   const countMap = {};
   (await ctR.json()).forEach(row => {
     countMap[row.tag_id] = (countMap[row.tag_id] || 0) + 1;
@@ -462,7 +377,6 @@ async function loadTags() {
     </div>
   `).join('');
 
-  // Pre-select from URL param
   const preTag = new URLSearchParams(window.location.search).get('tag');
   if (preTag) {
     const match = allTags.find(t => t.tag_id == preTag);
@@ -472,16 +386,12 @@ async function loadTags() {
 
 // ── Select tag ────────────────────────────────────────────────────────────────
 async function selectTag(tagId, tagName) {
-  // Switch to detail view immediately
   document.getElementById('panelTagName').textContent = tagName;
   document.getElementById('panelCount').textContent = '';
   document.getElementById('compList').innerHTML = '<div class="loading-state">Loading…</div>';
   showTagDetail();
-
-  // Fire image load in parallel
   loadHeroImage(tagName);
 
-  // Fetch composition_ids for this tag
   const ctR = await fetch(
     `${SUPABASE_URL}/rest/v1/composition_tag?tag_id=eq.${tagId}&select=composition_id`,
     { headers: H }
@@ -506,7 +416,6 @@ async function selectTag(tagId, tagName) {
   const scores = await scoreR.json();
   const ccRows = await ccR.json();
 
-  // Fetch composer names
   const personIds = [...new Set(ccRows.map(r => r.person_id))];
   let persons = [];
   for (let i = 0; i < personIds.length; i += 200) {
