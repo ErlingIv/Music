@@ -103,34 +103,32 @@
     border-radius: 10px 10px 0 0;
     overflow: hidden;
     position: relative;
-    background: var(--faint);
+    /* Shimmer background visible until .loaded is added */
+    background: linear-gradient(90deg, var(--faint) 25%, var(--border) 50%, var(--faint) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s infinite;
   }
+  .tag-hero.loaded {
+    background: #333;
+    animation: none;
+  }
+  @keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
   .tag-hero img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     object-position: center 35%;
     display: block;
+    position: relative;
+    z-index: 1;
     transition: opacity 0.5s;
     opacity: 0;
   }
-  .tag-hero img.ready { opacity: 1; }
-
-  /* Shimmer while loading */
-  .tag-hero::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, var(--faint) 25%, var(--border) 50%, var(--faint) 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.6s infinite;
-    z-index: 0;
-  }
-  .tag-hero img.ready ~ .tag-hero::before { display: none; }
-  @keyframes shimmer {
-    0%   { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-  }
+  .tag-hero.loaded img { opacity: 1; }
 
   .tag-hero-overlay {
     position: absolute;
@@ -140,7 +138,7 @@
       rgba(0,0,0,0.02) 40%,
       rgba(26,24,20,0.65) 100%
     );
-    z-index: 1;
+    z-index: 2;
   }
   .tag-hero-label {
     position: absolute;
@@ -151,7 +149,7 @@
     font-weight: 700;
     color: #fff;
     text-shadow: 0 1px 6px rgba(0,0,0,0.6);
-    z-index: 2;
+    z-index: 3;
   }
   .tag-hero-credit {
     position: absolute;
@@ -160,7 +158,7 @@
     font-size: 0.6rem;
     color: rgba(255,255,255,0.4);
     font-style: italic;
-    z-index: 2;
+    z-index: 3;
   }
 
   /* ── Panel ── */
@@ -323,13 +321,14 @@ function loadHeroImage(tagName) {
   const img   = document.getElementById('tagHeroImg');
   const label = document.getElementById('tagHeroLabel');
 
-  img.classList.remove('ready');
   label.textContent = tagName;
 
   const url = pollinationsUrl(getPrompt(tagName));
 
-  img.onload  = () => img.classList.add('ready');
-  img.onerror = () => { /* keep shimmer, no crash */ };
+  const hero  = document.getElementById('tagHero');
+  hero.classList.remove('loaded');
+  img.onload  = () => hero.classList.add('loaded');
+  img.onerror = () => { /* keep shimmer */ };
   img.src = url;
   img.alt = tagName;
 }
