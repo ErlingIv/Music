@@ -81,22 +81,70 @@
     opacity: 0.7;
   }
 
-  /* ── Compositions list ── */
-  .compositions-panel {
-    display: none;
-  }
+  /* ── Compositions panel ── */
+  .compositions-panel { display: none; }
   .compositions-panel.visible { display: block; }
 
+  /* ── Tag hero image ── */
+  .tag-hero {
+    position: relative;
+    width: 100%;
+    height: 220px;
+    border-radius: 10px 10px 0 0;
+    overflow: hidden;
+    background: var(--faint);
+    display: none; /* shown when image loads */
+  }
+  .tag-hero.visible { display: block; }
+  .tag-hero img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 30%;
+    display: block;
+  }
+  .tag-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      rgba(0,0,0,0.05) 0%,
+      rgba(26,24,20,0.55) 100%
+    );
+  }
+  .tag-hero-caption {
+    position: absolute;
+    bottom: 0.6rem;
+    right: 0.8rem;
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.6);
+    font-style: italic;
+    max-width: 60%;
+    text-align: right;
+    line-height: 1.3;
+  }
+  .tag-hero-caption a {
+    color: rgba(255,255,255,0.6);
+    text-decoration: underline;
+  }
+
+  /* ── Panel heading ── */
   .panel-heading {
     font-family: var(--serif);
     font-size: 1.2rem;
     font-weight: 500;
-    margin-bottom: 1rem;
-    padding-bottom: 0.6rem;
-    border-bottom: 1px solid var(--border);
+    padding: 0.9rem 1.2rem 0.6rem;
+    border: 1px solid var(--border);
+    border-top: none;
+    background: var(--paper);
     display: flex;
     align-items: baseline;
     gap: 0.75rem;
+    /* When no hero, round top corners */
+  }
+  .panel-heading.no-hero {
+    border-top: 1px solid var(--border);
+    border-radius: 10px 10px 0 0;
   }
   .panel-count {
     font-family: var(--body);
@@ -105,7 +153,18 @@
     font-weight: 400;
   }
 
-  .comp-list { display: flex; flex-direction: column; gap: 0.45rem; }
+  .comp-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    overflow: hidden;
+    background: var(--bg);
+    padding: 0.7rem;
+  }
+
   .comp-row {
     background: var(--paper);
     border: 1px solid var(--border);
@@ -146,7 +205,12 @@
   .icon-badge.mp3 { color: var(--accent2); border-color: var(--accent2); }
 
   .loading-state { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.9rem; }
-  .empty-state   { color: var(--muted); font-size: 0.9rem; padding: 1.5rem 0; text-align: center; }
+  .empty-state   { color: var(--muted); font-size: 0.9rem; padding: 1.5rem; text-align: center; }
+
+  /* hero-is-present: merge hero bottom border with heading top */
+  .tag-hero.visible + .panel-heading {
+    border-top: none;
+  }
 </style>
 </head>
 <body>
@@ -165,7 +229,14 @@
   </div>
 
   <div id="compositionsPanel" class="compositions-panel">
-    <div class="panel-heading">
+    <!-- hero image (shown when available) -->
+    <div id="tagHero" class="tag-hero">
+      <img id="tagHeroImg" src="" alt="">
+      <div class="tag-hero-overlay"></div>
+      <div class="tag-hero-caption" id="tagHeroCaption"></div>
+    </div>
+
+    <div class="panel-heading no-hero" id="panelHeading">
       <span id="panelTagName"></span>
       <span class="panel-count" id="panelCount"></span>
     </div>
@@ -180,18 +251,141 @@ const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
+// ── Tag → Wikimedia image search term ────────────────────────────────────────
+// Keys are lowercase substrings matched against the tag name.
+// Values are Wikimedia Commons search queries that reliably return fitting images.
+// Add entries here as new tags are created; unmatched tags show no image.
+const TAG_IMAGE_QUERIES = {
+  'polar':           'Fridtjof Nansen arctic expedition Norway',
+  'arctic':          'Fridtjof Nansen arctic expedition Norway',
+  '1905':            'Norwegian constitution 1905 dissolution union',
+  'norwegian-american': 'Norwegian immigrants America steamship 1900',
+  'folk':            'Hardanger fiddle Norway traditional',
+  'hardanger':       'Hardanger fiddle Norway traditional',
+  'church':          'Norwegian stave church medieval',
+  'hymn':            'Norwegian church organ interior',
+  'romantic':        'Edvard Grieg composer Norway',
+  'grieg':           'Edvard Grieg composer Norway',
+  'national':        'Norway mountain landscape Romanticism painting',
+  'march':           'Norway military parade 1900s vintage',
+  'waltz':           'ballroom dancing Vienna 1900s vintage',
+  'dance':           'Norwegian folk dance Halling vintage',
+  'children':        'Norwegian children vintage illustration',
+  'christmas':       'Norway Christmas vintage illustration jul',
+  'sailor':          'Norwegian sailor ship sea vintage',
+  'sea':             'Norwegian fishing boat fjord vintage',
+  'mountain':        'Norwegian mountain Jotunheimen vintage painting',
+  'piano':           'grand piano concert hall vintage 1900s',
+  'violin':          'Hardanger fiddle Norway Ole Bull',
+  'opera':           'opera stage Norway vintage',
+  'lullaby':          'mother child Norway vintage illustration',
+  'patriotic':       'Norway national day 17 mai vintage',
+  'serenade':        'evening concert garden vintage Norway',
+};
+
+// Find the best query for a given tag name
+function getImageQuery(tagName) {
+  const lower = tagName.toLowerCase();
+  for (const [key, query] of Object.entries(TAG_IMAGE_QUERIES)) {
+    if (lower.includes(key)) return query;
+  }
+  return null;
+}
+
+// Fetch one suitable image from Wikimedia Commons
+async function fetchWikimediaImage(searchQuery) {
+  const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchQuery)}&srnamespace=6&srlimit=5&format=json&origin=*`;
+  try {
+    const r = await fetch(url);
+    const data = await r.json();
+    const results = data?.query?.search || [];
+    for (const result of results) {
+      const title = result.title; // e.g. "File:Nansen.jpg"
+      // Get image info
+      const infoUrl = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=imageinfo&iiprop=url|extmetadata&format=json&origin=*`;
+      const infoR = await fetch(infoUrl);
+      const infoData = await infoR.json();
+      const pages = infoData?.query?.pages || {};
+      for (const page of Object.values(pages)) {
+        const ii = page?.imageinfo?.[0];
+        if (!ii) continue;
+        const imgUrl = ii.url;
+        // Skip SVGs, audio files, very small images
+        if (!imgUrl) continue;
+        if (imgUrl.match(/\.(svg|ogg|mp3|pdf|tif)$/i)) continue;
+        const artist = ii.extmetadata?.Artist?.value || '';
+        const credit = ii.extmetadata?.Credit?.value || '';
+        const desc   = ii.extmetadata?.ImageDescription?.value || '';
+        // Build clean caption from metadata
+        let caption = '';
+        if (artist) caption = stripHtml(artist);
+        else if (credit) caption = stripHtml(credit);
+        if (!caption && desc) caption = stripHtml(desc).slice(0, 80);
+        const pageLink = `https://commons.wikimedia.org/wiki/${encodeURIComponent(title)}`;
+        return { url: imgUrl, caption, pageLink };
+      }
+    }
+  } catch(e) { /* silent fail */ }
+  return null;
+}
+
+function stripHtml(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+}
+
+// ── Load & display tag image ──────────────────────────────────────────────────
+async function showTagImage(tagName) {
+  const hero    = document.getElementById('tagHero');
+  const heading = document.getElementById('panelHeading');
+  const img     = document.getElementById('tagHeroImg');
+  const caption = document.getElementById('tagHeroCaption');
+
+  // Reset
+  hero.classList.remove('visible');
+  heading.classList.add('no-hero');
+
+  const query = getImageQuery(tagName);
+  if (!query) return;
+
+  const result = await fetchWikimediaImage(query);
+  if (!result) return;
+
+  img.src = result.url;
+  img.alt = tagName;
+
+  if (result.caption) {
+    caption.innerHTML = result.caption +
+      (result.pageLink ? ` · <a href="${result.pageLink}" target="_blank" rel="noopener">Wikimedia Commons</a>` : '');
+  } else {
+    caption.innerHTML = result.pageLink
+      ? `<a href="${result.pageLink}" target="_blank" rel="noopener">Wikimedia Commons</a>`
+      : '';
+  }
+
+  // Only show hero once image has actually loaded
+  img.onload = () => {
+    hero.classList.add('visible');
+    heading.classList.remove('no-hero');
+  };
+  img.onerror = () => {
+    hero.classList.remove('visible');
+    heading.classList.add('no-hero');
+  };
+}
+
+// ── Tags ─────────────────────────────────────────────────────────────────────
 let allTags = [];
 let activeTagId = null;
 
 async function loadTags() {
-  // Fetch all tags
   const r = await fetch(
     `${SUPABASE_URL}/rest/v1/tag?select=tag_id,tag_name&order=tag_name.asc`,
     { headers: H }
   );
   allTags = await r.json();
 
-  // Fetch count per tag
   const ctR = await fetch(
     `${SUPABASE_URL}/rest/v1/composition_tag?select=tag_id`,
     { headers: H }
@@ -209,13 +403,13 @@ async function loadTags() {
   }
 
   cloud.innerHTML = allTags.map(t => `
-    <div class="tag-pill" id="tag-pill-${t.tag_id}" onclick="selectTag(${t.tag_id}, '${t.tag_name.replace(/'/g, "\\'")}')">
+    <div class="tag-pill" id="tag-pill-${t.tag_id}"
+         onclick="selectTag(${t.tag_id}, '${t.tag_name.replace(/'/g, "\\'")}')">
       ${t.tag_name}
       <span class="tag-count">${countMap[t.tag_id] || 0}</span>
     </div>
   `).join('');
 
-  // If tag pre-selected from URL param
   const params = new URLSearchParams(window.location.search);
   const preTag = params.get('tag');
   if (preTag) {
@@ -225,11 +419,11 @@ async function loadTags() {
 }
 
 async function selectTag(tagId, tagName) {
-  // Toggle off if same tag clicked again
   if (activeTagId === tagId) {
     activeTagId = null;
     document.querySelectorAll('.tag-pill').forEach(p => p.classList.remove('active'));
     document.getElementById('compositionsPanel').classList.remove('visible');
+    document.getElementById('tagHero').classList.remove('visible');
     return;
   }
 
@@ -246,6 +440,9 @@ async function selectTag(tagId, tagName) {
   // Scroll to panel
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+  // Fire image fetch in parallel — it appears when ready
+  showTagImage(tagName);
+
   // Fetch composition_ids for this tag
   const ctR = await fetch(
     `${SUPABASE_URL}/rest/v1/composition_tag?tag_id=eq.${tagId}&select=composition_id`,
@@ -261,7 +458,6 @@ async function selectTag(tagId, tagName) {
 
   const compIds = ctRows.map(r => r.composition_id).join(',');
 
-  // Fetch compositions with a MuseScore link + scores in parallel
   const [compR, scoreR] = await Promise.all([
     fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&public_domain=eq.Yes&musescore_link=not.is.null&select=composition_id,title,year_composed,musescore_link,public_domain&order=title.asc`, { headers: H }),
     fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=in.(${compIds})&select=composition_id,pdf_url,mp3_url`, { headers: H }),
@@ -269,14 +465,13 @@ async function selectTag(tagId, tagName) {
   const comps  = await compR.json();
   const scores = await scoreR.json();
 
-  // Fetch composers for each composition in one batch
+  // Fetch composers via composition_person
   const ccR = await fetch(
     `${SUPABASE_URL}/rest/v1/composition_person?composition_id=in.(${compIds})&role=eq.Composer&select=composition_id,person_id`,
     { headers: H }
   );
   const ccRows = await ccR.json();
 
-  // Fetch person names
   const personIds = [...new Set(ccRows.map(r => r.person_id))];
   let persons = [];
   for (let i = 0; i < personIds.length; i += 200) {
@@ -289,7 +484,7 @@ async function selectTag(tagId, tagName) {
   }
 
   const personMap = Object.fromEntries(persons.map(p => [p.person_id, p]));
-  const ccMap = {}; // composition_id → [person names]
+  const ccMap = {};
   ccRows.forEach(row => {
     if (!ccMap[row.composition_id]) ccMap[row.composition_id] = [];
     const p = personMap[row.person_id];
@@ -302,7 +497,7 @@ async function selectTag(tagId, tagName) {
   document.getElementById('panelCount').textContent =
     `${comps.length} composition${comps.length !== 1 ? 's' : ''}`;
 
-  document.getElementById('compList').innerHTML = comps.map(comp => {
+  document.getElementById('compList').innerHTML = comps.length ? comps.map(comp => {
     const s = scoreMap[comp.composition_id];
     const composers = (ccMap[comp.composition_id] || []).join(', ') || '—';
     return `
@@ -318,7 +513,7 @@ async function selectTag(tagId, tagName) {
           ${comp.public_domain === 'Yes' ? '<span class="icon-badge" style="color:var(--accent2);border-color:var(--accent2)">PD</span>' : ''}
         </div>
       </a>`;
-  }).join('');
+  }).join('') : '<div class="empty-state">No public domain scores found for this tag.</div>';
 }
 
 loadTags();

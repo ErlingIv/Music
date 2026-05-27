@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lyricists — Norske Musikknoter</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=Source+Serif+4:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #f7f4ee;
+    --paper:   #fffef9;
+    --ink:     #1a1814;
+    --muted:   #7a7060;
+    --faint:   #e8e2d4;
+    --accent:  #8b3a1e;
+    --accent2: #2a5c45;
+    --border:  #d4cdc0;
+    --serif:   'Playfair Display', Georgia, serif;
+    --body:    'Source Serif 4', Georgia, serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: var(--body); background: var(--bg); color: var(--ink); min-height: 100vh; }
+
+  /* ── Header ── */
+  .site-header {
+    background: var(--paper);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .back-link {
+    font-size: 0.82rem;
+    color: var(--muted);
+    text-decoration: none;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .back-link:hover { color: var(--accent); }
+  .site-name {
+    font-family: var(--serif);
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  /* ── Main ── */
+  main { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  /* ── Page heading ── */
+  .page-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .page-title {
+    font-family: var(--serif);
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .page-count {
+    font-size: 0.82rem;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Alpha index bar ── */
+  .alpha-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin-bottom: 1.5rem;
+  }
+  .alpha-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    font-family: var(--body);
+    font-weight: 500;
+    color: var(--muted);
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    user-select: none;
+  }
+  .alpha-btn:hover { background: var(--faint); color: var(--ink); }
+  .alpha-btn.active { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+  .alpha-btn.disabled { opacity: 0.3; cursor: default; pointer-events: none; }
+
+  /* ── Lyricist grid ── */
+  .lyricist-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.6rem;
+  }
+  .lyricist-card {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent2);
+    border-radius: 6px;
+    padding: 0.7rem 0.9rem;
+    text-decoration: none;
+    display: block;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .lyricist-card:hover {
+    border-color: var(--accent2);
+    box-shadow: 0 2px 8px rgba(42,92,69,0.12);
+  }
+  .lyricist-name {
+    font-family: var(--serif);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--ink);
+    line-height: 1.3;
+  }
+  .lyricist-meta {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .work-count {
+    font-size: 0.75rem;
+    color: var(--accent2);
+  }
+  .female-badge {
+    font-size: 0.68rem;
+    background: #f0e6f0;
+    color: #7a3a7a;
+    border: 1px solid #d4b8d4;
+    border-radius: 3px;
+    padding: 1px 5px;
+  }
+
+  /* ── Letter group ── */
+  .letter-group { margin-bottom: 1.5rem; }
+  .letter-heading {
+    font-family: var(--serif);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--accent2);
+    opacity: 0.6;
+    border-left: 3px solid var(--accent2);
+    padding-left: 0.6rem;
+    margin-bottom: 0.6rem;
+    line-height: 1;
+  }
+
+  /* ── Loading / empty states ── */
+  .loading-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+  }
+  .loading-dots::after {
+    content: '...';
+    animation: dots 1.2s steps(4, end) infinite;
+  }
+  @keyframes dots {
+    0%, 20% { content: '.'; }
+    40%      { content: '..'; }
+    60%, 100%{ content: '...'; }
+  }
+
+  footer {
+    text-align: center;
+    padding: 1.5rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    letter-spacing: 0.04em;
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a class="back-link" href="index.html">← Back</a>
+  <a class="site-name" href="index.html" id="siteNameLink">Norske Musikknoter</a>
+</header>
+
+<main>
+  <div class="page-header">
+    <h1 class="page-title">✍ Lyricists</h1>
+    <span class="page-count" id="pageCount"></span>
+  </div>
+
+  <div class="alpha-bar" id="alphaBar"></div>
+
+  <div id="lyricistContainer">
+    <div class="loading-state"><span class="loading-dots">Loading</span></div>
+  </div>
+</main>
+
+<footer>
+  Music Collection · Historical Nordic Sheet Music · Public Domain Scores
+</footer>
+
+<script src="config.js"></script>
+<script>
+document.getElementById('siteNameLink').textContent = SITE_NAME;
+const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
+const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
+
+const FLAGS = { NO:'🇳🇴', SE:'🇸🇪', DK:'🇩🇰', FI:'🇫🇮', IS:'🇮🇸',
+                DE:'🇩🇪', US:'🇺🇸', FR:'🇫🇷', GB:'🇬🇧', IT:'🇮🇹',
+                AT:'🇦🇹', BE:'🇧🇪', HU:'🇭🇺', AU:'🇦🇺', CZ:'🇨🇿',
+                PL:'🇵🇱', VE:'🇻🇪' };
+
+let allLyricists = [];
+let activeLetter = 'ALL';
+
+async function fetchLyricists() {
+  // 1. Find person_ids linked to PD compositions as Lyricist
+  const pdPersonIds = new Set();
+  const countMap = {};
+  let offset = 0;
+  while (true) {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/composition_person?role=eq.Lyricist&select=person_id,composition:composition_id(public_domain,musescore_link)&limit=1000&offset=${offset}`,
+      { headers: H }
+    );
+    const rows = await r.json();
+    if (!rows.length) break;
+    rows.forEach(row => {
+      if (row.composition?.public_domain === 'Yes' && row.composition?.musescore_link) {
+        pdPersonIds.add(row.person_id);
+        countMap[row.person_id] = (countMap[row.person_id] || 0) + 1;
+      }
+    });
+    if (rows.length < 1000) break;
+    offset += 1000;
+  }
+
+  // 2. Fetch person records in chunks
+  const ids = [...pdPersonIds];
+  let persons = [];
+  for (let i = 0; i < ids.length; i += 200) {
+    const chunk = ids.slice(i, i + 200).join(',');
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/person?person_id=in.(${chunk})&select=person_id,first_name,last_name,born,died,nationality,gender&order=last_name.asc`,
+      { headers: H }
+    );
+    persons = persons.concat(await r.json());
+  }
+
+  // 3. Attach counts and sort by last name
+  persons.forEach(p => { p.work_count = countMap[p.person_id] || 0; });
+  persons.sort((a, b) => (a.last_name || '').localeCompare(b.last_name || '', 'no'));
+  allLyricists = persons;
+
+  render();
+}
+
+function render() {
+  const ALL_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ'.split('');
+  const presentLetters = new Set(allLyricists.map(p => (p.last_name || '?')[0].toUpperCase()));
+
+  // Alpha bar
+  document.getElementById('alphaBar').innerHTML = `
+    <div class="alpha-btn ${activeLetter === 'ALL' ? 'active' : ''}"
+         onclick="setLetter('ALL')">All</div>
+    ${ALL_LETTERS.map(l => `
+      <div class="alpha-btn ${!presentLetters.has(l) ? 'disabled' : ''} ${activeLetter === l ? 'active' : ''}"
+           onclick="setLetter('${l}')">
+        ${l}
+      </div>`).join('')}
+  `;
+
+  // Filter
+  const filtered = activeLetter === 'ALL'
+    ? allLyricists
+    : allLyricists.filter(p => (p.last_name || '?')[0].toUpperCase() === activeLetter);
+
+  document.getElementById('pageCount').textContent =
+    `${filtered.length} lyricist${filtered.length !== 1 ? 's' : ''}`;
+
+  if (!filtered.length) {
+    document.getElementById('lyricistContainer').innerHTML =
+      '<div class="loading-state">No lyricists found.</div>';
+    return;
+  }
+
+  // Group by first letter
+  const groups = {};
+  filtered.forEach(p => {
+    const l = (p.last_name || '?')[0].toUpperCase();
+    if (!groups[l]) groups[l] = [];
+    groups[l].push(p);
+  });
+
+  document.getElementById('lyricistContainer').innerHTML =
+    Object.entries(groups).map(([letter, list]) => `
+      <div class="letter-group" id="letter-${letter}">
+        <div class="letter-heading">${letter}</div>
+        <div class="lyricist-grid">
+          ${list.map(lyricistCard).join('')}
+        </div>
+      </div>
+    `).join('');
+}
+
+function lyricistCard(p) {
+  const years  = [p.born, p.died].filter(Boolean).join('–');
+  const flag   = FLAGS[p.nationality] || '';
+  const female = p.gender === 'F' ? '<span class="female-badge">♀</span>' : '';
+  return `
+    <a class="lyricist-card" href="composer.html?id=${p.person_id}&role=Lyricist">
+      <div class="lyricist-name">${p.last_name}, ${p.first_name || ''} ${flag}</div>
+      <div class="lyricist-meta">
+        ${years ? `<span>${years}</span>` : ''}
+        ${female}
+        <span class="work-count">${p.work_count} work${p.work_count !== 1 ? 's' : ''}</span>
+      </div>
+    </a>
+  `;
+}
+
+function setLetter(letter) {
+  activeLetter = letter;
+  render();
+  if (letter !== 'ALL') {
+    const el = document.getElementById(`letter-${letter}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+fetchLyricists();
+</script>
+</body>
+</html>
