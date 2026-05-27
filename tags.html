@@ -49,12 +49,14 @@
   }
   .page-sub { font-size: 0.88rem; color: var(--muted); margin-bottom: 2rem; }
 
-  /* ── Tags cloud ── */
+  /* ── Tags cloud view ── */
+  #tagsView { display: block; }
+  #tagsView.hidden { display: none; }
+
   .tags-cloud {
     display: flex;
     flex-wrap: wrap;
     gap: 0.6rem;
-    margin-bottom: 2.5rem;
   }
   .tag-pill {
     display: inline-flex;
@@ -71,80 +73,103 @@
     user-select: none;
   }
   .tag-pill:hover { border-color: var(--accent2); color: var(--accent2); }
-  .tag-pill.active {
-    background: var(--accent2);
-    border-color: var(--accent2);
-    color: #fff;
-  }
-  .tag-count {
-    font-size: 0.72rem;
-    opacity: 0.7;
-  }
+  .tag-count { font-size: 0.72rem; opacity: 0.7; }
 
-  /* ── Compositions panel ── */
-  .compositions-panel { display: none; }
-  .compositions-panel.visible { display: block; }
+  /* ── Tag detail view ── */
+  #tagView { display: none; }
+  #tagView.visible { display: block; }
 
-  /* ── Tag hero image ── */
+  .tag-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: var(--body);
+  }
+  .tag-back-btn:hover { color: var(--accent); }
+
+  /* ── Hero image ── */
   .tag-hero {
-    position: relative;
     width: 100%;
-    height: 220px;
+    height: 240px;
     border-radius: 10px 10px 0 0;
     overflow: hidden;
+    position: relative;
     background: var(--faint);
-    display: none; /* shown when image loads */
+    display: none;
   }
-  .tag-hero.visible { display: block; }
+  .tag-hero.loaded { display: block; }
+
   .tag-hero img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: center 30%;
+    object-position: center 35%;
     display: block;
+    transition: opacity 0.4s;
+    opacity: 0;
   }
+  .tag-hero img.ready { opacity: 1; }
+
   .tag-hero-overlay {
     position: absolute;
     inset: 0;
     background: linear-gradient(
       to bottom,
-      rgba(0,0,0,0.05) 0%,
-      rgba(26,24,20,0.55) 100%
+      rgba(0,0,0,0.02) 40%,
+      rgba(26,24,20,0.6) 100%
     );
+  }
+  .tag-hero-label {
+    position: absolute;
+    bottom: 1rem;
+    left: 1.2rem;
+    font-family: var(--serif);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
   }
   .tag-hero-caption {
     position: absolute;
-    bottom: 0.6rem;
+    bottom: 0.5rem;
     right: 0.8rem;
-    font-size: 0.65rem;
-    color: rgba(255,255,255,0.6);
+    font-size: 0.62rem;
+    color: rgba(255,255,255,0.5);
     font-style: italic;
-    max-width: 60%;
     text-align: right;
+    max-width: 55%;
     line-height: 1.3;
   }
-  .tag-hero-caption a {
-    color: rgba(255,255,255,0.6);
-    text-decoration: underline;
-  }
+  .tag-hero-caption a { color: rgba(255,255,255,0.55); text-decoration: underline; }
 
-  /* ── Panel heading ── */
+  /* ── Panel heading (below hero or standalone) ── */
+  .panel-box {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .panel-box.has-hero { border-radius: 0 0 10px 10px; border-top: none; }
+
   .panel-heading {
     font-family: var(--serif);
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: 500;
-    padding: 0.9rem 1.2rem 0.6rem;
-    border: 1px solid var(--border);
-    border-top: none;
-    background: var(--paper);
+    padding: 0.85rem 1.1rem;
+    border-bottom: 1px solid var(--faint);
     display: flex;
     align-items: baseline;
     gap: 0.75rem;
-    /* When no hero, round top corners */
-  }
-  .panel-heading.no-hero {
-    border-top: 1px solid var(--border);
-    border-radius: 10px 10px 0 0;
+    background: var(--paper);
   }
   .panel-count {
     font-family: var(--body);
@@ -153,45 +178,31 @@
     font-weight: 400;
   }
 
+  /* ── Composition list ── */
   .comp-list {
     display: flex;
     flex-direction: column;
-    gap: 0.45rem;
-    border: 1px solid var(--border);
-    border-top: none;
-    border-radius: 0 0 10px 10px;
-    overflow: hidden;
-    background: var(--bg);
-    padding: 0.7rem;
+    gap: 0;
   }
-
   .comp-row {
-    background: var(--paper);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 1.1rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
     text-decoration: none;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    border-bottom: 1px solid var(--faint);
+    transition: background 0.12s;
   }
-  .comp-row:hover {
-    border-color: var(--accent);
-    box-shadow: 0 2px 8px rgba(139,58,30,0.08);
-  }
+  .comp-row:last-child { border-bottom: none; }
+  .comp-row:hover { background: var(--bg); }
   .comp-title {
     font-family: var(--serif);
     font-size: 0.95rem;
     font-weight: 500;
     color: var(--ink);
   }
-  .comp-meta {
-    font-size: 0.78rem;
-    color: var(--muted);
-    margin-top: 2px;
-  }
+  .comp-meta { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
   .comp-icons { display: flex; gap: 0.35rem; flex-shrink: 0; }
   .icon-badge {
     font-size: 0.68rem;
@@ -206,11 +217,6 @@
 
   .loading-state { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.9rem; }
   .empty-state   { color: var(--muted); font-size: 0.9rem; padding: 1.5rem; text-align: center; }
-
-  /* hero-is-present: merge hero bottom border with heading top */
-  .tag-hero.visible + .panel-heading {
-    border-top: none;
-  }
 </style>
 </head>
 <body>
@@ -221,27 +227,40 @@
 </header>
 
 <main>
-  <h1 class="page-title">🏷 Browse by Tag</h1>
-  <p class="page-sub">Select a tag to see all compositions in that category.</p>
 
-  <div id="tagsCloud" class="tags-cloud">
-    <div class="loading-state" style="width:100%">Loading tags…</div>
+  <!-- ── Tag cloud view ── -->
+  <div id="tagsView">
+    <h1 class="page-title">🏷 Browse by Tag</h1>
+    <p class="page-sub">Select a tag to see all compositions in that category.</p>
+    <div id="tagsCloud" class="tags-cloud">
+      <div class="loading-state" style="width:100%">Loading tags…</div>
+    </div>
   </div>
 
-  <div id="compositionsPanel" class="compositions-panel">
-    <!-- hero image (shown when available) -->
-    <div id="tagHero" class="tag-hero">
+  <!-- ── Tag detail view ── -->
+  <div id="tagView">
+    <button class="tag-back-btn" onclick="showTagCloud()">← All tags</button>
+
+    <!-- Hero image (shown when a matching image is found) -->
+    <div class="tag-hero" id="tagHero">
       <img id="tagHeroImg" src="" alt="">
       <div class="tag-hero-overlay"></div>
+      <div class="tag-hero-label" id="tagHeroLabel"></div>
       <div class="tag-hero-caption" id="tagHeroCaption"></div>
     </div>
 
-    <div class="panel-heading no-hero" id="panelHeading">
-      <span id="panelTagName"></span>
-      <span class="panel-count" id="panelCount"></span>
+    <!-- Composition list panel -->
+    <div class="panel-box" id="panelBox">
+      <div class="panel-heading">
+        <span id="panelTagName"></span>
+        <span class="panel-count" id="panelCount"></span>
+      </div>
+      <div id="compList" class="comp-list">
+        <div class="loading-state">Loading…</div>
+      </div>
     </div>
-    <div id="compList" class="comp-list"></div>
   </div>
+
 </main>
 
 <script src="config.js"></script>
@@ -251,100 +270,135 @@ const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
-// ── Tag → Wikimedia image search term ────────────────────────────────────────
-// Keys are lowercase substrings matched against the tag name.
-// Values are Wikimedia Commons search queries that reliably return fitting images.
-// Add entries here as new tags are created; unmatched tags show no image.
+// ── Tag name → Wikimedia Commons search query ─────────────────────────────────
+// Keys matched as lowercase substrings of tag name.
+// Add new entries here as new tags are created.
 const TAG_IMAGE_QUERIES = {
-  'polar':           'Fridtjof Nansen arctic expedition Norway',
-  'arctic':          'Fridtjof Nansen arctic expedition Norway',
-  '1905':            'Norwegian constitution 1905 dissolution union',
-  'norwegian-american': 'Norwegian immigrants America steamship 1900',
-  'folk':            'Hardanger fiddle Norway traditional',
-  'hardanger':       'Hardanger fiddle Norway traditional',
-  'church':          'Norwegian stave church medieval',
-  'hymn':            'Norwegian church organ interior',
-  'romantic':        'Edvard Grieg composer Norway',
-  'grieg':           'Edvard Grieg composer Norway',
-  'national':        'Norway mountain landscape Romanticism painting',
-  'march':           'Norway military parade 1900s vintage',
-  'waltz':           'ballroom dancing Vienna 1900s vintage',
-  'dance':           'Norwegian folk dance Halling vintage',
-  'children':        'Norwegian children vintage illustration',
-  'christmas':       'Norway Christmas vintage illustration jul',
-  'sailor':          'Norwegian sailor ship sea vintage',
-  'sea':             'Norwegian fishing boat fjord vintage',
-  'mountain':        'Norwegian mountain Jotunheimen vintage painting',
-  'piano':           'grand piano concert hall vintage 1900s',
-  'violin':          'Hardanger fiddle Norway Ole Bull',
-  'opera':           'opera stage Norway vintage',
-  'lullaby':          'mother child Norway vintage illustration',
-  'patriotic':       'Norway national day 17 mai vintage',
-  'serenade':        'evening concert garden vintage Norway',
+  'polar':              'Nansen Fram arctic expedition photograph',
+  'arktis':             'Nansen Fram arctic expedition photograph',
+  '1905':               'Norway 1905 independence union dissolution',
+  'norge 1905':         'Norway 1905 independence procession photograph',
+  'norsk-amerikansk':   'Norwegian emigrants America steamship 1900s',
+  'norsk-american':     'Norwegian emigrants America steamship 1900s',
+  'norwegian-american': 'Norwegian emigrants America steamship 1900s',
+  'kongefamilie':       'Norwegian royal family King Haakon 1905 photograph',
+  'royal':              'Norwegian royal family King Haakon 1905 photograph',
+  'bergen':             'Bergen Norway harbour 1900 vintage photograph',
+  'hefte':              'music score sheet vintage Norway',
+  'carl warmuth':       'music score sheet vintage Norway',
+  'folk':               'Hardanger fiddle Norway traditional folk',
+  'church':             'Norwegian stave church medieval',
+  'hymn':               'Norwegian church organ interior',
+  'grieg':              'Edvard Grieg composer Norway',
+  'national':           'Norway mountain landscape Romanticism painting',
+  'march':              'Norwegian military procession parade 1900s',
+  'waltz':              'ballroom dance Vienna 1900s vintage',
+  'dance':              'Norwegian folk dance Halling vintage',
+  'children':           'Norwegian children vintage illustration',
+  'christmas':          'Norway Christmas vintage jul illustration',
+  'sea':                'Norwegian fishing boat fjord vintage photograph',
+  'mountain':           'Norwegian mountain Jotunheimen vintage',
+  'piano':              'grand piano concert hall vintage',
+  'violin':             'Ole Bull violin Norway portrait',
+  'opera':              'opera stage Norway vintage',
+  'serenade':           'evening concert garden vintage Norway',
 };
 
-// Find the best query for a given tag name
 function getImageQuery(tagName) {
   const lower = tagName.toLowerCase();
+  // Exact match first
+  if (TAG_IMAGE_QUERIES[lower]) return TAG_IMAGE_QUERIES[lower];
+  // Substring match
   for (const [key, query] of Object.entries(TAG_IMAGE_QUERIES)) {
     if (lower.includes(key)) return query;
   }
   return null;
 }
 
-// Fetch one suitable image from Wikimedia Commons
+// ── Wikimedia Commons image fetch ─────────────────────────────────────────────
+// Uses generator=search with prop=pageimages for a direct thumbnail URL.
 async function fetchWikimediaImage(searchQuery) {
-  const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchQuery)}&srnamespace=6&srlimit=5&format=json&origin=*`;
+  const params = new URLSearchParams({
+    action:       'query',
+    generator:    'search',
+    gsrsearch:    searchQuery,
+    gsrnamespace: '6',       // File namespace only
+    gsrlimit:     '12',
+    prop:         'imageinfo',
+    iiprop:       'url|extmetadata|mime|size',
+    iiurlwidth:   '900',
+    format:       'json',
+    origin:       '*',
+  });
   try {
-    const r = await fetch(url);
+    const r = await fetch(`https://commons.wikimedia.org/w/api.php?${params}`);
     const data = await r.json();
-    const results = data?.query?.search || [];
-    for (const result of results) {
-      const title = result.title; // e.g. "File:Nansen.jpg"
-      // Get image info
-      const infoUrl = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=imageinfo&iiprop=url|extmetadata&format=json&origin=*`;
-      const infoR = await fetch(infoUrl);
-      const infoData = await infoR.json();
-      const pages = infoData?.query?.pages || {};
-      for (const page of Object.values(pages)) {
-        const ii = page?.imageinfo?.[0];
-        if (!ii) continue;
-        const imgUrl = ii.url;
-        // Skip SVGs, audio files, very small images
-        if (!imgUrl) continue;
-        if (imgUrl.match(/\.(svg|ogg|mp3|pdf|tif)$/i)) continue;
-        const artist = ii.extmetadata?.Artist?.value || '';
-        const credit = ii.extmetadata?.Credit?.value || '';
-        const desc   = ii.extmetadata?.ImageDescription?.value || '';
-        // Build clean caption from metadata
-        let caption = '';
-        if (artist) caption = stripHtml(artist);
-        else if (credit) caption = stripHtml(credit);
-        if (!caption && desc) caption = stripHtml(desc).slice(0, 80);
-        const pageLink = `https://commons.wikimedia.org/wiki/${encodeURIComponent(title)}`;
-        return { url: imgUrl, caption, pageLink };
-      }
+    const pages = Object.values(data?.query?.pages || {});
+
+    // Sort by page id (relevance order) and pick first usable photo
+    pages.sort((a, b) => (a.index || a.pageid) - (b.index || b.pageid));
+
+    for (const page of pages) {
+      const ii = page.imageinfo?.[0];
+      if (!ii) continue;
+      const url = ii.url || '';
+      const mime = ii.mime || '';
+      const w = ii.width || 0;
+      const h = ii.height || 0;
+      // Skip non-photos, very tall/narrow (portrait orientation badly distorted), small images
+      if (!mime.startsWith('image/jpeg') && !mime.startsWith('image/png')) continue;
+      if (w < 600 || h < 300) continue;
+      if (h > w * 1.2) continue; // skip portrait-dominant images
+      const thumbUrl = ii.thumburl || url; // iiurlwidth gives thumburl
+
+      // Attribution
+      const meta   = ii.extmetadata || {};
+      const artist = meta.Artist?.value   ? stripHtml(meta.Artist.value)   : '';
+      const credit = meta.Credit?.value   ? stripHtml(meta.Credit.value)   : '';
+      const desc   = meta.ImageDescription?.value ? stripHtml(meta.ImageDescription.value).slice(0, 80) : '';
+      const caption = artist || credit || desc || '';
+      const pageLink = `https://commons.wikimedia.org/wiki/${encodeURIComponent(page.title)}`;
+
+      return { url: thumbUrl, caption, pageLink, title: page.title };
     }
-  } catch(e) { /* silent fail */ }
+  } catch (e) { /* silent — no image */ }
   return null;
 }
 
 function stripHtml(html) {
-  const tmp = document.createElement('div');
-  tmp.innerHTML = html;
-  return tmp.textContent || tmp.innerText || '';
+  const d = document.createElement('div');
+  d.innerHTML = html;
+  return (d.textContent || d.innerText || '').trim();
 }
 
-// ── Load & display tag image ──────────────────────────────────────────────────
-async function showTagImage(tagName) {
+// ── Show/hide views ───────────────────────────────────────────────────────────
+function showTagCloud() {
+  document.getElementById('tagsView').classList.remove('hidden');
+  document.getElementById('tagView').classList.remove('visible');
+  document.getElementById('tagHero').classList.remove('loaded');
+  // Clear active pill
+  document.querySelectorAll('.tag-pill').forEach(p => p.classList.remove('active'));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showTagDetail() {
+  document.getElementById('tagsView').classList.add('hidden');
+  document.getElementById('tagView').classList.add('visible');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Load hero image for tag ───────────────────────────────────────────────────
+async function loadHeroImage(tagName) {
   const hero    = document.getElementById('tagHero');
-  const heading = document.getElementById('panelHeading');
   const img     = document.getElementById('tagHeroImg');
+  const label   = document.getElementById('tagHeroLabel');
   const caption = document.getElementById('tagHeroCaption');
+  const panelBox = document.getElementById('panelBox');
 
   // Reset
-  hero.classList.remove('visible');
-  heading.classList.add('no-hero');
+  hero.classList.remove('loaded');
+  img.classList.remove('ready');
+  panelBox.classList.remove('has-hero');
 
   const query = getImageQuery(tagName);
   if (!query) return;
@@ -352,32 +406,31 @@ async function showTagImage(tagName) {
   const result = await fetchWikimediaImage(query);
   if (!result) return;
 
-  img.src = result.url;
-  img.alt = tagName;
+  label.textContent = tagName;
 
   if (result.caption) {
     caption.innerHTML = result.caption +
       (result.pageLink ? ` · <a href="${result.pageLink}" target="_blank" rel="noopener">Wikimedia Commons</a>` : '');
   } else {
     caption.innerHTML = result.pageLink
-      ? `<a href="${result.pageLink}" target="_blank" rel="noopener">Wikimedia Commons</a>`
-      : '';
+      ? `<a href="${result.pageLink}" target="_blank" rel="noopener">Wikimedia Commons</a>` : '';
   }
 
-  // Only show hero once image has actually loaded
   img.onload = () => {
-    hero.classList.add('visible');
-    heading.classList.remove('no-hero');
+    hero.classList.add('loaded');
+    panelBox.classList.add('has-hero');
+    img.classList.add('ready');
   };
   img.onerror = () => {
-    hero.classList.remove('visible');
-    heading.classList.add('no-hero');
+    hero.classList.remove('loaded');
+    panelBox.classList.remove('has-hero');
   };
+  img.src = result.url;
+  img.alt = tagName;
 }
 
-// ── Tags ─────────────────────────────────────────────────────────────────────
+// ── Tags loading ──────────────────────────────────────────────────────────────
 let allTags = [];
-let activeTagId = null;
 
 async function loadTags() {
   const r = await fetch(
@@ -390,9 +443,8 @@ async function loadTags() {
     `${SUPABASE_URL}/rest/v1/composition_tag?select=tag_id`,
     { headers: H }
   );
-  const ctRows = await ctR.json();
   const countMap = {};
-  ctRows.forEach(row => {
+  (await ctR.json()).forEach(row => {
     countMap[row.tag_id] = (countMap[row.tag_id] || 0) + 1;
   });
 
@@ -410,38 +462,24 @@ async function loadTags() {
     </div>
   `).join('');
 
-  const params = new URLSearchParams(window.location.search);
-  const preTag = params.get('tag');
+  // Pre-select from URL param
+  const preTag = new URLSearchParams(window.location.search).get('tag');
   if (preTag) {
     const match = allTags.find(t => t.tag_id == preTag);
     if (match) selectTag(match.tag_id, match.tag_name);
   }
 }
 
+// ── Select tag ────────────────────────────────────────────────────────────────
 async function selectTag(tagId, tagName) {
-  if (activeTagId === tagId) {
-    activeTagId = null;
-    document.querySelectorAll('.tag-pill').forEach(p => p.classList.remove('active'));
-    document.getElementById('compositionsPanel').classList.remove('visible');
-    document.getElementById('tagHero').classList.remove('visible');
-    return;
-  }
-
-  activeTagId = tagId;
-  document.querySelectorAll('.tag-pill').forEach(p => p.classList.remove('active'));
-  document.getElementById(`tag-pill-${tagId}`).classList.add('active');
-
-  const panel = document.getElementById('compositionsPanel');
-  panel.classList.add('visible');
+  // Switch to detail view immediately
   document.getElementById('panelTagName').textContent = tagName;
   document.getElementById('panelCount').textContent = '';
   document.getElementById('compList').innerHTML = '<div class="loading-state">Loading…</div>';
+  showTagDetail();
 
-  // Scroll to panel
-  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-  // Fire image fetch in parallel — it appears when ready
-  showTagImage(tagName);
+  // Fire image load in parallel
+  loadHeroImage(tagName);
 
   // Fetch composition_ids for this tag
   const ctR = await fetch(
@@ -458,20 +496,17 @@ async function selectTag(tagId, tagName) {
 
   const compIds = ctRows.map(r => r.composition_id).join(',');
 
-  const [compR, scoreR] = await Promise.all([
+  const [compR, scoreR, ccR] = await Promise.all([
     fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&public_domain=eq.Yes&musescore_link=not.is.null&select=composition_id,title,year_composed,musescore_link,public_domain&order=title.asc`, { headers: H }),
     fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=in.(${compIds})&select=composition_id,pdf_url,mp3_url`, { headers: H }),
+    fetch(`${SUPABASE_URL}/rest/v1/composition_person?composition_id=in.(${compIds})&role=eq.Composer&select=composition_id,person_id`, { headers: H }),
   ]);
+
   const comps  = await compR.json();
   const scores = await scoreR.json();
-
-  // Fetch composers via composition_person
-  const ccR = await fetch(
-    `${SUPABASE_URL}/rest/v1/composition_person?composition_id=in.(${compIds})&role=eq.Composer&select=composition_id,person_id`,
-    { headers: H }
-  );
   const ccRows = await ccR.json();
 
+  // Fetch composer names
   const personIds = [...new Set(ccRows.map(r => r.person_id))];
   let persons = [];
   for (let i = 0; i < personIds.length; i += 200) {
@@ -497,23 +532,25 @@ async function selectTag(tagId, tagName) {
   document.getElementById('panelCount').textContent =
     `${comps.length} composition${comps.length !== 1 ? 's' : ''}`;
 
-  document.getElementById('compList').innerHTML = comps.length ? comps.map(comp => {
-    const s = scoreMap[comp.composition_id];
-    const composers = (ccMap[comp.composition_id] || []).join(', ') || '—';
-    return `
-      <a class="comp-row" href="score.html?id=${comp.composition_id}">
-        <div>
-          <div class="comp-title">${comp.title}</div>
-          <div class="comp-meta">${composers}${comp.year_composed ? ' · ' + comp.year_composed : ''}</div>
-        </div>
-        <div class="comp-icons">
-          ${s?.pdf_url ? '<span class="icon-badge pdf">PDF</span>' : ''}
-          ${s?.mp3_url ? '<span class="icon-badge mp3">MP3</span>' : ''}
-          ${comp.musescore_link ? '<span class="icon-badge">♪</span>' : ''}
-          ${comp.public_domain === 'Yes' ? '<span class="icon-badge" style="color:var(--accent2);border-color:var(--accent2)">PD</span>' : ''}
-        </div>
-      </a>`;
-  }).join('') : '<div class="empty-state">No public domain scores found for this tag.</div>';
+  document.getElementById('compList').innerHTML = comps.length
+    ? comps.map(comp => {
+        const s = scoreMap[comp.composition_id];
+        const composers = (ccMap[comp.composition_id] || []).join(', ') || '—';
+        return `
+          <a class="comp-row" href="score.html?id=${comp.composition_id}">
+            <div>
+              <div class="comp-title">${comp.title}</div>
+              <div class="comp-meta">${composers}${comp.year_composed ? ' · ' + comp.year_composed : ''}</div>
+            </div>
+            <div class="comp-icons">
+              ${s?.pdf_url ? '<span class="icon-badge pdf">PDF</span>' : ''}
+              ${s?.mp3_url ? '<span class="icon-badge mp3">MP3</span>' : ''}
+              ${comp.musescore_link ? '<span class="icon-badge">♪</span>' : ''}
+              ${comp.public_domain === 'Yes' ? '<span class="icon-badge" style="color:var(--accent2);border-color:var(--accent2)">PD</span>' : ''}
+            </div>
+          </a>`;
+      }).join('')
+    : '<div class="empty-state">No public domain scores found for this tag.</div>';
 }
 
 loadTags();
