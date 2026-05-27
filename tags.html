@@ -263,11 +263,11 @@ const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 // ── Tag → image generation prompt ────────────────────────────────────────────
 // Keys matched as lowercase substrings of tag name.
 // Style suffix is appended to every prompt for visual consistency.
-const STYLE = ', vintage engraving illustration style, muted earthy tones, 1890s Norway aesthetic, wide landscape format, no text';
+const STYLE = ', painterly vintage illustration, muted earthy tones with deep blues and greens, 1890s Norway aesthetic, wide cinematic landscape format, highly detailed, no text, no watermark';
 
 const TAG_PROMPTS = {
-  'polar':              'dramatic arctic expedition Norway 1895, Fram ship in pack ice, aurora borealis, heroic exploration' + STYLE,
-  'arktis':             'dramatic arctic expedition Norway 1895, Fram ship in pack ice, aurora borealis' + STYLE,
+  'polar':              'Norwegian polar ship Fram trapped in arctic pack ice 1895, three-masted wooden schooner, aurora borealis green sky, Fridtjof Nansen expedition, dramatic frozen ocean, moonlight on ice floes' + STYLE,
+  'arktis':             'Norwegian polar ship Fram trapped in arctic pack ice 1895, three-masted wooden schooner, aurora borealis green sky, Fridtjof Nansen expedition' + STYLE,
   'norge 1905':         'Norway independence 1905, jubilant crowds in Christiania, Norwegian flags, historic celebration' + STYLE,
   '1905':               'Norway independence 1905, jubilant crowds in Christiania, Norwegian flags, historic celebration' + STYLE,
   'norsk-amerikansk':   'Norwegian immigrants arriving America 1900, steamship dock, Ellis Island, hopeful emigrants' + STYLE,
