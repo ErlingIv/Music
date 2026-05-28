@@ -155,7 +155,7 @@ function apiFetch(table) {
   var results = [];
   function page(offset) {
     var extra = table === 'composition' ? '&musescore_link=not.is.null' : '';
-    var url = BASE + table + '?select=*&limit=1000&offset=' + offset + extra;
+    var url = BASE + table + '?select=*' + extra + '&limit=1000&offset=' + offset;
     return fetch(url, { headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY } })
       .then(function(r) {
         if (!r.ok) throw new Error(table + ': HTTP ' + r.status);
