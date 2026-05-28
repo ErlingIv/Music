@@ -130,6 +130,27 @@
   textarea { resize: vertical; min-height: 65px; }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 
+  /* Clearable input / textarea */
+  .input-clear-wrap { position: relative; }
+  .input-clear-wrap input  { padding-right: 1.8rem; }
+  .input-clear-wrap textarea { padding-right: 1.8rem; }
+  .input-clear-btn {
+    position: absolute; right: 0.4rem;
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 0.95rem; line-height: 1;
+    padding: 0.15rem 0.25rem; border-radius: 2px;
+    display: none;
+  }
+  /* inputs: vertically centred; textareas: top-aligned */
+  .input-clear-wrap.is-input .input-clear-btn   { top: 50%; transform: translateY(-50%); }
+  .input-clear-wrap.is-textarea .input-clear-btn { top: 0.45rem; transform: none; }
+  .input-clear-btn:hover { color: var(--accent); }
+  /* Show when the field has content */
+  .input-clear-wrap input:not(:placeholder-shown)   ~ .input-clear-btn,
+  .input-clear-wrap input.has-value                 ~ .input-clear-btn,
+  .input-clear-wrap textarea:not(:placeholder-shown)~ .input-clear-btn,
+  .input-clear-wrap textarea.has-value              ~ .input-clear-btn { display: block; }
+
   /* Lookup */
   .lookup-wrap { position: relative; }
 

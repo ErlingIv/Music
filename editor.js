@@ -828,6 +828,14 @@ async function loadEditForm(compId) {
   const srcEntry = score?.source_id ? [...sourceMap.entries()].find(([,id]) => id === score.source_id) : null;
   document.getElementById('e_source').value = srcEntry ? srcEntry[0] : '';
 
+  // Sync has-value class so clear buttons appear on already-filled fields
+  ['e_title','e_year','e_opus','e_msLink','e_notes','e_dedication',
+   'e_msNotes','e_displayCountry','e_publisherSearch','e_plateNumber','e_source']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('has-value', el.value.length > 0);
+    });
+
   // Approval state
   const approved = c.approved || false;
   document.getElementById('e_approved').value = approved ? 'true' : 'false';
@@ -1769,7 +1777,48 @@ async function biToggleScores(pid, btn) {
   btn.disabled = false;
 }
 
-// Open directly to a composition if ?edit=ID is in the URL
+// ── Clearable fields ──────────────────────────────────────────────────────────
+
+function makeClearable(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const isTextarea = el.tagName === 'TEXTAREA';
+
+  const wrap = document.createElement('div');
+  wrap.className = 'input-clear-wrap ' + (isTextarea ? 'is-textarea' : 'is-input');
+
+  el.parentNode.insertBefore(wrap, el);
+  wrap.appendChild(el);
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'input-clear-btn';
+  btn.textContent = '×';
+  btn.title = 'Tøm feltet';
+  btn.addEventListener('click', () => {
+    el.value = '';
+    el.classList.remove('has-value');
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.focus();
+  });
+  wrap.appendChild(btn);
+
+  // Keep has-value class in sync (needed for inputs loaded programmatically)
+  el.addEventListener('input', () => {
+    el.classList.toggle('has-value', el.value.length > 0);
+  });
+}
+
+// New-entry form
+['n_title','n_year','n_opus','n_notes','n_msLink','n_dedication',
+ 'n_publisherSearch','n_plateNumber','n_source'].forEach(makeClearable);
+
+// Edit form
+['e_title','e_year','e_opus','e_msLink','e_notes','e_dedication',
+ 'e_msNotes','e_displayCountry',
+ 'e_publisherSearch','e_plateNumber','e_source'].forEach(makeClearable);
+
+
 (function() {
   const p = new URLSearchParams(window.location.search);
   const editId = p.get('edit');
