@@ -431,7 +431,7 @@ function render() {
         var td = document.createElement('td');
         td.style.textAlign = col.a;
         td.style.maxWidth = col.w + 'px';
-        if (col.k === 'composer' || col.k === 'lyricist') td.className = 'wrap-cell';
+        if (col.k === 'composer' || col.k === 'lyricist' || col.k === 'notes') td.className = 'wrap-cell';
         td.innerHTML = cellHtml(col, row);
         tr.appendChild(td);
       });
@@ -471,7 +471,7 @@ function cellHtml(col, row) {
   if (col.k === 'year_composed') return row.year_composed || '<span class="empty">—</span>';
   if (col.k === 'notes') {
     if (!row.notes) return '<span class="empty">—</span>';
-    return '<span title="' + row.notes.replace(/"/g,'&quot;') + '" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + row.notes + '</span>';
+    return '<span style="display:block;white-space:normal;word-break:break-word;line-height:1.4">' + row.notes + '</span>';
   }
   return '<span class="empty">—</span>';
 }
