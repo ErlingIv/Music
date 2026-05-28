@@ -103,18 +103,10 @@
     border-radius: 10px 10px 0 0;
     overflow: hidden;
     position: relative;
-    /* Shimmer background visible until .loaded is added */
-    background: linear-gradient(90deg, var(--faint) 25%, var(--border) 50%, var(--faint) 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.6s infinite;
+    background: #2a2620;
   }
   .tag-hero.loaded {
     background: #333;
-    animation: none;
-  }
-  @keyframes shimmer {
-    0%   { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
   }
 
   .tag-hero img {
@@ -260,81 +252,21 @@ const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
-// ── Tag → image generation prompt ────────────────────────────────────────────
-// Keys matched as lowercase substrings of tag name.
-// Style suffix is appended to every prompt for visual consistency.
-const STYLE = ', painterly vintage illustration, muted earthy tones with deep blues and greens, 1890s Norway aesthetic, wide cinematic landscape format, highly detailed, no text, no watermark';
-
-const TAG_PROMPTS = {
-  // ── Exact tag names from database (lowercase) ──
-  'polarmusikk':
-    'Norwegian polar ship Fram trapped in arctic pack ice 1895, three-masted wooden schooner, ' +
-    'aurora borealis filling green sky, Fridtjof Nansen expedition, moonlight on frozen ocean, ice floes in foreground' + STYLE,
-
-  'norge 1905':
-    'Norway independence day 1905 Christiania, jubilant crowds filling Karl Johans gate, ' +
-    'Norwegian flags draped from every window, trams and top hats, summer sunshine, historic city street' + STYLE,
-
-  'norsk-amerikansk':
-    'Norwegian emigrants on deck of transatlantic steamship 1900, crowded with hopeful families, ' +
-    'luggage and trunks, foggy Atlantic ocean, Statue of Liberty faint on horizon, emotional farewell' + STYLE,
-
-  'musikk til norges kongefamilie':
-    'King Haakon VII and Queen Maud of Norway coronation ceremony Nidaros Cathedral Trondheim 1906, ' +
-    'grand interior candlelight, orchestra playing, formal court dress, Norwegian royal regalia' + STYLE,
-
-  'royal events':
-    'Norwegian royal palace Christiania 1905, grand ceremonial balcony, cheering crowds below, ' +
-    'royal guard in uniform, Norwegian flag flying, golden afternoon light' + STYLE,
-
-  'bergen-sanger':
-    'Bergen Norway harbour Bryggen wharf 1890s, male choral society singing outdoors, ' +
-    'wooden Hanseatic buildings behind, fishing boats in harbour, dramatic Fløyen mountain, ' +
-    'men in dark formal suits, torchlight evening concert' + STYLE,
-
-  "carl warmuth's jubileums album":
-    'elegant Victorian music publishing house interior Christiania 1890s, ornate shelves of sheet music, ' +
-    'engraved music covers displayed, mahogany counter, gaslit shopfront, well-dressed customers browsing' + STYLE,
-
-  'hefte':
-    'Norwegian music salon 1890s, open collection of sheet music folios spread on table, ' +
-    'grand piano in background, oil lamp light, velvet curtains, bouquet of flowers, intimate domestic scene' + STYLE,
-};
-
-// Default prompt for unmatched tags
-const DEFAULT_PROMPT = 'Norwegian music score concert hall 1890s, ornate Victorian interior, sheet music, candlelight' + STYLE;
-
-function getPrompt(tagName) {
-  const lower = tagName.toLowerCase();
-  // Exact match
-  if (TAG_PROMPTS[lower]) return TAG_PROMPTS[lower];
-  // Substring fallback
-  for (const [key, prompt] of Object.entries(TAG_PROMPTS)) {
-    if (lower.includes(key) || key.includes(lower)) return prompt;
-  }
-  return DEFAULT_PROMPT;
-}
-
-function pollinationsUrl(prompt) {
-  // seed derived from prompt for stable/consistent image on repeated loads
-  const seed = prompt.split('').reduce((a, c) => (a * 31 + c.charCodeAt(0)) & 0xfffffff, 0);
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1200&height=400&seed=${seed}&nologo=true`;
-}
 
 // ── Hero image ────────────────────────────────────────────────────────────────
-function loadHeroImage(tagName) {
+function loadHeroImage(tagName, imageUrl) {
+  const hero  = document.getElementById('tagHero');
   const img   = document.getElementById('tagHeroImg');
   const label = document.getElementById('tagHeroLabel');
 
+  hero.classList.remove('loaded');
   label.textContent = tagName;
 
-  const url = pollinationsUrl(getPrompt(tagName));
+  if (!imageUrl) return; // blank dark background, no image
 
-  const hero  = document.getElementById('tagHero');
-  hero.classList.remove('loaded');
   img.onload  = () => hero.classList.add('loaded');
-  img.onerror = () => { /* keep shimmer */ };
-  img.src = url;
+  img.onerror = () => hero.classList.remove('loaded');
+  img.src = imageUrl;
   img.alt = tagName;
 }
 
@@ -356,7 +288,7 @@ let allTags = [];
 
 async function loadTags() {
   const r = await fetch(
-    `${SUPABASE_URL}/rest/v1/tag?select=tag_id,tag_name&order=tag_name.asc`,
+    `${SUPABASE_URL}/rest/v1/tag?select=tag_id,tag_name,image_url&order=tag_name.asc`,
     { headers: H }
   );
   allTags = await r.json();
@@ -375,7 +307,7 @@ async function loadTags() {
 
   cloud.innerHTML = allTags.map(t => `
     <div class="tag-pill" id="tag-pill-${t.tag_id}"
-         onclick="selectTag(${t.tag_id}, '${t.tag_name.replace(/'/g, "\\'")}')">
+         onclick="selectTag(${t.tag_id}, '${t.tag_name.replace(/'/g, "\\'")}', '${(t.image_url||'').replace(/'/g, "\\'")}')">
       ${t.tag_name}
       <span class="tag-count">${countMap[t.tag_id] || 0}</span>
     </div>
@@ -384,17 +316,17 @@ async function loadTags() {
   const preTag = new URLSearchParams(window.location.search).get('tag');
   if (preTag) {
     const match = allTags.find(t => t.tag_id == preTag);
-    if (match) selectTag(match.tag_id, match.tag_name);
+    if (match) selectTag(match.tag_id, match.tag_name, match.image_url || '');
   }
 }
 
 // ── Select tag ────────────────────────────────────────────────────────────────
-async function selectTag(tagId, tagName) {
+async function selectTag(tagId, tagName, imageUrl) {
   document.getElementById('panelTagName').textContent = tagName;
   document.getElementById('panelCount').textContent = '';
   document.getElementById('compList').innerHTML = '<div class="loading-state">Loading…</div>';
   showTagDetail();
-  loadHeroImage(tagName);
+  loadHeroImage(tagName, imageUrl || '');
 
   const ctR = await fetch(
     `${SUPABASE_URL}/rest/v1/composition_tag?tag_id=eq.${tagId}&select=composition_id`,
