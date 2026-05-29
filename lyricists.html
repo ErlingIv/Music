@@ -22,7 +22,6 @@
   html { scroll-behavior: smooth; }
   body { font-family: var(--body); background: var(--bg); color: var(--ink); min-height: 100vh; }
 
-  /* ── Header ── */
   .site-header {
     background: var(--paper);
     border-bottom: 1px solid var(--border);
@@ -31,27 +30,13 @@
     align-items: center;
     gap: 1rem;
   }
-  .back-link {
-    font-size: 0.82rem;
-    color: var(--muted);
-    text-decoration: none;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-  }
+  .back-link { font-size: 0.82rem; color: var(--muted); text-decoration: none; letter-spacing: 0.05em; text-transform: uppercase; }
   .back-link:hover { color: var(--accent); }
-  .site-name {
-    font-family: var(--serif);
-    font-size: 1rem;
-    font-weight: 500;
-    color: var(--ink);
-    text-decoration: none;
-  }
+  .site-name { font-family: var(--serif); font-size: 1rem; font-weight: 500; color: var(--ink); text-decoration: none; }
 
-  /* ── Nav tabs ── */
   nav {
     display: flex;
     justify-content: center;
-    gap: 0;
     background: var(--paper);
     border-bottom: 1px solid var(--border);
     overflow-x: auto;
@@ -73,32 +58,49 @@
   .tab:hover { color: var(--ink); }
   .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-  /* ── Main ── */
   main { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
 
-  /* ── Section panels ── */
   .section-panel { display: none; }
   .section-panel.active { display: block; }
 
-  /* ── Section header ── */
   .section-header {
     display: flex;
     align-items: baseline;
     gap: 1rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
     padding-bottom: 0.75rem;
     border-bottom: 1px solid var(--border);
   }
-  .section-title {
-    font-family: var(--serif);
-    font-size: clamp(1.4rem, 3vw, 2rem);
-    font-weight: 700;
-    color: var(--ink);
+  .section-title { font-family: var(--serif); font-size: clamp(1.4rem, 3vw, 2rem); font-weight: 700; color: var(--ink); }
+  .section-count { font-size: 0.82rem; color: var(--muted); letter-spacing: 0.04em; }
+
+  /* ── Alpha bar ── */
+  .alpha-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin-bottom: 1.5rem;
   }
-  .section-count {
-    font-size: 0.82rem;
-    color: var(--muted);
-    letter-spacing: 0.04em;
+  .alpha-btn {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.78rem; font-family: var(--body); font-weight: 500;
+    color: var(--muted); background: var(--paper);
+    border: 1px solid var(--border); border-radius: 4px;
+    cursor: pointer; transition: all 0.15s;
+    text-transform: uppercase; user-select: none;
+  }
+  .alpha-btn:hover { background: var(--faint); color: var(--ink); }
+  .alpha-btn.active { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+  .alpha-btn.disabled { opacity: 0.3; cursor: default; pointer-events: none; }
+
+  /* ── Letter group ── */
+  .letter-group { margin-bottom: 1.5rem; }
+  .letter-heading {
+    font-family: var(--serif); font-size: 1.6rem; font-weight: 700;
+    color: var(--accent2); opacity: 0.6;
+    border-left: 3px solid var(--accent2); padding-left: 0.6rem;
+    margin-bottom: 0.6rem; line-height: 1;
   }
 
   /* ── Lyricist grid ── */
@@ -108,73 +110,22 @@
     gap: 0.6rem;
   }
   .lyricist-card {
-    background: var(--paper);
-    border: 1px solid var(--border);
-    border-left: 4px solid var(--accent2);
-    border-radius: 6px;
-    padding: 0.7rem 0.9rem;
-    text-decoration: none;
-    display: block;
+    background: var(--paper); border: 1px solid var(--border);
+    border-left: 4px solid var(--accent2); border-radius: 6px;
+    padding: 0.7rem 0.9rem; text-decoration: none; display: block;
     transition: border-color 0.15s, box-shadow 0.15s;
   }
-  .lyricist-card:hover {
-    border-color: var(--accent2);
-    box-shadow: 0 2px 8px rgba(42,92,69,0.12);
-  }
-  .lyricist-name {
-    font-family: var(--serif);
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: var(--ink);
-    line-height: 1.3;
-  }
-  .lyricist-meta {
-    font-size: 0.78rem;
-    color: var(--muted);
-    margin-top: 2px;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-  }
-  .work-count {
-    font-size: 0.75rem;
-    color: var(--accent2);
-  }
-  .female-badge {
-    font-size: 0.68rem;
-    background: #f0e6f0;
-    color: #7a3a7a;
-    border: 1px solid #d4b8d4;
-    border-radius: 3px;
-    padding: 1px 5px;
-  }
+  .lyricist-card:hover { border-color: var(--accent2); box-shadow: 0 2px 8px rgba(42,92,69,0.12); }
+  .lyricist-name { font-family: var(--serif); font-size: 0.95rem; font-weight: 500; color: var(--ink); line-height: 1.3; }
+  .lyricist-meta { font-size: 0.78rem; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 0.4rem; }
+  .work-count { font-size: 0.75rem; color: var(--accent2); }
+  .female-badge { font-size: 0.68rem; background: #f0e6f0; color: #7a3a7a; border: 1px solid #d4b8d4; border-radius: 3px; padding: 1px 5px; }
 
-  /* ── Loading / empty states ── */
-  .loading-state {
-    text-align: center;
-    padding: 3rem;
-    color: var(--muted);
-    font-size: 0.9rem;
-    letter-spacing: 0.05em;
-  }
-  .loading-dots::after {
-    content: '...';
-    animation: dots 1.2s steps(4, end) infinite;
-  }
-  @keyframes dots {
-    0%, 20% { content: '.'; }
-    40%      { content: '..'; }
-    60%, 100%{ content: '...'; }
-  }
+  .loading-state { text-align: center; padding: 3rem; color: var(--muted); font-size: 0.9rem; letter-spacing: 0.05em; }
+  .loading-dots::after { content: '...'; animation: dots 1.2s steps(4, end) infinite; }
+  @keyframes dots { 0%, 20% { content: '.'; } 40% { content: '..'; } 60%, 100% { content: '...'; } }
 
-  footer {
-    text-align: center;
-    padding: 1.5rem;
-    font-size: 0.78rem;
-    color: var(--muted);
-    border-top: 1px solid var(--border);
-    letter-spacing: 0.04em;
-  }
+  footer { text-align: center; padding: 1.5rem; font-size: 0.78rem; color: var(--muted); border-top: 1px solid var(--border); letter-spacing: 0.04em; }
 </style>
 </head>
 <body>
@@ -188,6 +139,7 @@
   <div class="tab active" data-section="no"      onclick="switchTab('no')">🇳🇴 Norwegian</div>
   <div class="tab"        data-section="nordic"  onclick="switchTab('nordic')">Nordic</div>
   <div class="tab"        data-section="others"  onclick="switchTab('others')">Others</div>
+  <div class="tab"        data-section="unknown" onclick="switchTab('unknown')">Unknown</div>
 </nav>
 
 <main>
@@ -198,9 +150,8 @@
       <h1 class="section-title">✍ Norwegian Lyricists</h1>
       <span class="section-count" id="count-no"></span>
     </div>
-    <div id="lyricists-no" class="lyricist-grid">
-      <div class="loading-state" style="grid-column:1/-1"><span class="loading-dots">Loading</span></div>
-    </div>
+    <div class="alpha-bar" id="alpha-no"></div>
+    <div id="lyricists-no"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
   </div>
 
   <!-- Nordic -->
@@ -209,9 +160,8 @@
       <h1 class="section-title">✍ Nordic Lyricists</h1>
       <span class="section-count" id="count-nordic"></span>
     </div>
-    <div id="lyricists-nordic" class="lyricist-grid">
-      <div class="loading-state" style="grid-column:1/-1"><span class="loading-dots">Loading</span></div>
-    </div>
+    <div class="alpha-bar" id="alpha-nordic"></div>
+    <div id="lyricists-nordic"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
   </div>
 
   <!-- Others -->
@@ -220,9 +170,18 @@
       <h1 class="section-title">✍ Other Lyricists</h1>
       <span class="section-count" id="count-others"></span>
     </div>
-    <div id="lyricists-others" class="lyricist-grid">
-      <div class="loading-state" style="grid-column:1/-1"><span class="loading-dots">Loading</span></div>
+    <div class="alpha-bar" id="alpha-others"></div>
+    <div id="lyricists-others"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
+  </div>
+
+  <!-- Unknown -->
+  <div class="section-panel" id="panel-unknown">
+    <div class="section-header">
+      <h1 class="section-title">✍ Unknown Nationality</h1>
+      <span class="section-count" id="count-unknown"></span>
     </div>
+    <div class="alpha-bar" id="alpha-unknown"></div>
+    <div id="lyricists-unknown"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
   </div>
 
 </main>
@@ -243,63 +202,105 @@ const FLAGS = { NO:'🇳🇴', SE:'🇸🇪', DK:'🇩🇰', FI:'🇫🇮', IS:'
                 AT:'🇦🇹', BE:'🇧🇪', HU:'🇭🇺', AU:'🇦🇺', CZ:'🇨🇿',
                 PL:'🇵🇱', VE:'🇻🇪' };
 
-const NORDIC = ['SE', 'DK', 'FI', 'IS'];
+const NORDIC    = ['SE', 'DK', 'FI', 'IS'];
+const ALL_ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ'.split('');
+
+// Per-section data and active letter state
+const sectionData   = { no: [], nordic: [], others: [], unknown: [] };
+const activeLetters = { no: 'ALL', nordic: 'ALL', others: 'ALL', unknown: 'ALL' };
 
 // ── Tab switching ─────────────────────────────────────────────────────────────
 function switchTab(sec) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelector(`[data-section="${sec}"]`).classList.add('active');
+  document.querySelector('[data-section="' + sec + '"]').classList.add('active');
   document.querySelectorAll('.section-panel').forEach(p => p.classList.remove('active'));
-  document.getElementById(`panel-${sec}`).classList.add('active');
+  document.getElementById('panel-' + sec).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Alpha filter ──────────────────────────────────────────────────────────────
+function setLetter(sec, letter) {
+  activeLetters[sec] = letter;
+  renderSection(sec);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ── Render a section ──────────────────────────────────────────────────────────
-function renderSection(sec, list) {
-  const countEl = document.getElementById(`count-${sec}`);
-  const gridEl  = document.getElementById(`lyricists-${sec}`);
+function renderSection(sec) {
+  const list        = sectionData[sec];
+  const activeLetter = activeLetters[sec];
 
-  countEl.textContent = `${list.length} lyricist${list.length !== 1 ? 's' : ''}`;
+  document.getElementById('count-' + sec).textContent =
+    list.length + ' lyricist' + (list.length !== 1 ? 's' : '');
 
-  if (!list.length) {
-    gridEl.innerHTML = '<div class="loading-state" style="grid-column:1/-1">No lyricists found.</div>';
+  // Build alpha bar
+  const presentLetters = new Set(list.map(p => (p.last_name || '?')[0].toUpperCase()));
+  document.getElementById('alpha-' + sec).innerHTML =
+    '<div class="alpha-btn ' + (activeLetter === 'ALL' ? 'active' : '') +
+    '" onclick="setLetter(\'' + sec + '\', \'ALL\')">All</div>' +
+    ALL_ALPHA.map(function(l) {
+      var cls = !presentLetters.has(l) ? 'disabled' : (activeLetter === l ? 'active' : '');
+      return '<div class="alpha-btn ' + cls + '" onclick="setLetter(\'' + sec + '\', \'' + l + '\')">' + l + '</div>';
+    }).join('');
+
+  // Filter by letter
+  var filtered = activeLetter === 'ALL'
+    ? list
+    : list.filter(function(p) { return (p.last_name || '?')[0].toUpperCase() === activeLetter; });
+
+  if (!filtered.length) {
+    document.getElementById('lyricists-' + sec).innerHTML =
+      '<div class="loading-state">No lyricists found.</div>';
     return;
   }
 
-  gridEl.innerHTML = list.map(p => lyricistCard(p)).join('');
+  // Group by first letter
+  var groups = {};
+  filtered.forEach(function(p) {
+    var l = (p.last_name || '?')[0].toUpperCase();
+    if (!groups[l]) groups[l] = [];
+    groups[l].push(p);
+  });
+
+  document.getElementById('lyricists-' + sec).innerHTML =
+    Object.entries(groups).map(function(entry) {
+      var letter = entry[0], glist = entry[1];
+      return '<div class="letter-group">' +
+        '<div class="letter-heading">' + letter + '</div>' +
+        '<div class="lyricist-grid">' + glist.map(lyricistCard).join('') + '</div>' +
+        '</div>';
+    }).join('');
 }
 
 function lyricistCard(p) {
-  const years  = [p.born, p.died].filter(Boolean).join('–');
-  const flag   = FLAGS[p.nationality] || '';
-  const female = p.gender === 'F' ? '<span class="female-badge">♀</span>' : '';
-  return `
-    <a class="lyricist-card" href="composer.html?id=${p.person_id}&role=Lyricist">
-      <div class="lyricist-name">${p.last_name}, ${p.first_name || ''} ${flag}</div>
-      <div class="lyricist-meta">
-        ${years ? `<span>${years}</span>` : ''}
-        ${female}
-        <span class="work-count">${p.work_count} work${p.work_count !== 1 ? 's' : ''}</span>
-      </div>
-    </a>
-  `;
+  var years  = [p.born, p.died].filter(Boolean).join('–');
+  var flag   = FLAGS[p.nationality] || '';
+  var female = p.gender === 'F' ? '<span class="female-badge">♀</span>' : '';
+  return '<a class="lyricist-card" href="composer.html?id=' + p.person_id + '&role=Lyricist">' +
+    '<div class="lyricist-name">' + (p.last_name || '') + ', ' + (p.first_name || '') + ' ' + flag + '</div>' +
+    '<div class="lyricist-meta">' +
+      (years ? '<span>' + years + '</span>' : '') +
+      female +
+      '<span class="work-count">' + p.work_count + ' work' + (p.work_count !== 1 ? 's' : '') + '</span>' +
+    '</div>' +
+    '</a>';
 }
 
 // ── Fetch and sort ────────────────────────────────────────────────────────────
 async function fetchLyricists() {
   // 1. Find person_ids linked to PD compositions as Lyricist
-  const pdPersonIds = new Set();
   const countMap = {};
+  const pdPersonIds = new Set();
   let offset = 0;
   while (true) {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition_person?role=eq.Lyricist&select=person_id,composition:composition_id(public_domain,musescore_link)&limit=1000&offset=${offset}`,
+      SUPABASE_URL + '/rest/v1/composition_person?role=eq.Lyricist&select=person_id,composition:composition_id(public_domain,musescore_link)&limit=1000&offset=' + offset,
       { headers: H }
     );
     const rows = await r.json();
     if (!rows.length) break;
-    rows.forEach(row => {
-      if (row.composition?.public_domain === 'Yes' && row.composition?.musescore_link) {
+    rows.forEach(function(row) {
+      if (row.composition && row.composition.public_domain === 'Yes' && row.composition.musescore_link) {
         pdPersonIds.add(row.person_id);
         countMap[row.person_id] = (countMap[row.person_id] || 0) + 1;
       }
@@ -314,35 +315,32 @@ async function fetchLyricists() {
   for (let i = 0; i < ids.length; i += 200) {
     const chunk = ids.slice(i, i + 200).join(',');
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/person?person_id=in.(${chunk})&select=person_id,first_name,last_name,born,died,nationality,gender&order=last_name.asc`,
+      SUPABASE_URL + '/rest/v1/person?person_id=in.(' + chunk + ')&select=person_id,first_name,last_name,born,died,nationality,gender&order=last_name.asc',
       { headers: H }
     );
     persons = persons.concat(await r.json());
   }
 
-  // 3. Attach counts
-  persons.forEach(p => { p.work_count = countMap[p.person_id] || 0; });
+  // 3. Attach counts and sort into sections
+  const sorter = function(a, b) { return (a.last_name || '').localeCompare(b.last_name || '', 'no'); };
 
-  // 4. Split into sections and sort by last name
-  const sections = { no: [], nordic: [], others: [] };
-  persons.forEach(p => {
-    if (p.nationality === 'NO') {
-      sections.no.push(p);
+  persons.forEach(function(p) {
+    p.work_count = countMap[p.person_id] || 0;
+    if (!p.nationality) {
+      sectionData.unknown.push(p);
+    } else if (p.nationality === 'NO') {
+      sectionData.no.push(p);
     } else if (NORDIC.includes(p.nationality)) {
-      sections.nordic.push(p);
+      sectionData.nordic.push(p);
     } else {
-      sections.others.push(p);
+      sectionData.others.push(p);
     }
   });
 
-  const sorter = (a, b) => (a.last_name || '').localeCompare(b.last_name || '', 'no');
-  sections.no.sort(sorter);
-  sections.nordic.sort(sorter);
-  sections.others.sort(sorter);
-
-  renderSection('no',     sections.no);
-  renderSection('nordic', sections.nordic);
-  renderSection('others', sections.others);
+  ['no', 'nordic', 'others', 'unknown'].forEach(function(sec) {
+    sectionData[sec].sort(sorter);
+    renderSection(sec);
+  });
 }
 
 fetchLyricists();
