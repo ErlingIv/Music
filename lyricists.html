@@ -47,11 +47,41 @@
     text-decoration: none;
   }
 
+  /* ── Nav tabs ── */
+  nav {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    background: var(--paper);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 0.9rem 2rem;
+    font-family: var(--body);
+    font-size: 0.88rem;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
   /* ── Main ── */
   main { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
 
-  /* ── Page heading ── */
-  .page-header {
+  /* ── Section panels ── */
+  .section-panel { display: none; }
+  .section-panel.active { display: block; }
+
+  /* ── Section header ── */
+  .section-header {
     display: flex;
     align-items: baseline;
     gap: 1rem;
@@ -59,46 +89,17 @@
     padding-bottom: 0.75rem;
     border-bottom: 1px solid var(--border);
   }
-  .page-title {
+  .section-title {
     font-family: var(--serif);
     font-size: clamp(1.4rem, 3vw, 2rem);
     font-weight: 700;
     color: var(--ink);
   }
-  .page-count {
+  .section-count {
     font-size: 0.82rem;
     color: var(--muted);
     letter-spacing: 0.04em;
   }
-
-  /* ── Alpha index bar ── */
-  .alpha-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px;
-    margin-bottom: 1.5rem;
-  }
-  .alpha-btn {
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.78rem;
-    font-family: var(--body);
-    font-weight: 500;
-    color: var(--muted);
-    background: var(--paper);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.15s;
-    text-transform: uppercase;
-    user-select: none;
-  }
-  .alpha-btn:hover { background: var(--faint); color: var(--ink); }
-  .alpha-btn.active { background: var(--accent2); color: #fff; border-color: var(--accent2); }
-  .alpha-btn.disabled { opacity: 0.3; cursor: default; pointer-events: none; }
 
   /* ── Lyricist grid ── */
   .lyricist-grid {
@@ -148,20 +149,6 @@
     padding: 1px 5px;
   }
 
-  /* ── Letter group ── */
-  .letter-group { margin-bottom: 1.5rem; }
-  .letter-heading {
-    font-family: var(--serif);
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--accent2);
-    opacity: 0.6;
-    border-left: 3px solid var(--accent2);
-    padding-left: 0.6rem;
-    margin-bottom: 0.6rem;
-    line-height: 1;
-  }
-
   /* ── Loading / empty states ── */
   .loading-state {
     text-align: center;
@@ -197,17 +184,47 @@
   <a class="site-name" href="index.html" id="siteNameLink">Norske Musikknoter</a>
 </header>
 
+<nav>
+  <div class="tab active" data-section="no"      onclick="switchTab('no')">🇳🇴 Norwegian</div>
+  <div class="tab"        data-section="nordic"  onclick="switchTab('nordic')">Nordic</div>
+  <div class="tab"        data-section="others"  onclick="switchTab('others')">Others</div>
+</nav>
+
 <main>
-  <div class="page-header">
-    <h1 class="page-title">✍ Lyricists</h1>
-    <span class="page-count" id="pageCount"></span>
+
+  <!-- Norwegian -->
+  <div class="section-panel active" id="panel-no">
+    <div class="section-header">
+      <h1 class="section-title">✍ Norwegian Lyricists</h1>
+      <span class="section-count" id="count-no"></span>
+    </div>
+    <div id="lyricists-no" class="lyricist-grid">
+      <div class="loading-state" style="grid-column:1/-1"><span class="loading-dots">Loading</span></div>
+    </div>
   </div>
 
-  <div class="alpha-bar" id="alphaBar"></div>
-
-  <div id="lyricistContainer">
-    <div class="loading-state"><span class="loading-dots">Loading</span></div>
+  <!-- Nordic -->
+  <div class="section-panel" id="panel-nordic">
+    <div class="section-header">
+      <h1 class="section-title">✍ Nordic Lyricists</h1>
+      <span class="section-count" id="count-nordic"></span>
+    </div>
+    <div id="lyricists-nordic" class="lyricist-grid">
+      <div class="loading-state" style="grid-column:1/-1"><span class="loading-dots">Loading</span></div>
+    </div>
   </div>
+
+  <!-- Others -->
+  <div class="section-panel" id="panel-others">
+    <div class="section-header">
+      <h1 class="section-title">✍ Other Lyricists</h1>
+      <span class="section-count" id="count-others"></span>
+    </div>
+    <div id="lyricists-others" class="lyricist-grid">
+      <div class="loading-state" style="grid-column:1/-1"><span class="loading-dots">Loading</span></div>
+    </div>
+  </div>
+
 </main>
 
 <footer>
@@ -226,9 +243,49 @@ const FLAGS = { NO:'🇳🇴', SE:'🇸🇪', DK:'🇩🇰', FI:'🇫🇮', IS:'
                 AT:'🇦🇹', BE:'🇧🇪', HU:'🇭🇺', AU:'🇦🇺', CZ:'🇨🇿',
                 PL:'🇵🇱', VE:'🇻🇪' };
 
-let allLyricists = [];
-let activeLetter = 'ALL';
+const NORDIC = ['SE', 'DK', 'FI', 'IS'];
 
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(sec) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`[data-section="${sec}"]`).classList.add('active');
+  document.querySelectorAll('.section-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`panel-${sec}`).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Render a section ──────────────────────────────────────────────────────────
+function renderSection(sec, list) {
+  const countEl = document.getElementById(`count-${sec}`);
+  const gridEl  = document.getElementById(`lyricists-${sec}`);
+
+  countEl.textContent = `${list.length} lyricist${list.length !== 1 ? 's' : ''}`;
+
+  if (!list.length) {
+    gridEl.innerHTML = '<div class="loading-state" style="grid-column:1/-1">No lyricists found.</div>';
+    return;
+  }
+
+  gridEl.innerHTML = list.map(p => lyricistCard(p)).join('');
+}
+
+function lyricistCard(p) {
+  const years  = [p.born, p.died].filter(Boolean).join('–');
+  const flag   = FLAGS[p.nationality] || '';
+  const female = p.gender === 'F' ? '<span class="female-badge">♀</span>' : '';
+  return `
+    <a class="lyricist-card" href="composer.html?id=${p.person_id}&role=Lyricist">
+      <div class="lyricist-name">${p.last_name}, ${p.first_name || ''} ${flag}</div>
+      <div class="lyricist-meta">
+        ${years ? `<span>${years}</span>` : ''}
+        ${female}
+        <span class="work-count">${p.work_count} work${p.work_count !== 1 ? 's' : ''}</span>
+      </div>
+    </a>
+  `;
+}
+
+// ── Fetch and sort ────────────────────────────────────────────────────────────
 async function fetchLyricists() {
   // 1. Find person_ids linked to PD compositions as Lyricist
   const pdPersonIds = new Set();
@@ -263,87 +320,29 @@ async function fetchLyricists() {
     persons = persons.concat(await r.json());
   }
 
-  // 3. Attach counts and sort by last name
+  // 3. Attach counts
   persons.forEach(p => { p.work_count = countMap[p.person_id] || 0; });
-  persons.sort((a, b) => (a.last_name || '').localeCompare(b.last_name || '', 'no'));
-  allLyricists = persons;
 
-  render();
-}
-
-function render() {
-  const ALL_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ'.split('');
-  const presentLetters = new Set(allLyricists.map(p => (p.last_name || '?')[0].toUpperCase()));
-
-  // Alpha bar
-  document.getElementById('alphaBar').innerHTML = `
-    <div class="alpha-btn ${activeLetter === 'ALL' ? 'active' : ''}"
-         onclick="setLetter('ALL')">All</div>
-    ${ALL_LETTERS.map(l => `
-      <div class="alpha-btn ${!presentLetters.has(l) ? 'disabled' : ''} ${activeLetter === l ? 'active' : ''}"
-           onclick="setLetter('${l}')">
-        ${l}
-      </div>`).join('')}
-  `;
-
-  // Filter
-  const filtered = activeLetter === 'ALL'
-    ? allLyricists
-    : allLyricists.filter(p => (p.last_name || '?')[0].toUpperCase() === activeLetter);
-
-  document.getElementById('pageCount').textContent =
-    `${filtered.length} lyricist${filtered.length !== 1 ? 's' : ''}`;
-
-  if (!filtered.length) {
-    document.getElementById('lyricistContainer').innerHTML =
-      '<div class="loading-state">No lyricists found.</div>';
-    return;
-  }
-
-  // Group by first letter
-  const groups = {};
-  filtered.forEach(p => {
-    const l = (p.last_name || '?')[0].toUpperCase();
-    if (!groups[l]) groups[l] = [];
-    groups[l].push(p);
+  // 4. Split into sections and sort by last name
+  const sections = { no: [], nordic: [], others: [] };
+  persons.forEach(p => {
+    if (p.nationality === 'NO') {
+      sections.no.push(p);
+    } else if (NORDIC.includes(p.nationality)) {
+      sections.nordic.push(p);
+    } else {
+      sections.others.push(p);
+    }
   });
 
-  document.getElementById('lyricistContainer').innerHTML =
-    Object.entries(groups).map(([letter, list]) => `
-      <div class="letter-group" id="letter-${letter}">
-        <div class="letter-heading">${letter}</div>
-        <div class="lyricist-grid">
-          ${list.map(lyricistCard).join('')}
-        </div>
-      </div>
-    `).join('');
-}
+  const sorter = (a, b) => (a.last_name || '').localeCompare(b.last_name || '', 'no');
+  sections.no.sort(sorter);
+  sections.nordic.sort(sorter);
+  sections.others.sort(sorter);
 
-function lyricistCard(p) {
-  const years  = [p.born, p.died].filter(Boolean).join('–');
-  const flag   = FLAGS[p.nationality] || '';
-  const female = p.gender === 'F' ? '<span class="female-badge">♀</span>' : '';
-  return `
-    <a class="lyricist-card" href="composer.html?id=${p.person_id}&role=Lyricist">
-      <div class="lyricist-name">${p.last_name}, ${p.first_name || ''} ${flag}</div>
-      <div class="lyricist-meta">
-        ${years ? `<span>${years}</span>` : ''}
-        ${female}
-        <span class="work-count">${p.work_count} work${p.work_count !== 1 ? 's' : ''}</span>
-      </div>
-    </a>
-  `;
-}
-
-function setLetter(letter) {
-  activeLetter = letter;
-  render();
-  if (letter !== 'ALL') {
-    const el = document.getElementById(`letter-${letter}`);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  } else {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
+  renderSection('no',     sections.no);
+  renderSection('nordic', sections.nordic);
+  renderSection('others', sections.others);
 }
 
 fetchLyricists();
