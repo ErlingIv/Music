@@ -442,13 +442,14 @@ function codeToFlag(code) {
 }
 
 function renderFlags(nationality, birthCountry, birthCountryPrimary) {
-  var prime  = birthCountryPrimary && birthCountry ? birthCountry : nationality;
-  var second = birthCountryPrimary && birthCountry ? nationality  : birthCountry;
+  var bcp    = (birthCountryPrimary === true);
+  var prime  = bcp && birthCountry ? birthCountry : nationality;
+  var second = bcp && birthCountry ? nationality  : birthCountry;
   var pFlag  = codeToFlag(prime);
   if (!pFlag) return '';
   if (second && second !== prime) {
     var sFlag = codeToFlag(second);
-    if (sFlag) return pFlag + '<span style="font-size:0.65em;vertical-align:super" title="' + (birthCountryPrimary ? 'Karriereland: ' : 'Born: ') + second + '">' + sFlag + '</span>';
+    if (sFlag) return pFlag + '<span style="font-size:0.65em;vertical-align:super">' + sFlag + '</span>';
   }
   return pFlag;
 }
@@ -580,12 +581,12 @@ async function fetchAllComposers(copyrightMode = false) {
     p.score_count = countMap[p.person_id] || 0;
     p.has_media   = mediaPersonIds.has(p.person_id);
     p.is_female   = p.gender === 'F';
-    var primeNat = (p.birth_country_primary && p.birth_country) ? p.birth_country : p.nationality;
-    if (!primeNat) {
+    var tabNat = (p.birth_country_primary === true && p.birth_country) ? p.birth_country : p.nationality;
+    if (!tabNat) {
       allComposers.unknown.push(p);
-    } else if (primeNat === 'NO') {
+    } else if (tabNat === 'NO') {
       allComposers.no.push(p);
-    } else if (NORDIC.includes(primeNat)) {
+    } else if (NORDIC.includes(tabNat)) {
       allComposers.nordic.push(p);
     } else {
       allComposers.others.push(p);
@@ -664,8 +665,7 @@ function renderSection(sec) {
 
 function composerCard(c) {
   const years  = [c.born, c.died].filter(Boolean).join('–');
-  var primeNat = (c.birth_country_primary && c.birth_country) ? c.birth_country : c.nationality;
-  const flag   = primeNat !== 'NO' ? renderFlags(c.nationality, c.birth_country, c.birth_country_primary) : '';
+  const flag   = c.nationality !== 'NO' ? renderFlags(c.nationality, c.birth_country, c.birth_country_primary) : '';
   const female = c.is_female ? '<span class="female-badge">♀</span>' : '';
   const media  = c.has_media ? '<span class="female-badge" style="background:#e6f0ea;color:#2a5c45;border-color:#b8d4c0;">🎵</span>' : '';
   const n = c.score_count;

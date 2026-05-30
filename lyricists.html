@@ -204,13 +204,14 @@ function codeToFlag(code) {
 }
 
 function renderFlags(nationality, birthCountry, birthCountryPrimary) {
-  var prime  = birthCountryPrimary && birthCountry ? birthCountry : nationality;
-  var second = birthCountryPrimary && birthCountry ? nationality  : birthCountry;
+  var bcp    = (birthCountryPrimary === true);
+  var prime  = bcp && birthCountry ? birthCountry : nationality;
+  var second = bcp && birthCountry ? nationality  : birthCountry;
   var pFlag  = codeToFlag(prime);
   if (!pFlag) return '';
   if (second && second !== prime) {
     var sFlag = codeToFlag(second);
-    if (sFlag) return pFlag + '<span style="font-size:0.65em;vertical-align:super" title="' + (birthCountryPrimary ? 'Karriereland: ' : 'Born: ') + second + '">' + sFlag + '</span>';
+    if (sFlag) return pFlag + '<span style="font-size:0.65em;vertical-align:super">' + sFlag + '</span>';
   }
   return pFlag;
 }
@@ -339,12 +340,12 @@ async function fetchLyricists() {
 
   persons.forEach(function(p) {
     p.work_count = countMap[p.person_id] || 0;
-    var primeNat = (p.birth_country_primary && p.birth_country) ? p.birth_country : p.nationality;
-    if (!primeNat) {
+    var tabNat = (p.birth_country_primary === true && p.birth_country) ? p.birth_country : p.nationality;
+    if (!tabNat) {
       sectionData.unknown.push(p);
-    } else if (primeNat === 'NO') {
+    } else if (tabNat === 'NO') {
       sectionData.no.push(p);
-    } else if (NORDIC.includes(primeNat)) {
+    } else if (NORDIC.includes(tabNat)) {
       sectionData.nordic.push(p);
     } else {
       sectionData.others.push(p);
