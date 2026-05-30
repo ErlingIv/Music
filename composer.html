@@ -241,6 +241,16 @@ function flagEmoji(code) {
   ).join('');
 }
 
+function renderFlags(nationality, birthCountry) {
+  const primary = flagEmoji(nationality);
+  if (!primary) return '';
+  if (birthCountry && birthCountry !== nationality) {
+    const bFlag = flagEmoji(birthCountry);
+    if (bFlag) return primary + '<span style="font-size:0.65em;vertical-align:super" title="Born: ' + birthCountry + '">' + bFlag + '</span>';
+  }
+  return primary;
+}
+
 const params    = new URLSearchParams(window.location.search);
 const personId  = params.get('id');
 const roleParam = params.get('role') || 'Composer'; // 'Composer' or 'Lyricist'
@@ -268,7 +278,7 @@ async function load() {
   try {
     // 1. Fetch person
     const pR = await fetch(
-      `${SUPABASE_URL}/rest/v1/person?person_id=eq.${personId}&select=person_id,first_name,last_name,born,died,nationality,gender,bio_url,bio_text`,
+      `${SUPABASE_URL}/rest/v1/person?person_id=eq.${personId}&select=person_id,first_name,last_name,born,died,nationality,birth_country,gender,bio_url,bio_text`,
       { headers: H }
     );
     const person = (await pR.json())[0];
@@ -327,7 +337,7 @@ async function load() {
     // ── Render ──────────────────────────────────────────────────────────────
 
     const years  = [person.born, person.died].filter(Boolean).join('–');
-    const flag   = flagEmoji(person.nationality);
+    const flag   = renderFlags(person.nationality, person.birth_country);
     const female = person.gender === 'F';
     const bioHtml = person.bio_text ? person.bio_text.replace(/\n/g, '<br>') : '';
 

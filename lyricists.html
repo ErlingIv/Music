@@ -203,6 +203,16 @@ const FLAGS = { NO:'🇳🇴', SE:'🇸🇪', DK:'🇩🇰', FI:'🇫🇮', IS:'
                 PL:'🇵🇱', VE:'🇻🇪' };
 
 const NORDIC    = ['SE', 'DK', 'FI', 'IS'];
+
+function renderFlags(nationality, birthCountry) {
+  var primary = FLAGS[nationality] || '';
+  if (!primary) return '';
+  if (birthCountry && birthCountry !== nationality) {
+    var bFlag = FLAGS[birthCountry] || '';
+    if (bFlag) return primary + '<span style="font-size:0.65em;vertical-align:super" title="Born: ' + birthCountry + '">' + bFlag + '</span>';
+  }
+  return primary;
+}
 const ALL_ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ'.split('');
 
 // Per-section data and active letter state
@@ -274,7 +284,7 @@ function renderSection(sec) {
 
 function lyricistCard(p) {
   var years  = [p.born, p.died].filter(Boolean).join('–');
-  var flag   = FLAGS[p.nationality] || '';
+  var flag   = renderFlags(p.nationality, p.birth_country);
   var female = p.gender === 'F' ? '<span class="female-badge">♀</span>' : '';
   return '<a class="lyricist-card" href="composer.html?id=' + p.person_id + '&role=Lyricist">' +
     '<div class="lyricist-name">' + (p.last_name || '') + ', ' + (p.first_name || '') + ' ' + flag + '</div>' +
@@ -315,7 +325,7 @@ async function fetchLyricists() {
   for (let i = 0; i < ids.length; i += 200) {
     const chunk = ids.slice(i, i + 200).join(',');
     const r = await fetch(
-      SUPABASE_URL + '/rest/v1/person?person_id=in.(' + chunk + ')&select=person_id,first_name,last_name,born,died,nationality,gender&order=last_name.asc',
+      SUPABASE_URL + '/rest/v1/person?person_id=in.(' + chunk + ')&select=person_id,first_name,last_name,born,died,nationality,birth_country,gender&order=last_name.asc',
       { headers: H }
     );
     persons = persons.concat(await r.json());
