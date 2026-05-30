@@ -1069,7 +1069,8 @@ function countryCodeToFlag(code) {
 }
 
 document.getElementById('p_birth_country').addEventListener('input', function() {
-  const v = this.value.trim().toUpperCase();
+  this.value = this.value.toUpperCase();
+  const v = this.value.trim();
   document.getElementById('p_birth_flag').textContent = v ? countryCodeToFlag(v) : '';
 });
 document.getElementById('p_nationality').addEventListener('input', function() {
@@ -1077,7 +1078,8 @@ document.getElementById('p_nationality').addEventListener('input', function() {
   document.getElementById('p_flag').textContent = countryCodeToFlag(this.value);
 });
 document.getElementById('np_birth_country').addEventListener('input', function() {
-  const v = this.value.trim().toUpperCase();
+  this.value = this.value.toUpperCase();
+  const v = this.value.trim();
   document.getElementById('np_birth_flag').textContent = v ? countryCodeToFlag(v) : '';
 });
 document.getElementById('np_nationality').addEventListener('input', function() {
