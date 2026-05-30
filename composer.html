@@ -234,10 +234,12 @@ const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
-const FLAGS = { NO:'🇳🇴', SE:'🇸🇪', DK:'🇩🇰', FI:'🇫🇮', IS:'🇮🇸',
-                DE:'🇩🇪', US:'🇺🇸', FR:'🇫🇷', GB:'🇬🇧', IT:'🇮🇹',
-                AT:'🇦🇹', BE:'🇧🇪', HU:'🇭🇺', AU:'🇦🇺', CZ:'🇨🇿',
-                PL:'🇵🇱', VE:'🇻🇪' };
+function flagEmoji(code) {
+  if (!code || code.length !== 2) return '';
+  return [...code.toUpperCase()].map(c =>
+    String.fromCodePoint(0x1F1E0 - 65 + c.charCodeAt(0))
+  ).join('');
+}
 
 const params    = new URLSearchParams(window.location.search);
 const personId  = params.get('id');
@@ -325,7 +327,7 @@ async function load() {
     // ── Render ──────────────────────────────────────────────────────────────
 
     const years  = [person.born, person.died].filter(Boolean).join('–');
-    const flag   = FLAGS[person.nationality] || '';
+    const flag   = flagEmoji(person.nationality);
     const female = person.gender === 'F';
     const bioHtml = person.bio_text ? person.bio_text.replace(/\n/g, '<br>') : '';
 
