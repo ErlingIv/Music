@@ -686,9 +686,21 @@
         <div class="row2">
           <div class="field">
             <label>Nasjonalitet (landkode)</label>
-            <div style="display:flex;gap:0.5rem;align-items:center">
-              <input type="text" id="p_nationality" placeholder="NO, DE, SE…" style="width:6rem;flex:none">
-              <span id="p_flag" style="font-size:1.8rem"></span>
+            <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap">
+              <div style="display:flex;flex-direction:column;gap:0.2rem">
+                <div style="font-size:0.72rem;color:var(--muted)">Karriereland</div>
+                <div style="display:flex;gap:0.5rem;align-items:center">
+                  <input type="text" id="p_nationality" placeholder="NO" style="width:5rem;flex:none">
+                  <span id="p_flag" style="font-size:1.6rem"></span>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:0.2rem">
+                <div style="font-size:0.72rem;color:var(--muted)">Fødeland (hvis annet)</div>
+                <div style="display:flex;gap:0.5rem;align-items:center">
+                  <input type="text" id="p_birth_country" placeholder="DE, US…" style="width:5rem;flex:none">
+                  <span id="p_birth_flag" style="font-size:1.1rem;vertical-align:super"></span>
+                </div>
+              </div>
             </div>
           </div>
           <div class="field">
@@ -756,9 +768,21 @@
       <div class="row2">
         <div class="field">
           <label>Nasjonalitet</label>
-          <div style="display:flex;gap:0.5rem;align-items:center">
-            <input type="text" id="np_nationality" placeholder="NO, DE…" style="width:6rem;flex:none">
-            <span id="np_flag" style="font-size:1.8rem"></span>
+          <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap">
+            <div style="display:flex;flex-direction:column;gap:0.2rem">
+              <div style="font-size:0.72rem;color:var(--muted)">Karriereland</div>
+              <div style="display:flex;gap:0.5rem;align-items:center">
+                <input type="text" id="np_nationality" placeholder="NO" style="width:5rem;flex:none">
+                <span id="np_flag" style="font-size:1.6rem"></span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:0.2rem">
+              <div style="font-size:0.72rem;color:var(--muted)">Fødeland (hvis annet)</div>
+              <div style="display:flex;gap:0.5rem;align-items:center">
+                <input type="text" id="np_birth_country" placeholder="DE, US…" style="width:5rem;flex:none">
+                <span id="np_birth_flag" style="font-size:1.1rem;vertical-align:super"></span>
+              </div>
+            </div>
           </div>
         </div>
         <div class="field">
@@ -833,7 +857,16 @@
     <div class="row2">
       <div class="field">
         <label>Nasjonalitet</label>
-        <input type="text" id="m_nationality" placeholder="NO, DE…" style="width:6rem">
+        <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:0.2rem">
+            <div style="font-size:0.72rem;color:var(--muted)">Karriereland</div>
+            <input type="text" id="m_nationality" placeholder="NO" style="width:5rem">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0.2rem">
+            <div style="font-size:0.72rem;color:var(--muted)">Fødeland (hvis annet)</div>
+            <input type="text" id="m_birth_country" placeholder="DE, US…" style="width:5rem">
+          </div>
+        </div>
       </div>
       <div class="field">
         <label>Kjønn</label>

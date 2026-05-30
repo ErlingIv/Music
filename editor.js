@@ -353,14 +353,16 @@ async function saveNewPerson() {
   const prevWarn = document.getElementById('m_dupWarn');
   if (prevWarn) prevWarn.style.display = 'none';
 
-  const gender      = document.getElementById('m_gender').value;
-  const nationality = document.getElementById('m_nationality').value.trim() || null;
+  const gender        = document.getElementById('m_gender').value;
+  const nationality   = document.getElementById('m_nationality').value.trim() || null;
+  const birth_country = document.getElementById('m_birth_country').value.trim() || null;
   const data = {
     first_name: first || null,
     last_name:  last,
     born:       parseInt(document.getElementById('m_born').value)  || null,
     died:       parseInt(document.getElementById('m_died').value)  || null,
     nationality,
+    birth_country,
     gender:     gender || null,
     bio_url:    document.getElementById('m_bioUrl').value.trim()   || null,
     bio_url_verified: document.getElementById('m_bioUrlVerified').checked || false,
@@ -1064,9 +1066,17 @@ function countryCodeToFlag(code) {
   return Array.from(code.toUpperCase()).map(c => String.fromCodePoint(c.charCodeAt(0) + offset)).join('');
 }
 
+document.getElementById('p_birth_country').addEventListener('input', function() {
+  const v = this.value.trim().toUpperCase();
+  document.getElementById('p_birth_flag').textContent = v ? countryCodeToFlag(v) : '';
+});
 document.getElementById('p_nationality').addEventListener('input', function() {
   this.value = this.value.toUpperCase();
   document.getElementById('p_flag').textContent = countryCodeToFlag(this.value);
+});
+document.getElementById('np_birth_country').addEventListener('input', function() {
+  const v = this.value.trim().toUpperCase();
+  document.getElementById('np_birth_flag').textContent = v ? countryCodeToFlag(v) : '';
 });
 document.getElementById('np_nationality').addEventListener('input', function() {
   this.value = this.value.toUpperCase();
@@ -1130,13 +1140,16 @@ async function loadPersonForm(personId) {
   document.getElementById('p_lastName').dataset.original  = p.last_name  || '';
   document.getElementById('p_born').value       = p.born       || '';
   document.getElementById('p_died').value       = p.died       || '';
-  document.getElementById('p_nationality').value= p.nationality|| '';
-  document.getElementById('p_pseudonym').value  = p.pseudonym  || '';
-  document.getElementById('p_gender').value     = p.gender     || '';
-  document.getElementById('p_bioUrl').value     = p.bio_url    || '';
+  document.getElementById('p_nationality').value     = p.nationality   || '';
+  document.getElementById('p_birth_country').value   = p.birth_country || '';
+  document.getElementById('p_pseudonym').value       = p.pseudonym     || '';
+  document.getElementById('p_gender').value          = p.gender        || '';
+  document.getElementById('p_bioUrl').value          = p.bio_url       || '';
   document.getElementById('p_bioUrlVerified').checked = (p.bio_url_verified === true);
-  document.getElementById('p_bioText').value    = p.bio_text   || '';
-  document.getElementById('p_flag').textContent = countryCodeToFlag(p.nationality || '');
+  document.getElementById('p_bioText').value         = p.bio_text      || '';
+  document.getElementById('p_flag').textContent      = countryCodeToFlag(p.nationality || '');
+  document.getElementById('p_birth_flag').textContent = (p.birth_country && p.birth_country !== p.nationality)
+    ? countryCodeToFlag(p.birth_country) : '';
   const link = document.getElementById('p_bioLink');
   if (p.bio_url) { link.href = p.bio_url; link.style.display = 'block'; }
   else link.style.display = 'none';
@@ -1245,13 +1258,15 @@ async function savePerson() {
   // Normal save
   try {
     const gender      = document.getElementById('p_gender').value;
-    const nationality = document.getElementById('p_nationality').value.trim() || null;
+    const nationality    = document.getElementById('p_nationality').value.trim() || null;
+    const birth_country  = document.getElementById('p_birth_country').value.trim() || null;
     await patch('person', `person_id=eq.${personId}`, {
       first_name:           first || null,
       last_name:            last,
       born:                 parseInt(document.getElementById('p_born').value) || null,
       died:                 parseInt(document.getElementById('p_died').value) || null,
       nationality,
+      birth_country,
       pseudonym:            document.getElementById('p_pseudonym').value.trim() || null,
       gender:               gender || null,
       bio_url:              document.getElementById('p_bioUrl').value.trim() || null,
@@ -1323,11 +1338,12 @@ async function deletePerson() {
 
 // ── New person form reset ─────────────────────────────────────────────────────
 function resetNewPersonForm() {
-  ['np_firstName','np_lastName','np_born','np_died','np_nationality','np_bioUrl'].forEach(id => document.getElementById(id).value = '');
+  ['np_firstName','np_lastName','np_born','np_died','np_nationality','np_birth_country','np_bioUrl'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('np_gender').value = '';
   document.getElementById('np_bioUrlVerified').checked = false;
   document.getElementById('np_bioLink').style.display = 'none';
   document.getElementById('np_flag').textContent = '';
+  document.getElementById('np_birth_flag').textContent = '';
 }
 
 // ── Person duplicate helpers (called from inline warning buttons) ─────────────
@@ -1349,7 +1365,8 @@ async function forceAddPerson(btn) {
   const last  = document.getElementById('np_lastName').value.trim();
   const first = document.getElementById('np_firstName').value.trim();
   const gender      = document.getElementById('np_gender').value;
-  const nationality = document.getElementById('np_nationality').value.trim() || null;
+  const nationality   = document.getElementById('np_nationality').value.trim() || null;
+  const birth_country = document.getElementById('np_birth_country').value.trim() || null;
   try {
     const p = await post('person', {
       first_name:       first || null,
@@ -1357,6 +1374,7 @@ async function forceAddPerson(btn) {
       born:             parseInt(document.getElementById('np_born').value) || null,
       died:             parseInt(document.getElementById('np_died').value) || null,
       nationality,
+      birth_country,
       gender:           gender || null,
       bio_url:          document.getElementById('np_bioUrl').value.trim() || null,
       bio_url_verified: document.getElementById('np_bioUrlVerified').checked || false,
@@ -1392,13 +1410,15 @@ async function addNewPerson() {
   }
   try {
     const gender      = document.getElementById('np_gender').value;
-    const nationality = document.getElementById('np_nationality').value.trim() || null;
+    const nationality   = document.getElementById('np_nationality').value.trim() || null;
+    const birth_country = document.getElementById('np_birth_country').value.trim() || null;
     const p = await post('person', {
       first_name:          document.getElementById('np_firstName').value.trim() || null,
       last_name:           last,
       born:                parseInt(document.getElementById('np_born').value) || null,
       died:                parseInt(document.getElementById('np_died').value) || null,
       nationality,
+      birth_country,
       gender:              gender || null,
       bio_url:             document.getElementById('np_bioUrl').value.trim() || null,
       bio_url_verified:    document.getElementById('np_bioUrlVerified').checked || false,
