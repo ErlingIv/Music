@@ -237,7 +237,7 @@ const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 function flagEmoji(code) {
   if (!code || code.length !== 2) return '';
   return [...code.toUpperCase()].map(c =>
-    String.fromCodePoint(0x1F1E0 - 65 + c.charCodeAt(0))
+    String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)
   ).join('');
 }
 
@@ -351,7 +351,7 @@ async function load() {
             ${years ? `<p class="composer-dates">${years}</p>` : ''}
             <div class="badges">
               ${female ? '<span class="badge badge-female">♀ Female composer</span>' : ''}
-              ${person.nationality ? `<span class="badge badge-nation">${person.nationality}</span>` : ''}
+              ${person.nationality ? `<span class="badge badge-nation">${person.nationality.toUpperCase()}</span>` : ''}
               ${roleParam === 'Lyricist' && !hasComposer ? '<span class="badge badge-lyricist">Lyricist</span>' : ''}
             </div>
           </div>
