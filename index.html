@@ -435,16 +435,17 @@ const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
 const NORDIC = ['SE', 'DK', 'FI', 'IS'];
-const FLAGS  = { SE: '🇸🇪', DK: '🇩🇰', FI: '🇫🇮', IS: '🇮🇸',
-                 DE: '🇩🇪', US: '🇺🇸', FR: '🇫🇷', GB: '🇬🇧',
-                 IT: '🇮🇹', AT: '🇦🇹', BE: '🇧🇪', HU: '🇭🇺',
-                 AU: '🇦🇺', CZ: '🇨🇿', PL: '🇵🇱', VE: '🇻🇪' };
+function codeToFlag(code) {
+  if (!code || code.length < 2) return '';
+  return [...code.toUpperCase().slice(0,2)]
+    .map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('');
+}
 
 function renderFlags(nationality, birthCountry) {
-  const primary = FLAGS[nationality] || '';
+  const primary = codeToFlag(nationality);
   if (!primary) return '';
   if (birthCountry && birthCountry !== nationality) {
-    const bFlag = FLAGS[birthCountry] || '';
+    const bFlag = codeToFlag(birthCountry);
     if (bFlag) return primary + '<span style="font-size:0.65em;vertical-align:super" title="Born: ' + birthCountry + '">' + bFlag + '</span>';
   }
   return primary;

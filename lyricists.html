@@ -197,22 +197,23 @@ const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
-const FLAGS = { NO:'🇳🇴', SE:'🇸🇪', DK:'🇩🇰', FI:'🇫🇮', IS:'🇮🇸',
-                DE:'🇩🇪', US:'🇺🇸', FR:'🇫🇷', GB:'🇬🇧', IT:'🇮🇹',
-                AT:'🇦🇹', BE:'🇧🇪', HU:'🇭🇺', AU:'🇦🇺', CZ:'🇨🇿',
-                PL:'🇵🇱', VE:'🇻🇪' };
-
-const NORDIC    = ['SE', 'DK', 'FI', 'IS'];
+function codeToFlag(code) {
+  if (!code || code.length < 2) return '';
+  return [...code.toUpperCase().slice(0,2)]
+    .map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('');
+}
 
 function renderFlags(nationality, birthCountry) {
-  var primary = FLAGS[nationality] || '';
+  var primary = codeToFlag(nationality);
   if (!primary) return '';
   if (birthCountry && birthCountry !== nationality) {
-    var bFlag = FLAGS[birthCountry] || '';
+    var bFlag = codeToFlag(birthCountry);
     if (bFlag) return primary + '<span style="font-size:0.65em;vertical-align:super" title="Born: ' + birthCountry + '">' + bFlag + '</span>';
   }
   return primary;
 }
+
+const NORDIC    = ['SE', 'DK', 'FI', 'IS'];
 const ALL_ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ'.split('');
 
 // Per-section data and active letter state
