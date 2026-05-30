@@ -441,14 +441,16 @@ function codeToFlag(code) {
     .map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('');
 }
 
-function renderFlags(nationality, birthCountry) {
-  const primary = codeToFlag(nationality);
-  if (!primary) return '';
-  if (birthCountry && birthCountry !== nationality) {
-    const bFlag = codeToFlag(birthCountry);
-    if (bFlag) return primary + '<span style="font-size:0.65em;vertical-align:super" title="Born: ' + birthCountry + '">' + bFlag + '</span>';
+function renderFlags(nationality, birthCountry, birthCountryPrimary) {
+  var prime  = birthCountryPrimary && birthCountry ? birthCountry : nationality;
+  var second = birthCountryPrimary && birthCountry ? nationality  : birthCountry;
+  var pFlag  = codeToFlag(prime);
+  if (!pFlag) return '';
+  if (second && second !== prime) {
+    var sFlag = codeToFlag(second);
+    if (sFlag) return pFlag + '<span style="font-size:0.65em;vertical-align:super" title="' + (birthCountryPrimary ? 'Karriereland: ' : 'Born: ') + second + '">' + sFlag + '</span>';
   }
-  return primary;
+  return pFlag;
 }
 
 let allComposers = { no: [], nordic: [], others: [], unknown: [] };
@@ -511,7 +513,7 @@ async function fetchAllComposers(copyrightMode = false) {
   for (let i = 0; i < pdIdsArr.length; i += 200) {
     const chunk = pdIdsArr.slice(i, i + 200).join(',');
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/person?person_id=in.(${chunk})&select=person_id,first_name,last_name,born,died,nationality,birth_country,gender&order=last_name.asc`,
+      `${SUPABASE_URL}/rest/v1/person?person_id=in.(${chunk})&select=person_id,first_name,last_name,born,died,nationality,birth_country,birth_country_primary,gender&order=last_name.asc`,
       { headers: H }
     );
     const rows = await r.json();
@@ -578,11 +580,12 @@ async function fetchAllComposers(copyrightMode = false) {
     p.score_count = countMap[p.person_id] || 0;
     p.has_media   = mediaPersonIds.has(p.person_id);
     p.is_female   = p.gender === 'F';
-    if (!p.nationality) {
+    var primeNat = (p.birth_country_primary && p.birth_country) ? p.birth_country : p.nationality;
+    if (!primeNat) {
       allComposers.unknown.push(p);
-    } else if (p.nationality === 'NO') {
+    } else if (primeNat === 'NO') {
       allComposers.no.push(p);
-    } else if (NORDIC.includes(p.nationality)) {
+    } else if (NORDIC.includes(primeNat)) {
       allComposers.nordic.push(p);
     } else {
       allComposers.others.push(p);
@@ -661,7 +664,8 @@ function renderSection(sec) {
 
 function composerCard(c) {
   const years  = [c.born, c.died].filter(Boolean).join('–');
-  const flag   = c.nationality !== 'NO' ? renderFlags(c.nationality, c.birth_country) : '';
+  var primeNat = (c.birth_country_primary && c.birth_country) ? c.birth_country : c.nationality;
+  const flag   = primeNat !== 'NO' ? renderFlags(c.nationality, c.birth_country, c.birth_country_primary) : '';
   const female = c.is_female ? '<span class="female-badge">♀</span>' : '';
   const media  = c.has_media ? '<span class="female-badge" style="background:#e6f0ea;color:#2a5c45;border-color:#b8d4c0;">🎵</span>' : '';
   const n = c.score_count;
