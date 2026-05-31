@@ -181,6 +181,10 @@ function personDates(p) {
   return (b || '?') + ' – ' + (d || '');
 }
 
+function primeNat(p) {
+  return (p.birth_country_primary === true && p.birth_country) ? p.birth_country : (p.nationality || '');
+}
+
 function load() {
   Promise.all([
     apiFetch('composition'),
@@ -224,13 +228,13 @@ function load() {
         // 2. Multiple composers with mixed nationalities → lyricist decides
         // 3. Unknown/no composer → lyricist decides
         // 4. No lyricist either → ''
-        var compNats = composers.map(function(p) { return p.nationality || ''; }).filter(Boolean);
+        var compNats = composers.map(function(p) { return primeNat(p); }).filter(Boolean);
         var uniqueNats = compNats.filter(function(n, i, a) { return a.indexOf(n) === i; });
         if (uniqueNats.length === 1) {
           effectiveNat = uniqueNats[0];
         } else {
           // Mixed composers or unknown — use lyricist nationality
-          effectiveNat = firstLyr ? (firstLyr.nationality || '') : '';
+          effectiveNat = firstLyr ? primeNat(firstLyr) : '';
         }
       }
 
