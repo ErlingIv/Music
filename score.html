@@ -66,19 +66,15 @@
     color: var(--ink);
     margin-bottom: 4px;
   }
-  /* subtitle shows composer name + lifespan only — year is in meta-grid below */
-  .score-sub { font-size: 0.9rem; color: var(--muted); }
+  .score-sub { font-size: 0.95rem; color: var(--muted); margin-top: 4px; }
 
   .meta-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0 2rem;
+    gap: 0.25rem 2rem;
     margin-bottom: 1.5rem;
-    align-items: start;
+    margin-top: 1rem;
   }
-  .meta-right-col { display: flex; flex-direction: column; gap: 3px; }
-  .meta-opus { color: var(--muted); font-size: 0.88rem; }
-  .meta-lyricist { margin-top: 2px; }
   .meta-label {
     font-size: 0.7rem;
     color: var(--muted);
@@ -87,6 +83,8 @@
     margin-bottom: 3px;
   }
   .meta-value { font-size: 0.95rem; color: var(--ink); }
+  .meta-year  { font-size: 0.95rem; color: var(--muted); }
+  .meta-opus  { font-size: 0.95rem; color: var(--ink); }
   .composer-link { color: var(--accent); text-decoration: none; }
   .composer-link:hover { text-decoration: underline; }
 
@@ -330,17 +328,16 @@ async function load() {
     el.innerHTML = `
       <div class="title-row">
         <h1 class="score-title">${comp.title}</h1>
+        <p class="score-sub">${composerDisplay}</p>
       </div>
 
       <div class="meta-grid">
         <div>
-          <p class="meta-label">Composer</p>
-          <p class="meta-value">${composerDisplay}</p>
+          ${comp.year_composed ? `<p class="meta-year">Composed ${comp.year_composed}</p>` : ''}
+          ${lyricistDisplay    ? `<p class="meta-value" style="margin-top:0.3rem">Lyricist: ${lyricistDisplay}</p>` : ''}
         </div>
-        <div class="meta-right-col">
-          ${comp.year_composed ? `<p class="meta-value">Composed ${comp.year_composed}</p>` : ''}
-          ${comp.opus_number   ? `<p class="meta-value meta-opus">${comp.opus_number}</p>` : ''}
-          ${lyricistDisplay    ? `<p class="meta-value meta-lyricist">Lyricist: ${lyricistDisplay}</p>` : ''}
+        <div>
+          ${comp.opus_number ? `<p class="meta-opus">${comp.opus_number}</p>` : ''}
         </div>
       </div>
 
