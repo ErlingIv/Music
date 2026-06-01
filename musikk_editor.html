@@ -676,11 +676,21 @@
         <div class="row2">
           <div class="field">
             <label>Født</label>
-            <input type="text" id="p_born" placeholder="årstall">
+            <div style="display:flex;align-items:center;gap:0.6rem">
+              <input type="text" id="p_born" placeholder="årstall" style="flex:1">
+              <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.78rem;color:var(--muted);font-weight:400;white-space:nowrap;cursor:pointer">
+                <input type="checkbox" id="p_born_uncertain" style="width:auto;margin:0;accent-color:var(--accent)"> usikker
+              </label>
+            </div>
           </div>
           <div class="field">
             <label>Død</label>
-            <input type="text" id="p_died" placeholder="årstall">
+            <div style="display:flex;align-items:center;gap:0.6rem">
+              <input type="text" id="p_died" placeholder="årstall" style="flex:1">
+              <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.78rem;color:var(--muted);font-weight:400;white-space:nowrap;cursor:pointer">
+                <input type="checkbox" id="p_died_uncertain" style="width:auto;margin:0;accent-color:var(--accent)"> usikker / etter
+              </label>
+            </div>
           </div>
         </div>
         <div class="row2">
