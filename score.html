@@ -253,6 +253,13 @@ function bbcodeToHtml(text) {
     .replace(/\[i\](.+?)\[\/i\]/gi, '<em>$1</em>');
 }
 
+function lifespan(born, died, diedUncertain) {
+  if (!born && !died) return '';
+  if (born && !died) return born;
+  if (!born && died)  return (diedUncertain === 'yes') ? 'after ' + died : died;
+  return born + '–' + (diedUncertain === 'yes' ? 'after ' + died : died);
+}
+
 async function load() {
   const el = document.getElementById('content');
   if (!compId) {
@@ -284,18 +291,18 @@ async function load() {
 
     for (const row of cc) {
       const pR = await fetch(
-        `${SUPABASE_URL}/rest/v1/person?person_id=eq.${row.person_id}&select=person_id,first_name,last_name,born,died`,
+        `${SUPABASE_URL}/rest/v1/person?person_id=eq.${row.person_id}&select=person_id,first_name,last_name,born,died,died_uncertain`,
         { headers: H }
       );
       const p = (await pR.json())[0];
       if (p) {
         const displayName = row.credited_as || `${p.first_name} ${p.last_name}`;
-        const years = [p.born, p.died].filter(Boolean);
-        const yearsStr = years.length ? ` <span style="color:var(--muted);font-size:0.88rem">(${years.join('–')})</span>` : '';
+        const years = lifespan(p.born, p.died, p.died_uncertain);
+        const yearsStr = years ? ` <span style="color:var(--muted);font-size:0.88rem">(${years})</span>` : '';
         composerDisplayParts.push(`<a class="composer-link" href="composer.html?id=${p.person_id}">${displayName}</a>${yearsStr}`);
         if (composerName === '—') {
           composerName = displayName;
-          composerYears = years.length ? `(${years.join('–')})` : '';
+          composerYears = years ? `(${years})` : '';
         }
       }
     }
@@ -305,14 +312,14 @@ async function load() {
     const lyricistDisplayParts = [];
     for (const row of cl) {
       const pR = await fetch(
-        `${SUPABASE_URL}/rest/v1/person?person_id=eq.${row.person_id}&select=person_id,first_name,last_name,born,died`,
+        `${SUPABASE_URL}/rest/v1/person?person_id=eq.${row.person_id}&select=person_id,first_name,last_name,born,died,died_uncertain`,
         { headers: H }
       );
       const p = (await pR.json())[0];
       if (p) {
         const displayName = row.credited_as || `${p.first_name} ${p.last_name}`;
-        const years = [p.born, p.died].filter(Boolean);
-        const yearsStr = years.length ? ` <span style="color:var(--muted);font-size:0.88rem">(${years.join('–')})</span>` : '';
+        const years = lifespan(p.born, p.died, p.died_uncertain);
+        const yearsStr = years ? ` <span style="color:var(--muted);font-size:0.88rem">(${years})</span>` : '';
         lyricistDisplayParts.push(`<a class="composer-link" href="composer.html?id=${p.person_id}&role=Lyricist">${displayName}</a>${yearsStr}`);
       }
     }

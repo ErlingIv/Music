@@ -514,7 +514,7 @@ async function fetchAllComposers(copyrightMode = false) {
   for (let i = 0; i < pdIdsArr.length; i += 200) {
     const chunk = pdIdsArr.slice(i, i + 200).join(',');
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/person?person_id=in.(${chunk})&select=person_id,first_name,last_name,born,died,nationality,birth_country,birth_country_primary,gender&order=last_name.asc`,
+      `${SUPABASE_URL}/rest/v1/person?person_id=in.(${chunk})&select=person_id,first_name,last_name,born,died,died_uncertain,nationality,birth_country,birth_country_primary,gender&order=last_name.asc`,
       { headers: H }
     );
     const rows = await r.json();
@@ -663,8 +663,15 @@ function renderSection(sec) {
   `).join('');
 }
 
+function lifespan(born, died, diedUncertain) {
+  if (!born && !died) return '';
+  if (born && !died) return born;
+  if (!born && died)  return (diedUncertain === 'yes') ? 'after ' + died : died;
+  return born + '–' + (diedUncertain === 'yes' ? 'after ' + died : died);
+}
+
 function composerCard(c) {
-  const years  = [c.born, c.died].filter(Boolean).join('–');
+  const years  = lifespan(c.born, c.died, c.died_uncertain);
   const flag   = c.nationality !== 'NO' ? renderFlags(c.nationality, c.birth_country, c.birth_country_primary) : '';
   const female = c.is_female ? '<span class="female-badge">♀</span>' : '';
   const media  = c.has_media ? '<span class="female-badge" style="background:#e6f0ea;color:#2a5c45;border-color:#b8d4c0;">🎵</span>' : '';

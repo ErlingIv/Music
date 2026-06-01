@@ -270,6 +270,13 @@ function msInfoBadge(notes) {
                  return '<span class="ms-dot ms-high" title="MuseScore info: ~' + wc + ' words"></span>';
 }
 
+function lifespan(born, died, diedUncertain) {
+  if (!born && !died) return '';
+  if (born && !died) return born;
+  if (!born && died)  return (diedUncertain === 'yes') ? 'after ' + died : died;
+  return born + '–' + (diedUncertain === 'yes' ? 'after ' + died : died);
+}
+
 async function load() {
   const el = document.getElementById('content');
   if (!personId) {
@@ -280,7 +287,7 @@ async function load() {
   try {
     // 1. Fetch person
     const pR = await fetch(
-      `${SUPABASE_URL}/rest/v1/person?person_id=eq.${personId}&select=person_id,first_name,last_name,born,died,nationality,birth_country,birth_country_primary,gender,bio_url,bio_text`,
+      `${SUPABASE_URL}/rest/v1/person?person_id=eq.${personId}&select=person_id,first_name,last_name,born,died,died_uncertain,nationality,birth_country,birth_country_primary,gender,bio_url,bio_text`,
       { headers: H }
     );
     const person = (await pR.json())[0];
@@ -338,7 +345,7 @@ async function load() {
 
     // ── Render ──────────────────────────────────────────────────────────────
 
-    const years  = [person.born, person.died].filter(Boolean).join('–');
+    const years  = lifespan(person.born, person.died, person.died_uncertain);
     const flag   = renderFlags(person.nationality, person.birth_country, person.birth_country_primary);
     const female = person.gender === 'F';
     const bioHtml = person.bio_text ? person.bio_text.replace(/\n/g, '<br>') : '';
