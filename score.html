@@ -254,10 +254,11 @@ function bbcodeToHtml(text) {
 }
 
 function lifespan(born, died, diedUncertain) {
+  const uncertain = (diedUncertain === 'yes' || diedUncertain === true);
   if (!born && !died) return '';
-  if (born && !died) return born;
-  if (!born && died)  return (diedUncertain === 'yes') ? 'after ' + died : died;
-  return born + '–' + (diedUncertain === 'yes' ? 'after ' + died : died);
+  if (born && !died) return String(born);
+  if (!born && died)  return uncertain ? 'after ' + died : String(died);
+  return born + '–' + (uncertain ? 'after ' + died : died);
 }
 
 async function load() {
