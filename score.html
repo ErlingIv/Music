@@ -74,7 +74,11 @@
     grid-template-columns: 1fr 1fr;
     gap: 0 2rem;
     margin-bottom: 1.5rem;
+    align-items: start;
   }
+  .meta-right-col { display: flex; flex-direction: column; gap: 3px; }
+  .meta-opus { color: var(--muted); font-size: 0.88rem; }
+  .meta-lyricist { margin-top: 2px; }
   .meta-label {
     font-size: 0.7rem;
     color: var(--muted);
@@ -326,7 +330,6 @@ async function load() {
     el.innerHTML = `
       <div class="title-row">
         <h1 class="score-title">${comp.title}</h1>
-        <p class="score-sub">${composerName}${composerYears ? ' ' + composerYears : ''}</p>
       </div>
 
       <div class="meta-grid">
@@ -334,18 +337,11 @@ async function load() {
           <p class="meta-label">Composer</p>
           <p class="meta-value">${composerDisplay}</p>
         </div>
-        <div>
-          <p class="meta-label">Year composed</p>
-          <p class="meta-value">${comp.year_composed || '—'}</p>
+        <div class="meta-right-col">
+          ${comp.year_composed ? `<p class="meta-value">Composed ${comp.year_composed}</p>` : ''}
+          ${comp.opus_number   ? `<p class="meta-value meta-opus">${comp.opus_number}</p>` : ''}
+          ${lyricistDisplay    ? `<p class="meta-value meta-lyricist">Lyricist: ${lyricistDisplay}</p>` : ''}
         </div>
-        ${comp.opus_number ? `<div>
-          <p class="meta-label">Opus</p>
-          <p class="meta-value">${comp.opus_number}</p>
-        </div>` : ''}
-        ${lyricistDisplay ? `<div style="margin-top:0.75rem">
-          <p class="meta-label">Lyricist</p>
-          <p class="meta-value">${lyricistDisplay}</p>
-        </div>` : ''}
       </div>
 
       ${notesHtml ? `
