@@ -1143,9 +1143,9 @@ async function loadPersonForm(personId) {
   document.getElementById('p_firstName').dataset.original = p.first_name || '';
   document.getElementById('p_lastName').dataset.original  = p.last_name  || '';
   document.getElementById('p_born').value             = p.born       || '';
-  document.getElementById('p_born_uncertain').checked = (p.born_uncertain === 'yes');
+  document.getElementById('p_born_uncertain').checked = (p.born_uncertain === 'yes' || p.born_uncertain === true);
   document.getElementById('p_died').value             = p.died       || '';
-  document.getElementById('p_died_uncertain').checked = (p.died_uncertain === 'yes');
+  document.getElementById('p_died_uncertain').checked = (p.died_uncertain === 'yes' || p.died_uncertain === true);
   document.getElementById('p_nationality').value     = p.nationality   || '';
   document.getElementById('p_birth_country').value          = p.birth_country || '';
   document.getElementById('p_birth_country_primary').checked = (p.birth_country_primary === true);
@@ -1272,9 +1272,9 @@ async function savePerson() {
       first_name:           first || null,
       last_name:            last,
       born:                 parseInt(document.getElementById('p_born').value) || null,
-      born_uncertain:       document.getElementById('p_born_uncertain').checked ? 'yes' : 'no',
+      born_uncertain:       document.getElementById('p_born_uncertain').checked,
       died:                 parseInt(document.getElementById('p_died').value) || null,
-      died_uncertain:       document.getElementById('p_died_uncertain').checked ? 'yes' : 'no',
+      died_uncertain:       document.getElementById('p_died_uncertain').checked,
       nationality,
       birth_country,
       birth_country_primary,
