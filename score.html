@@ -119,6 +119,9 @@
     margin-bottom: 1.5rem;
     border-left: 2px solid var(--faint);
     padding-left: 1rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1.25rem;
+    margin-top: 0.5rem;
   }
   .notes-header {
     display: flex;
@@ -254,11 +257,10 @@ function bbcodeToHtml(text) {
 }
 
 function lifespan(born, died, diedUncertain) {
-  const uncertain = (diedUncertain === 'yes' || diedUncertain === true);
   if (!born && !died) return '';
-  if (born && !died) return String(born);
-  if (!born && died)  return uncertain ? 'after ' + died : String(died);
-  return born + '–' + (uncertain ? 'after ' + died : died);
+  if (born && !died) return born;
+  if (!born && died)  return (diedUncertain === 'yes') ? 'after ' + died : died;
+  return born + '–' + (diedUncertain === 'yes' ? 'after ' + died : died);
 }
 
 async function load() {
