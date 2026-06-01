@@ -261,7 +261,7 @@ async function load() {
   try {
     // Fetch composition, score, and all contributors in parallel
     const [compR, scoreR, cpR] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${compId}&select=composition_id,title,year_composed,musescore_link,musescore_notes`, { headers: H }),
+      fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${compId}&select=composition_id,title,year_composed,opus_number,musescore_link,musescore_notes`, { headers: H }),
       fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=eq.${compId}&select=pdf_url,mp3_url`, { headers: H }),
       fetch(`${SUPABASE_URL}/rest/v1/composition_person?composition_id=eq.${compId}&select=person_id,role,credited_as`, { headers: H }),
     ]);
@@ -338,6 +338,10 @@ async function load() {
           <p class="meta-label">Year composed</p>
           <p class="meta-value">${comp.year_composed || '—'}</p>
         </div>
+        ${comp.opus_number ? `<div>
+          <p class="meta-label">Opus</p>
+          <p class="meta-value">${comp.opus_number}</p>
+        </div>` : ''}
         ${lyricistDisplay ? `<div style="margin-top:0.75rem">
           <p class="meta-label">Lyricist</p>
           <p class="meta-value">${lyricistDisplay}</p>
