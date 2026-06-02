@@ -348,7 +348,7 @@ async function fetchLyricists() {
 
   persons.forEach(function(p) {
     p.work_count = countMap[p.person_id] || 0;
-    var tabNat = (p.birth_country_primary === true && p.birth_country) ? p.birth_country : p.nationality;
+    var tabNat = (p.birth_country_primary === true && p.birth_country) ? p.birth_country : (p.nationality || p.birth_country);
     if (!tabNat) {
       sectionData.unknown.push(p);
     } else if (tabNat === 'NO') {

@@ -581,7 +581,7 @@ async function fetchAllComposers(copyrightMode = false) {
     p.score_count = countMap[p.person_id] || 0;
     p.has_media   = mediaPersonIds.has(p.person_id);
     p.is_female   = p.gender === 'F';
-    var tabNat = (p.birth_country_primary === true && p.birth_country) ? p.birth_country : p.nationality;
+    var tabNat = (p.birth_country_primary === true && p.birth_country) ? p.birth_country : (p.nationality || p.birth_country);
     if (!tabNat) {
       allComposers.unknown.push(p);
     } else if (tabNat === 'NO') {
