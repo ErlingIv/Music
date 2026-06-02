@@ -1072,6 +1072,11 @@ document.getElementById('p_birth_country').addEventListener('input', function() 
   this.value = this.value.toUpperCase();
   const v = this.value.trim();
   document.getElementById('p_birth_flag').textContent = v ? countryCodeToFlag(v) : '';
+  const natField = document.getElementById('p_nationality');
+  if (v && !natField.value.trim()) {
+    natField.value = v;
+    document.getElementById('p_flag').textContent = countryCodeToFlag(v);
+  }
 });
 document.getElementById('p_nationality').addEventListener('input', function() {
   this.value = this.value.toUpperCase();
@@ -1081,6 +1086,11 @@ document.getElementById('np_birth_country').addEventListener('input', function()
   this.value = this.value.toUpperCase();
   const v = this.value.trim();
   document.getElementById('np_birth_flag').textContent = v ? countryCodeToFlag(v) : '';
+  const natField = document.getElementById('np_nationality');
+  if (v && !natField.value.trim()) {
+    natField.value = v;
+    document.getElementById('np_flag').textContent = countryCodeToFlag(v);
+  }
 });
 document.getElementById('np_nationality').addEventListener('input', function() {
   this.value = this.value.toUpperCase();
