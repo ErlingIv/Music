@@ -105,9 +105,7 @@
     position: relative;
     background: #2a2620;
   }
-  .tag-hero.loaded {
-    background: #333;
-  }
+  .tag-hero.loaded { background: #333; }
 
   .tag-hero img {
     width: 100%;
@@ -125,11 +123,7 @@
   .tag-hero-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-      to bottom,
-      rgba(0,0,0,0.02) 40%,
-      rgba(26,24,20,0.65) 100%
-    );
+    background: linear-gradient(to bottom, rgba(0,0,0,0.02) 40%, rgba(26,24,20,0.65) 100%);
     z-index: 2;
   }
   .tag-hero-label {
@@ -143,7 +137,6 @@
     text-shadow: 0 1px 6px rgba(0,0,0,0.6);
     z-index: 3;
   }
-
 
   /* ── Panel ── */
   .panel-box {
@@ -300,10 +293,16 @@ async function loadTags() {
   );
   allTags = await r.json();
 
-  const ctR = await fetch(`${SUPABASE_URL}/rest/v1/composition_tag?select=tag_id`, { headers: H });
+  // Only count PD compositions with a MuseScore link (matches what detail view shows)
+  const [ctR, pdR] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/composition_tag?select=tag_id,composition_id`, { headers: H }),
+    fetch(`${SUPABASE_URL}/rest/v1/composition?public_domain=eq.Yes&musescore_link=not.is.null&select=composition_id`, { headers: H }),
+  ]);
+  const pdIds = new Set((await pdR.json()).map(r => r.composition_id));
   const countMap = {};
   (await ctR.json()).forEach(row => {
-    countMap[row.tag_id] = (countMap[row.tag_id] || 0) + 1;
+    if (pdIds.has(row.composition_id))
+      countMap[row.tag_id] = (countMap[row.tag_id] || 0) + 1;
   });
 
   const cloud = document.getElementById('tagsCloud');
@@ -343,7 +342,7 @@ async function selectTag(tagId, tagName, imageUrl) {
 
   if (!ctRows.length) {
     document.getElementById('compList').innerHTML = '<div class="empty-state">No compositions with this tag.</div>';
-    document.getElementById('panelCount').textContent = '0 compositions';
+    document.getElementById('panelCount').textContent = '0';
     return;
   }
 
@@ -381,8 +380,7 @@ async function selectTag(tagId, tagName, imageUrl) {
   const scoreMap = {};
   scores.forEach(s => { scoreMap[s.composition_id] = s; });
 
-  document.getElementById('panelCount').textContent =
-    `${comps.length} composition${comps.length !== 1 ? 's' : ''}`;
+  document.getElementById('panelCount').textContent = comps.length;
 
   document.getElementById('compList').innerHTML = comps.length
     ? comps.map(comp => {
