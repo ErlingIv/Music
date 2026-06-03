@@ -185,13 +185,17 @@
   .comp-row:hover { background: var(--bg); }
   .comp-title { font-family: var(--serif); font-size: 0.95rem; font-weight: 500; color: var(--ink); }
   .comp-meta  { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
-  .comp-icons { display: flex; gap: 0.35rem; flex-shrink: 0; }
+  .comp-icons { display: flex; gap: 0.35rem; flex-shrink: 0; align-items: center; }
   .icon-badge {
     font-size: 0.68rem; padding: 2px 7px; border-radius: 3px;
     border: 1px solid var(--border); color: var(--muted); background: var(--bg);
   }
   .icon-badge.pdf { color: var(--accent);  border-color: var(--accent); }
   .icon-badge.mp3 { color: var(--accent2); border-color: var(--accent2); }
+  .ms-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .ms-dot.ms-low  { background: #aaa49c; }
+  .ms-dot.ms-med  { background: #3a6ea8; }
+  .ms-dot.ms-high { background: #8b3a1e; }
 
   .loading-state { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.9rem; }
   .empty-state   { color: var(--muted); font-size: 0.9rem; padding: 1.5rem; text-align: center; }
@@ -243,6 +247,18 @@ const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
+function wordCount(text) {
+  if (!text || !text.trim()) return 0;
+  return text.trim().split(/\s+/).length;
+}
+
+function msInfoBadge(notes) {
+  const wc = wordCount(notes);
+  if (wc === 0)  return '<span class="ms-dot ms-low" style="visibility:hidden"></span>';
+  if (wc <= 100) return '<span class="ms-dot ms-low"  title="MuseScore info: ~' + wc + ' words"></span>';
+  if (wc <= 300) return '<span class="ms-dot ms-med"  title="MuseScore info: ~' + wc + ' words"></span>';
+                 return '<span class="ms-dot ms-high" title="MuseScore info: ~' + wc + ' words"></span>';
+}
 
 // ── Hero image ────────────────────────────────────────────────────────────────
 function loadHeroImage(tagName, imageUrl) {
@@ -253,7 +269,7 @@ function loadHeroImage(tagName, imageUrl) {
   hero.classList.remove('loaded');
   label.textContent = tagName;
 
-  if (!imageUrl) return; // blank dark background, no image
+  if (!imageUrl) return;
 
   img.onload  = () => hero.classList.add('loaded');
   img.onerror = () => hero.classList.remove('loaded');
@@ -334,7 +350,7 @@ async function selectTag(tagId, tagName, imageUrl) {
   const compIds = ctRows.map(r => r.composition_id).join(',');
 
   const [compR, scoreR, ccR] = await Promise.all([
-    fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&public_domain=eq.Yes&musescore_link=not.is.null&select=composition_id,title,year_composed,musescore_link,public_domain&order=title.asc`, { headers: H }),
+    fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&public_domain=eq.Yes&musescore_link=not.is.null&select=composition_id,title,year_composed,musescore_link,public_domain,musescore_notes&order=title.asc`, { headers: H }),
     fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=in.(${compIds})&select=composition_id,pdf_url,mp3_url`, { headers: H }),
     fetch(`${SUPABASE_URL}/rest/v1/composition_person?composition_id=in.(${compIds})&role=eq.Composer&select=composition_id,person_id`, { headers: H }),
   ]);
@@ -383,6 +399,7 @@ async function selectTag(tagId, tagName, imageUrl) {
               ${s?.mp3_url ? '<span class="icon-badge mp3">MP3</span>' : ''}
               ${comp.musescore_link ? '<span class="icon-badge">♪</span>' : ''}
               ${comp.public_domain === 'Yes' ? '<span class="icon-badge" style="color:var(--accent2);border-color:var(--accent2)">PD</span>' : ''}
+              ${msInfoBadge(comp.musescore_notes)}
             </div>
           </a>`;
       }).join('')
