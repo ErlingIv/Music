@@ -581,7 +581,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
         document.getElementById('scoreDupConfirm').onclick = async () => {
           msgEl.innerHTML = '';
           btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Lagrer…';
-          await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, pdf_url: null, mp3_url: null, source_id: getSourceId(source)||null });
+          await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, pdf_url: document.getElementById('n_pdfUrl').value.trim()||null, mp3_url: document.getElementById('n_mp3Url').value.trim()||null, source_id: getSourceId(source)||null });
           showMsg('newMsg', `✓ "${title}" er lagret (id=${compId})`, 'success');
           resetNewForm();
           btn.disabled = false; btn.textContent = 'Lagre innføring';
@@ -590,7 +590,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
       }
     }
 
-    await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, pdf_url: null, mp3_url: null, source_id: getSourceId(source)||null });
+    await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, pdf_url: document.getElementById('n_pdfUrl').value.trim()||null, mp3_url: document.getElementById('n_mp3Url').value.trim()||null, source_id: getSourceId(source)||null });
 
     showMsg('newMsg', `✓ "${title}" er lagret (id=${compId})`, 'success');
     resetNewForm();
@@ -832,9 +832,22 @@ async function loadEditForm(compId) {
   const srcEntry = score?.source_id ? [...sourceMap.entries()].find(([,id]) => id === score.source_id) : null;
   document.getElementById('e_source').value = srcEntry ? srcEntry[0] : '';
 
+  // PDF / MP3 URLs
+  const pdfUrl = score?.pdf_url || '';
+  const mp3Url = score?.mp3_url || '';
+  document.getElementById('e_pdfUrl').value = pdfUrl;
+  document.getElementById('e_mp3Url').value = mp3Url;
+  const pdfLink = document.getElementById('e_pdfLink');
+  const mp3Link = document.getElementById('e_mp3Link');
+  pdfLink.style.display = pdfUrl ? 'inline-block' : 'none';
+  pdfLink.href = pdfUrl || '#';
+  mp3Link.style.display = mp3Url ? 'inline-block' : 'none';
+  mp3Link.href = mp3Url || '#';
+
   // Sync has-value class so clear buttons appear on already-filled fields
   ['e_title','e_year','e_opus','e_msLink','e_notes','e_dedication',
-   'e_msNotes','e_displayCountry','e_publisherSearch','e_plateNumber','e_source']
+   'e_msNotes','e_displayCountry','e_publisherSearch','e_plateNumber','e_source',
+   'e_pdfUrl','e_mp3Url']
     .forEach(id => {
       const el = document.getElementById(id);
       if (el) el.classList.toggle('has-value', el.value.length > 0);
@@ -949,7 +962,7 @@ async function saveEdit() {
     const pubId   = await resolvePublisher('e_publisherSearch', ePubState, 'id');
     const plate   = document.getElementById('e_plateNumber').value.trim();
     const catName = cat === 'pd' ? 'Eldre klassisk' : 'Eldre populærmusikk';
-    const scoreData = { plate_number: plate||null, publisher_id: pubId||null, category: catName, pdf_url: null, mp3_url: null, source_id: getSourceId(esource)||null };
+    const scoreData = { plate_number: plate||null, publisher_id: pubId||null, category: catName, pdf_url: document.getElementById('e_pdfUrl').value.trim()||null, mp3_url: document.getElementById('e_mp3Url').value.trim()||null, source_id: getSourceId(esource)||null };
 
     if (scoreId) {
       await patch('score', `score_id=eq.${scoreId}`, scoreData);
@@ -1856,13 +1869,28 @@ function makeClearable(id) {
 
 // New-entry form
 ['n_title','n_year','n_opus','n_notes','n_msLink','n_dedication',
- 'n_publisherSearch','n_plateNumber','n_source'].forEach(makeClearable);
+ 'n_publisherSearch','n_plateNumber','n_source','n_pdfUrl','n_mp3Url'].forEach(makeClearable);
 
 // Edit form
 ['e_title','e_year','e_opus','e_msLink','e_notes','e_dedication',
  'e_msNotes','e_displayCountry',
- 'e_publisherSearch','e_plateNumber','e_source'].forEach(makeClearable);
+ 'e_publisherSearch','e_plateNumber','e_source','e_pdfUrl','e_mp3Url'].forEach(makeClearable);
 
+
+(function() {
+  // Live "Åpne" buttons for PDF/MP3 URL fields
+  [['e_pdfUrl','e_pdfLink'],['e_mp3Url','e_mp3Link'],
+   ['n_pdfUrl','n_pdfLink'],['n_mp3Url','n_mp3Link']].forEach(([inpId, linkId]) => {
+    const inp  = document.getElementById(inpId);
+    const link = document.getElementById(linkId);
+    if (!inp || !link) return;
+    inp.addEventListener('input', () => {
+      const v = inp.value.trim();
+      link.style.display = v ? 'inline-block' : 'none';
+      link.href = v || '#';
+    });
+  });
+})();
 
 (function() {
   const p = new URLSearchParams(window.location.search);
