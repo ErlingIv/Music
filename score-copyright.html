@@ -412,9 +412,18 @@ load().then(() => {
 
   function renderPage(num) {
     pdfDoc.getPage(num).then(page => {
-      const viewport = page.getViewport({ scale: canvas.parentElement.clientWidth / page.getViewport({ scale: 1 }).width });
-      canvas.height = viewport.height;
+      const dpr        = window.devicePixelRatio || 1;
+      const cssWidth   = canvas.parentElement.clientWidth;
+      const baseScale  = cssWidth / page.getViewport({ scale: 1 }).width;
+      const viewport   = page.getViewport({ scale: baseScale * dpr });
+
+      // Physical canvas size = CSS size × dpr (gives full Retina resolution)
       canvas.width  = viewport.width;
+      canvas.height = viewport.height;
+      // CSS size stays at the container width so layout is unchanged
+      canvas.style.width  = cssWidth + 'px';
+      canvas.style.height = (viewport.height / dpr) + 'px';
+
       page.render({ canvasContext: canvas.getContext('2d'), viewport });
       document.getElementById('pageInfo').textContent = `Page ${num} of ${pdfDoc.numPages}`;
       document.getElementById('prevPage').disabled = num <= 1;
