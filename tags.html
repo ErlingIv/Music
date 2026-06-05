@@ -285,6 +285,8 @@ async function loadTags() {
     { headers: H }
   );
   allTags = await r.json();
+  const HIDDEN_TAGS = ['Music for the Norwegian Royal Family'];
+  allTags = allTags.filter(t => !HIDDEN_TAGS.includes(t.tag_name));
 
   const [ctR, pdR] = await Promise.all([
     fetch(`${SUPABASE_URL}/rest/v1/composition_tag?select=tag_id,composition_id`, { headers: H }),
