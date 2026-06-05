@@ -49,7 +49,6 @@
   }
   .page-sub { font-size: 0.88rem; color: var(--muted); margin-bottom: 2rem; }
 
-  /* ── Tags cloud view ── */
   #tagsView { display: block; }
   #tagsView.hidden { display: none; }
 
@@ -75,7 +74,6 @@
   .tag-pill:hover { border-color: var(--accent2); color: var(--accent2); }
   .tag-count { font-size: 0.72rem; opacity: 0.7; }
 
-  /* ── Tag detail view ── */
   #tagView { display: none; }
   #tagView.visible { display: block; }
 
@@ -96,7 +94,6 @@
   }
   .tag-back-btn:hover { color: var(--accent); }
 
-  /* ── Hero image ── */
   .tag-hero {
     width: 100%;
     height: 360px;
@@ -138,7 +135,6 @@
     z-index: 3;
   }
 
-  /* ── Panel ── */
   .panel-box {
     background: var(--paper);
     border: 1px solid var(--border);
@@ -188,7 +184,7 @@
   .ms-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
   .ms-dot.ms-low  { background: #aaa49c; }
   .ms-dot.ms-med  { background: #3a6ea8; }
-  .ms-dot.ms-high { background: #8b3a1e; }
+  .ms-dot.ms-high { background: #cc2200; }
 
   .loading-state { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.9rem; }
   .empty-state   { color: var(--muted); font-size: 0.9rem; padding: 1.5rem; text-align: center; }
@@ -253,7 +249,6 @@ function msInfoBadge(notes) {
                  return '<span class="ms-dot ms-high" title="MuseScore info: ~' + wc + ' words"></span>';
 }
 
-// ── Hero image ────────────────────────────────────────────────────────────────
 function loadHeroImage(tagName, imageUrl) {
   const hero  = document.getElementById('tagHero');
   const img   = document.getElementById('tagHeroImg');
@@ -270,7 +265,6 @@ function loadHeroImage(tagName, imageUrl) {
   img.alt = tagName;
 }
 
-// ── View switching ────────────────────────────────────────────────────────────
 function showTagCloud() {
   document.getElementById('tagsView').classList.remove('hidden');
   document.getElementById('tagView').classList.remove('visible');
@@ -283,7 +277,6 @@ function showTagDetail() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ── Tags ──────────────────────────────────────────────────────────────────────
 let allTags = [];
 
 async function loadTags() {
@@ -293,7 +286,6 @@ async function loadTags() {
   );
   allTags = await r.json();
 
-  // Only count PD compositions with a MuseScore link (matches what detail view shows)
   const [ctR, pdR] = await Promise.all([
     fetch(`${SUPABASE_URL}/rest/v1/composition_tag?select=tag_id,composition_id`, { headers: H }),
     fetch(`${SUPABASE_URL}/rest/v1/composition?public_domain=eq.Yes&musescore_link=not.is.null&select=composition_id`, { headers: H }),
@@ -326,7 +318,6 @@ async function loadTags() {
   }
 }
 
-// ── Select tag ────────────────────────────────────────────────────────────────
 async function selectTag(tagId, tagName, imageUrl) {
   document.getElementById('panelTagName').textContent = tagName;
   document.getElementById('panelCount').textContent = '';
