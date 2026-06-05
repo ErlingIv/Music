@@ -839,10 +839,8 @@ async function loadEditForm(compId) {
   document.getElementById('e_mp3Url').value = mp3Url;
   const pdfLink = document.getElementById('e_pdfLink');
   const mp3Link = document.getElementById('e_mp3Link');
-  pdfLink.style.display = pdfUrl ? 'inline-block' : 'none';
-  pdfLink.href = pdfUrl || '#';
-  mp3Link.style.display = mp3Url ? 'inline-block' : 'none';
-  mp3Link.href = mp3Url || '#';
+  pdfLink.href = pdfUrl || '#'; pdfLink.style.display = pdfUrl ? 'inline-block' : 'none';
+  mp3Link.href = mp3Url || '#'; mp3Link.style.display = mp3Url ? 'inline-block' : 'none';
 
   // Sync has-value class so clear buttons appear on already-filled fields
   ['e_title','e_year','e_opus','e_msLink','e_notes','e_dedication',
@@ -1876,9 +1874,68 @@ function makeClearable(id) {
  'e_msNotes','e_displayCountry',
  'e_publisherSearch','e_plateNumber','e_source','e_pdfUrl','e_mp3Url'].forEach(makeClearable);
 
+// ── Supabase Storage upload ───────────────────────────────────────────────────
 
+const PDF_BUCKET = 'scores-pdf';
+const MP3_BUCKET = 'scores-mp3';
+
+async function uploadScoreFile(input, type, urlFieldId, linkId, progressId) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const progress = document.getElementById(progressId);
+  progress.textContent = 'Laster opp…';
+  progress.style.display = 'inline';
+
+  const bucket  = type === 'pdf' ? PDF_BUCKET : MP3_BUCKET;
+  const mime    = type === 'pdf' ? 'application/pdf' : 'audio/mpeg';
+  // Sanitise filename: strip path separators and spaces
+  const filename = file.name.replace(/[/\\]/g, '_').replace(/\s+/g, '_');
+  const uploadUrl = `${SB.replace('/rest/v1','')}/storage/v1/object/${bucket}/${encodeURIComponent(filename)}`;
+
+  try {
+    const res = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        'apikey':         KEY,
+        'Authorization':  `Bearer ${KEY}`,
+        'Content-Type':   mime,
+        'x-upsert':       'true',   // overwrite if same filename
+      },
+      body: file,
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`${res.status}: ${err}`);
+    }
+
+    // Build the public URL
+    const publicUrl = `${SB.replace('/rest/v1','')}/storage/v1/object/public/${bucket}/${encodeURIComponent(filename)}`;
+
+    // Fill the URL field and show the open-link button
+    const urlField = document.getElementById(urlFieldId);
+    urlField.value = publicUrl;
+    urlField.classList.add('has-value');
+    urlField.dispatchEvent(new Event('input', { bubbles: true }));
+
+    const link = document.getElementById(linkId);
+    link.href = publicUrl;
+    link.style.display = 'inline-block';
+
+    progress.textContent = '✓ Opplastet';
+    setTimeout(() => { progress.style.display = 'none'; }, 3000);
+  } catch (err) {
+    progress.textContent = '✗ Feil: ' + err.message;
+    console.error('Storage upload error:', err);
+  }
+
+  // Reset the file input so the same file can be re-selected if needed
+  input.value = '';
+}
+
+// Live "Åpne" buttons for manually typed PDF/MP3 URL fields
 (function() {
-  // Live "Åpne" buttons for PDF/MP3 URL fields
   [['e_pdfUrl','e_pdfLink'],['e_mp3Url','e_mp3Link'],
    ['n_pdfUrl','n_pdfLink'],['n_mp3Url','n_mp3Link']].forEach(([inpId, linkId]) => {
     const inp  = document.getElementById(inpId);

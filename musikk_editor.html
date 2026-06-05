@@ -461,17 +461,31 @@
           <input type="text" id="n_source" list="sourceList" placeholder="Velg eller skriv kilde…" autocomplete="off">
         </div>
         <div class="field">
-          <label>PDF-lenke</label>
-          <div style="display:flex;gap:0.5rem;align-items:center">
-            <input type="text" id="n_pdfUrl" placeholder="https://…" style="flex:1">
+          <label>PDF</label>
+          <div class="file-upload-wrap">
+            <input type="text" id="n_pdfUrl" placeholder="https://… (eller last opp fil nedenfor)">
             <a id="n_pdfLink" href="#" target="_blank" class="btn-upload" style="display:none">Åpne</a>
+          </div>
+          <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.4rem">
+            <label class="btn-upload" style="cursor:pointer">
+              Velg PDF…
+              <input type="file" id="n_pdfFile" accept=".pdf,application/pdf" style="display:none" onchange="uploadScoreFile(this,'pdf','n_pdfUrl','n_pdfLink','n_pdfProgress')">
+            </label>
+            <span id="n_pdfProgress" class="upload-progress"></span>
           </div>
         </div>
         <div class="field">
-          <label>MP3-lenke</label>
-          <div style="display:flex;gap:0.5rem;align-items:center">
-            <input type="text" id="n_mp3Url" placeholder="https://…" style="flex:1">
+          <label>MP3</label>
+          <div class="file-upload-wrap">
+            <input type="text" id="n_mp3Url" placeholder="https://… (eller last opp fil nedenfor)">
             <a id="n_mp3Link" href="#" target="_blank" class="btn-upload" style="display:none">Åpne</a>
+          </div>
+          <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.4rem">
+            <label class="btn-upload" style="cursor:pointer">
+              Velg MP3…
+              <input type="file" id="n_mp3File" accept=".mp3,audio/mpeg" style="display:none" onchange="uploadScoreFile(this,'mp3','n_mp3Url','n_mp3Link','n_mp3Progress')">
+            </label>
+            <span id="n_mp3Progress" class="upload-progress"></span>
           </div>
         </div>
       </div>
@@ -631,17 +645,31 @@
           <input type="text" id="e_source" list="sourceList" placeholder="Velg eller skriv kilde…" autocomplete="off">
         </div>
         <div class="field">
-          <label>PDF-lenke</label>
-          <div style="display:flex;gap:0.5rem;align-items:center">
-            <input type="text" id="e_pdfUrl" placeholder="https://…" style="flex:1">
+          <label>PDF</label>
+          <div class="file-upload-wrap">
+            <input type="text" id="e_pdfUrl" placeholder="https://… (eller last opp fil nedenfor)">
             <a id="e_pdfLink" href="#" target="_blank" class="btn-upload" style="display:none">Åpne</a>
+          </div>
+          <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.4rem">
+            <label class="btn-upload" style="cursor:pointer">
+              Velg PDF…
+              <input type="file" id="e_pdfFile" accept=".pdf,application/pdf" style="display:none" onchange="uploadScoreFile(this,'pdf','e_pdfUrl','e_pdfLink','e_pdfProgress')">
+            </label>
+            <span id="e_pdfProgress" class="upload-progress"></span>
           </div>
         </div>
         <div class="field">
-          <label>MP3-lenke</label>
-          <div style="display:flex;gap:0.5rem;align-items:center">
-            <input type="text" id="e_mp3Url" placeholder="https://…" style="flex:1">
+          <label>MP3</label>
+          <div class="file-upload-wrap">
+            <input type="text" id="e_mp3Url" placeholder="https://… (eller last opp fil nedenfor)">
             <a id="e_mp3Link" href="#" target="_blank" class="btn-upload" style="display:none">Åpne</a>
+          </div>
+          <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.4rem">
+            <label class="btn-upload" style="cursor:pointer">
+              Velg MP3…
+              <input type="file" id="e_mp3File" accept=".mp3,audio/mpeg" style="display:none" onchange="uploadScoreFile(this,'mp3','e_mp3Url','e_mp3Link','e_mp3Progress')">
+            </label>
+            <span id="e_mp3Progress" class="upload-progress"></span>
           </div>
         </div>
       </div>
