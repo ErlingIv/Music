@@ -164,7 +164,41 @@
 
   .loading-state { text-align: center; padding: 3rem; color: var(--muted); font-size: 0.9rem; }
   .error-state { color: #a32d2d; font-size: 0.9rem; padding: 1rem 0; }
+
+  .pdf-container {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 1rem;
+    background: #525659;
+  }
+  .pdf-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: #383838;
+    color: #fff;
+    font-size: 0.82rem;
+    font-family: var(--body);
+  }
+  .pdf-toolbar button {
+    background: #555;
+    border: none;
+    color: #fff;
+    padding: 3px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-family: var(--body);
+  }
+  .pdf-toolbar button:hover { background: #777; }
+  .pdf-toolbar button:disabled { opacity: 0.4; cursor: default; }
+  #pdfCanvas { display: block; margin: 0 auto; max-width: 100%; }
+  .pdf-loading { color: #ccc; text-align: center; padding: 2rem; font-size: 0.85rem; }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
 
@@ -329,7 +363,16 @@ async function load() {
             </a>` : ''}
 
           ${score?.pdf_url ? `
-            <div style="margin-top:1rem">
+            <div class="pdf-container">
+              <div class="pdf-toolbar">
+                <button id="prevPage" disabled>◀ Prev</button>
+                <span id="pageInfo" style="flex:1;text-align:center">Loading…</span>
+                <button id="nextPage" disabled>Next ▶</button>
+              </div>
+              <canvas id="pdfCanvas"></canvas>
+              <p class="pdf-loading" id="pdfLoading">Loading PDF…</p>
+            </div>
+            <div style="margin-top:0.5rem">
               <a class="btn" href="${score.pdf_url}" target="_blank">
                 <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
                   <path d="M2 12h10M7 2v7M4 6l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -351,7 +394,45 @@ async function load() {
   }
 }
 
-load();
+load().then(() => {
+  // Initialise PDF.js viewer after content is rendered
+  const canvas = document.getElementById('pdfCanvas');
+  if (!canvas) return;
+
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  // Get the PDF URL from the download link's href
+  const downloadLink = document.querySelector('a[href$=".pdf"], a[href*="scores-pdf"]');
+  if (!downloadLink) return;
+  const pdfUrl = downloadLink.href;
+
+  let pdfDoc = null;
+  let currentPage = 1;
+
+  function renderPage(num) {
+    pdfDoc.getPage(num).then(page => {
+      const viewport = page.getViewport({ scale: canvas.parentElement.clientWidth / page.getViewport({ scale: 1 }).width });
+      canvas.height = viewport.height;
+      canvas.width  = viewport.width;
+      page.render({ canvasContext: canvas.getContext('2d'), viewport });
+      document.getElementById('pageInfo').textContent = `Page ${num} of ${pdfDoc.numPages}`;
+      document.getElementById('prevPage').disabled = num <= 1;
+      document.getElementById('nextPage').disabled = num >= pdfDoc.numPages;
+      document.getElementById('pdfLoading').style.display = 'none';
+    });
+  }
+
+  pdfjsLib.getDocument(pdfUrl).promise.then(doc => {
+    pdfDoc = doc;
+    renderPage(1);
+  }).catch(err => {
+    document.getElementById('pdfLoading').textContent = 'Could not load PDF: ' + err.message;
+  });
+
+  document.getElementById('prevPage').addEventListener('click', () => { if (currentPage > 1) renderPage(--currentPage); });
+  document.getElementById('nextPage').addEventListener('click', () => { if (currentPage < pdfDoc.numPages) renderPage(++currentPage); });
+});
 </script>
 </body>
 </html>
