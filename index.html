@@ -35,35 +35,107 @@
   /* ── Header ── */
   header {
     background: var(--paper);
-    border-bottom: 1px solid var(--border);
-    padding: 2.5rem 2rem 2rem;
+    border-bottom: 2px solid var(--border);
+    padding: 2rem 2rem 0;
     text-align: center;
     position: relative;
+    overflow: hidden;
   }
-  header::after {
-    content: '';
-    display: block;
-    width: 60px;
-    height: 2px;
-    background: var(--accent);
-    margin: 1.2rem auto 0;
-  }
+
   .site-title {
     font-family: var(--serif);
-    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-size: clamp(2.2rem, 5vw, 3.6rem);
     font-weight: 700;
     letter-spacing: -0.02em;
     color: var(--ink);
-    line-height: 1.1;
+    line-height: 1.05;
+    position: relative;
   }
   .site-subtitle {
     font-family: var(--body);
-    font-size: 0.95rem;
+    font-size: 0.82rem;
     color: var(--muted);
-    margin-top: 0.5rem;
+    margin-top: 0.4rem;
     font-weight: 300;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
+    position: relative;
+  }
+
+  /* About text */
+  .header-about {
+    font-family: var(--body);
+    font-size: 0.82rem;
+    font-style: italic;
+    color: var(--muted);
+    margin-top: 0.6rem;
+    margin-bottom: 1.2rem;
+    letter-spacing: 0.02em;
+    position: relative;
+  }
+
+  /* ── Sheet music strip ── */
+  .score-strip {
+    width: calc(100% + 4rem);
+    margin-left: -2rem;
+    height: 90px;
+    position: relative;
+    border-top: 1px solid var(--border);
+    border-bottom: none;
+    overflow: hidden;
+    margin-top: 1.2rem;
+  }
+  .score-strip img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 18%;
+    display: block;
+    opacity: 0.55;
+    filter: grayscale(20%) contrast(0.9);
+  }
+  /* Fade edges so it blends into page */
+  .score-strip::before,
+  .score-strip::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 80px;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .score-strip::before {
+    left: 0;
+    background: linear-gradient(to right, var(--paper), transparent);
+  }
+  .score-strip::after {
+    right: 0;
+    background: linear-gradient(to left, var(--paper), transparent);
+  }
+
+  /* ── Header nav links ── */
+  .header-links {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 0.9rem 0 1rem;
+    position: relative;
+    background: var(--paper);
+  }
+  .header-link {
+    font-size: 0.82rem;
+    color: var(--accent2);
+    text-decoration: none;
+    border: 1px solid var(--accent2);
+    border-radius: 4px;
+    padding: 5px 14px;
+    letter-spacing: 0.04em;
+    transition: background 0.15s, color 0.15s;
+  }
+  .header-link:hover {
+    background: var(--accent2);
+    color: #fff;
   }
 
 
@@ -333,11 +405,18 @@
 <body>
 
 <header>
-  <h1 class="site-title" id="siteTitle">Music Collection</h1>
-  <p class="site-subtitle">Classic compositions — public domain</p>
-  <div style="display:flex;align-items:center;justify-content:center;gap:1rem;margin-top:1rem;">
-    <a href="tags.html" style="font-size:0.82rem;color:var(--accent2);text-decoration:none;border:1px solid var(--accent2);border-radius:4px;padding:4px 12px;letter-spacing:0.04em;">🏷 Browse by Tag</a>
-    <a href="lyricists.html" style="font-size:0.82rem;color:var(--accent2);text-decoration:none;border:1px solid var(--accent2);border-radius:4px;padding:4px 12px;letter-spacing:0.04em;">✍ Lyricists</a>
+  <h1 class="site-title" id="siteTitle">Music Scores</h1>
+  <p class="site-subtitle">Sheet Music &nbsp;·&nbsp; Public Domain</p>
+  <p class="header-about">Primarily Norwegian compositions, with Nordic and international works — all in the public domain</p>
+
+  <!-- Real sheet music strip -->
+  <div class="score-strip">
+    <img src="Norges.jpg" alt="">
+  </div>
+
+  <div class="header-links">
+    <a href="tags.html" class="header-link">🏷 Browse by Tag</a>
+    <a href="lyricists.html" class="header-link">✍ Lyricists</a>
   </div>
 </header>
 
@@ -417,7 +496,6 @@
       <span class="section-title">Nationality Unknown</span>
       <span class="section-count" id="count-unknown"></span>
     </div>
-    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;">These composers have no nationality set. Add a country code in the admin tool and they will move to the correct section.</p>
     <div class="alpha-bar" id="alpha-unknown"></div>
     <div id="composers-unknown"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
   </div>
