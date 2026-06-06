@@ -74,45 +74,6 @@
     position: relative;
   }
 
-  /* ── Sheet music strip ── */
-  .score-strip {
-    width: calc(100% + 4rem);
-    margin-left: -2rem;
-    height: 90px;
-    position: relative;
-    border-top: 1px solid var(--border);
-    border-bottom: none;
-    overflow: hidden;
-    margin-top: 1.2rem;
-  }
-  .score-strip img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center 18%;
-    display: block;
-    opacity: 0.55;
-    filter: grayscale(20%) contrast(0.9);
-  }
-  /* Fade edges so it blends into page */
-  .score-strip::before,
-  .score-strip::after {
-    content: '';
-    position: absolute;
-    top: 0; bottom: 0;
-    width: 80px;
-    z-index: 2;
-    pointer-events: none;
-  }
-  .score-strip::before {
-    left: 0;
-    background: linear-gradient(to right, var(--paper), transparent);
-  }
-  .score-strip::after {
-    right: 0;
-    background: linear-gradient(to left, var(--paper), transparent);
-  }
-
   /* ── Header nav links ── */
   .header-links {
     display: flex;
@@ -408,11 +369,6 @@
   <h1 class="site-title" id="siteTitle">Music Scores</h1>
   <p class="site-subtitle">Sheet Music &nbsp;·&nbsp; Public Domain</p>
   <p class="header-about">Primarily Norwegian compositions, with Nordic and international works — all in the public domain</p>
-
-  <!-- Real sheet music strip -->
-  <div class="score-strip">
-    <img src="Norges.jpg" alt="">
-  </div>
 
   <div class="header-links">
     <a href="tags.html" class="header-link">🏷 Browse by Tag</a>
