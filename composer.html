@@ -288,7 +288,7 @@ async function load() {
   try {
     // 1. Fetch person
     const pR = await fetch(
-      `${SUPABASE_URL}/rest/v1/person?person_id=eq.${personId}&select=person_id,first_name,last_name,born,died,died_uncertain,nationality,birth_country,birth_country_primary,gender,bio_url,bio_text`,
+      `${SUPABASE_URL}/rest/v1/person?person_id=eq.${personId}&select=person_id,first_name,last_name,born,died,died_uncertain,nationality,birth_country,birth_country_primary,gender,bio_url,bio_text,pseudonym`,
       { headers: H }
     );
     const person = (await pR.json())[0];
@@ -307,10 +307,13 @@ async function load() {
 
     // 3. Fetch composition_ids for this person in the active role
     const ccR = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition_person?person_id=eq.${personId}&role=eq.${roleParam}&select=composition_id`,
+      `${SUPABASE_URL}/rest/v1/composition_person?person_id=eq.${personId}&role=eq.${roleParam}&select=composition_id,credited_as`,
       { headers: H }
     );
     const cc = await ccR.json();
+    // Map composition_id → credited_as (only where set)
+    const creditedAsMap = {};
+    cc.forEach(r => { if (r.credited_as) creditedAsMap[r.composition_id] = r.credited_as; });
 
     // 4. Fetch public domain compositions that have a MuseScore link
     let compositions = [];
@@ -378,6 +381,7 @@ async function load() {
         </div>
 
         ${bioHtml ? `<div class="bio-text">${bioHtml}</div>` : ''}
+        ${person.pseudonym ? `<p class="composer-dates" style="font-style:italic">Also known as: ${person.pseudonym}</p>` : ''}
 
         ${person.bio_url ? `
           <a class="bio-link" href="${person.bio_url}" target="_blank">
@@ -411,6 +415,7 @@ async function load() {
                     <div class="score-title">${c.title}</div>
                     <div class="score-meta">
                       ${c.year_composed ? `<span>${c.year_composed}</span>` : ''}
+                      ${creditedAsMap[c.composition_id] ? `<span style="font-style:italic;color:var(--muted)">as ${creditedAsMap[c.composition_id]}</span>` : ''}
                       ${(tagMap[c.composition_id]||[]).map(t => `<span style="background:#eaf3ee;color:var(--accent2);border:1px solid #b8d4c0;border-radius:3px;padding:1px 6px;font-size:0.7rem;">${t}</span>`).join('')}
                     </div>
                   </div>
