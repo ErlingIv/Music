@@ -432,6 +432,10 @@
           <input type="checkbox" id="n_toInvestigate" style="width:auto;margin:0;accent-color:var(--accent)">
           <label for="n_toInvestigate" style="margin:0;text-transform:none;font-size:0.88rem;letter-spacing:0;font-weight:500;color:#4a4035;cursor:pointer">Merk som interessant å undersøke</label>
         </div>
+        <div class="field" style="display:flex;align-items:center;gap:0.6rem;margin-top:0.25rem">
+          <input type="checkbox" id="n_underArbeid" style="width:auto;margin:0;accent-color:#c07000">
+          <label for="n_underArbeid" style="margin:0;text-transform:none;font-size:0.88rem;letter-spacing:0;font-weight:500;color:#4a4035;cursor:pointer">Under arbeid</label>
+        </div>
       </div>
 
       <div class="card">
@@ -531,6 +535,12 @@
             <option value="investigate">Til undersøkelse</option>
           </select>
         </div>
+        <div class="field" style="margin-bottom:0">
+          <select id="editUnderArbeidFilter">
+            <option value="">Alle</option>
+            <option value="under_arbeid">Under arbeid</option>
+          </select>
+        </div>
       </div>
       <div class="field">
         <input type="text" id="editSearch" placeholder="Søk på komponist…" autocomplete="off">
@@ -597,6 +607,10 @@
         <div class="field" style="display:flex;align-items:center;gap:0.6rem;margin-top:0.25rem">
           <input type="checkbox" id="e_toInvestigate" style="width:auto;margin:0;accent-color:var(--accent)">
           <label for="e_toInvestigate" style="margin:0;text-transform:none;font-size:0.88rem;letter-spacing:0;font-weight:500;color:#4a4035;cursor:pointer">Merk som interessant å undersøke</label>
+        </div>
+        <div class="field" style="display:flex;align-items:center;gap:0.6rem;margin-top:0.25rem">
+          <input type="checkbox" id="e_underArbeid" style="width:auto;margin:0;accent-color:#c07000">
+          <label for="e_underArbeid" style="margin:0;text-transform:none;font-size:0.88rem;letter-spacing:0;font-weight:500;color:#4a4035;cursor:pointer">Under arbeid</label>
         </div>
         <div class="field" style="margin-bottom:0.5rem">
           <label style="margin-bottom:0.25rem">Tagger</label>

@@ -533,6 +533,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
     const dedication = document.getElementById('n_dedication').value.trim();
     const msLink   = document.getElementById('n_msLink').value.trim();
     const toInvestigate = document.getElementById('n_toInvestigate').checked;
+    const underArbeid   = document.getElementById('n_underArbeid').checked;
     const plate    = document.getElementById('n_plateNumber').value.trim();
     if (!title) throw new Error('Tittel er påkrevd.');
     if (!cat)   throw new Error('Kategori er påkrevd.');
@@ -545,7 +546,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
     const source   = document.getElementById('n_source').value;
     if (!validateSource('n_source')) { btn.disabled = false; btn.textContent = 'Lagre innføring'; return; }
 
-    const comp = await post('composition', { title, public_domain: pubDomain, year_composed: year||null, opus_number: document.getElementById('n_opus').value.trim()||null, composition_notes: notes||null, musescore_link: msLink||null, dedication: dedication||null, to_investigate: toInvestigate||null });
+    const comp = await post('composition', { title, public_domain: pubDomain, year_composed: year||null, opus_number: document.getElementById('n_opus').value.trim()||null, composition_notes: notes||null, musescore_link: msLink||null, dedication: dedication||null, to_investigate: toInvestigate||null, under_arbeid: underArbeid||null });
     const compId = comp.composition_id;
     if (!compId) throw new Error('Feil ved lagring.');
 
@@ -603,6 +604,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
 function resetNewForm() {
   document.getElementById('newForm').reset();
   document.getElementById('n_toInvestigate').checked = false;
+  document.getElementById('n_underArbeid').checked = false;
   nPubState.id = null;
   nContributors.length = 0;
   nRowIdxRef.value = 0;
@@ -694,13 +696,15 @@ async function searchCompositions(q) {
 
   const msFilter          = document.getElementById('editMusescoreFilter').value;
   const investigateFilter = document.getElementById('editInvestigateFilter').value;
-  const approvalQ = approvalFilter === 'approved' ? '&approved=eq.true' : (approvalFilter === 'unapproved' || approvalFilter === 'hide_approved') ? '&approved=eq.false' : '';
-  const msQ       = msFilter === 'with_link' ? '&musescore_link=not.is.null' : msFilter === 'without_link' ? '&musescore_link=is.null' : '';
-  const invQ      = investigateFilter === 'investigate' ? '&to_investigate=eq.true' : '';
+  const underArbeidFilter = document.getElementById('editUnderArbeidFilter').value;
+  const approvalQ   = approvalFilter === 'approved' ? '&approved=eq.true' : (approvalFilter === 'unapproved' || approvalFilter === 'hide_approved') ? '&approved=eq.false' : '';
+  const msQ         = msFilter === 'with_link' ? '&musescore_link=not.is.null' : msFilter === 'without_link' ? '&musescore_link=is.null' : '';
+  const invQ        = investigateFilter === 'investigate' ? '&to_investigate=eq.true' : '';
+  const arbeidQ     = underArbeidFilter === 'under_arbeid' ? '&under_arbeid=eq.true' : '';
   let results = [];
 
   if (mode === 'title') {
-    results = await get(`/composition?title=ilike.*${encodeURIComponent(q)}*&select=composition_id,title,year_composed,public_domain,approved,musescore_link,to_investigate${approvalQ}${msQ}${invQ}&limit=30&order=title`);
+    results = await get(`/composition?title=ilike.*${encodeURIComponent(q)}*&select=composition_id,title,year_composed,public_domain,approved,musescore_link,to_investigate,under_arbeid${approvalQ}${msQ}${invQ}${arbeidQ}&limit=30&order=title`);
 
   } else {
     // Composer mode only — find persons, then their compositions
@@ -709,7 +713,7 @@ async function searchCompositions(q) {
       const cc = await get(`/composition_person?person_id=eq.${p.person_id}&role=eq.Composer&select=composition_id`);
       if (!cc.length) continue;
       const ids = cc.map(r => r.composition_id).join(',');
-      const comps = await get(`/composition?composition_id=in.(${ids})&select=composition_id,title,year_composed,public_domain,approved,musescore_link,to_investigate`);
+      const comps = await get(`/composition?composition_id=in.(${ids})&select=composition_id,title,year_composed,public_domain,approved,musescore_link,to_investigate,under_arbeid`);
       comps.forEach(c => {
         if (!results.find(r => r.composition_id === c.composition_id)) {
           c._composer = [p.first_name, p.last_name].filter(Boolean).join(' ');
@@ -723,6 +727,7 @@ async function searchCompositions(q) {
     if (msFilter === 'with_link')    results = results.filter(r => r.musescore_link);
     if (msFilter === 'without_link') results = results.filter(r => !r.musescore_link);
     if (investigateFilter === 'investigate') results = results.filter(r => r.to_investigate);
+    if (underArbeidFilter === 'under_arbeid') results = results.filter(r => r.under_arbeid);
     results.sort((a,b) => a.title.localeCompare(b.title));
   }
 
@@ -737,10 +742,11 @@ async function searchCompositions(q) {
     d.className = 'result-row';
     const approvedBadge    = c.approved      ? ' <span class="approved-badge">✓</span>' : '';
     const investigateBadge = c.to_investigate ? ' <span style="font-size:0.75rem;background:#fff3cd;border:1px solid #f0c040;border-radius:2px;padding:0.1rem 0.4rem;color:#7a5c00;font-weight:500;vertical-align:middle">🔍 Undersøke</span>' : '';
+    const underArbeidBadge = c.under_arbeid   ? ' <span style="font-size:0.75rem;background:#fff0d6;border:1px solid #e8a000;border-radius:2px;padding:0.1rem 0.4rem;color:#7a4500;font-weight:500;vertical-align:middle">⚙ Under arbeid</span>' : '';
     const composerMeta = c._composer
       ? ` · <span style="cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();openComposerScores(${c._composer_id||'null'},'${(c._composer||'').replace(/'/g,"\\'")}')">🎵 ${c._composer}</span>`
       : '';
-    d.innerHTML = `<div class="result-title">${c.title}${approvedBadge}${investigateBadge}</div>
+    d.innerHTML = `<div class="result-title">${c.title}${approvedBadge}${investigateBadge}${underArbeidBadge}</div>
                    <div class="result-meta">${c.year_composed || '—'} · ${c.public_domain === 'Yes' ? 'PD' : 'Opphavsrett'}${composerMeta}</div>`;
     if (c.approved) d.classList.add('is-approved');
     d.onclick = () => loadEditForm(c.composition_id);
@@ -795,6 +801,7 @@ async function loadEditForm(compId) {
   document.getElementById('e_dedication').value  = c.dedication || '';
   document.getElementById('e_msNotes').value = c.musescore_notes || '';
   document.getElementById('e_toInvestigate').checked = c.to_investigate || false;
+  document.getElementById('e_underArbeid').checked   = c.under_arbeid   || false;
   const dcEl = document.getElementById('e_displayCountry');
   dcEl.value = c.display_country || '';
   document.getElementById('e_displayCountryFlag').textContent = c.display_country ? countryCodeToFlag(c.display_country) : '';
@@ -939,6 +946,7 @@ async function saveEdit() {
       musescore_notes:    document.getElementById('e_msNotes').value.trim() || null,
       dedication:        document.getElementById('e_dedication').value.trim() || null,
       to_investigate:    document.getElementById('e_toInvestigate').checked,
+      under_arbeid:      document.getElementById('e_underArbeid').checked,
       display_country:   document.getElementById('e_displayCountry').value.trim().toUpperCase() || null,
     });
 
