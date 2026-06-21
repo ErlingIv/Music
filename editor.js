@@ -1990,6 +1990,30 @@ async function loadArbeidsliste() {
     get('/composition?to_investigate=eq.true&select=composition_id,title,year_composed,musescore_link&order=title&limit=500'),
   ]);
 
+  // Attach composer names: batch fetch composition_person for all IDs
+  const allIds = [...new Set([...mangler, ...underArbeid, ...interessant].map(c => c.composition_id))];
+  if (allIds.length) {
+    const cpRows = await get(`/composition_person?composition_id=in.(${allIds.join(',')})&role=eq.Composer&select=composition_id,person_id,credited_as`);
+    const personIds = [...new Set(cpRows.map(r => r.person_id))];
+    const persons = personIds.length
+      ? await get(`/person?person_id=in.(${personIds.join(',')})&select=person_id,first_name,last_name`)
+      : [];
+    const personMap = Object.fromEntries(persons.map(p => [p.person_id, ((p.first_name||'') + ' ' + (p.last_name||'')).trim()]));
+
+    // Build composer string per composition (may have multiple)
+    const composerMap = {};
+    for (const row of cpRows) {
+      const name = row.credited_as || personMap[row.person_id] || '';
+      if (!name) continue;
+      composerMap[row.composition_id] = composerMap[row.composition_id]
+        ? composerMap[row.composition_id] + ', ' + name
+        : name;
+    }
+    [...mangler, ...underArbeid, ...interessant].forEach(c => {
+      c._composer = composerMap[c.composition_id] || '';
+    });
+  }
+
   arbeidsData.mangler      = mangler;
   arbeidsData.under_arbeid = underArbeid;
   arbeidsData.interessant  = interessant;
@@ -2042,13 +2066,14 @@ function showArbeidsSection(section) {
         <a href="#" onclick="event.preventDefault();switchTab('edit');loadEditForm(${c.composition_id})"
            style="color:var(--ink);text-decoration:none;border-bottom:1px solid var(--border)">${c.title}</a>
       </td>
+      <td style="padding:0.35rem 0.6rem;color:var(--muted);font-size:0.85rem">${c._composer || '—'}</td>
       <td style="padding:0.35rem 0.6rem;color:var(--muted);font-size:0.85rem">${c.year_composed || '—'}</td>
       ${msCell}
       ${checkCell}
     </tr>`;
   }).join('');
 
-  const msHeader    = msCol           ? '<th style="padding:0.35rem 0.6rem;font-weight:600;text-align:left">MuseScore</th>' : '';
+  const msHeader    = msCol                 ? '<th style="padding:0.35rem 0.6rem;font-weight:600;text-align:left">MuseScore</th>' : '';
   const checkHeader = section === 'mangler' ? '<th style="padding:0.35rem 0.6rem;font-weight:600;text-align:center;width:2.5rem">⚙</th>' : '';
 
   area.innerHTML = `
@@ -2057,6 +2082,7 @@ function showArbeidsSection(section) {
       <thead>
         <tr style="border-bottom:2px solid var(--border);background:var(--surface)">
           <th style="padding:0.35rem 0.6rem;font-weight:600;text-align:left">Tittel</th>
+          <th style="padding:0.35rem 0.6rem;font-weight:600;text-align:left">Komponist</th>
           <th style="padding:0.35rem 0.6rem;font-weight:600;text-align:left">År</th>
           ${msHeader}
           ${checkHeader}
