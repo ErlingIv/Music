@@ -377,7 +377,6 @@
     <button type="button" class="tab" onclick="switchTab('edit')">Rediger</button>
     <button type="button" class="tab" onclick="switchTab('person')">Person</button>
     <button type="button" class="tab" onclick="switchTab('biolinks')">Bio-lenker</button>
-    <button type="button" class="tab" onclick="switchTab('arbeidsliste')">Arbeidsliste</button>
   </div>
 
   <!-- ═══════════════════════ NEW ENTRY TAB ═══════════════════════ -->
@@ -508,41 +507,15 @@
 
     <div class="card">
       <div class="card-title">Søk etter komposisjon</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
-        <div class="field" style="margin-bottom:0">
-          <select id="editSearchMode">
-            <option value="composer">Søk på komponist</option>
-            <option value="title">Søk på tittel</option>
-          </select>
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <select id="editApprovalFilter">
-            <option value="">Alle</option>
-            <option value="unapproved">Ikke godkjent</option>
-            <option value="approved">Godkjent</option>
-            <option value="hide_approved">Skjul godkjente</option>
-          </select>
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <select id="editMusescoreFilter">
-            <option value="">Alle</option>
-            <option value="with_link">Med MuseScore-lenke</option>
-            <option value="without_link">Uten MuseScore-lenke</option>
-          </select>
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <select id="editInvestigateFilter">
-            <option value="">Alle</option>
-            <option value="investigate">Til undersøkelse</option>
-          </select>
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <select id="editUnderArbeidFilter">
-            <option value="">Alle</option>
-            <option value="under_arbeid">Under arbeid</option>
-          </select>
-        </div>
+      <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem">
+        <button type="button" id="searchModeComposer" class="btn btn-secondary"
+          onclick="setSearchMode('composer')"
+          style="font-size:0.82rem;padding:0.3rem 0.9rem;font-weight:700">Komponist</button>
+        <button type="button" id="searchModeTitle" class="btn btn-secondary"
+          onclick="setSearchMode('title')"
+          style="font-size:0.82rem;padding:0.3rem 0.9rem">Tittel</button>
       </div>
+      <input type="hidden" id="editSearchMode" value="composer">
       <div class="field">
         <input type="text" id="editSearch" placeholder="Søk på komponist…" autocomplete="off">
       </div>
@@ -909,20 +882,6 @@
     </div>
     <div id="bioAlphaNav" style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:1.2rem"></div>
     <div id="bioCardArea"></div>
-  </div>
-
-  <div id="tab-arbeidsliste" class="tab-content">
-    <div class="card">
-      <div class="card-title" style="display:flex;align-items:center;gap:1rem">
-        Arbeidsliste
-        <div style="display:flex;gap:0.5rem;margin-left:auto">
-          <button type="button" class="btn btn-secondary" onclick="showArbeidsSection('mangler')" id="arbeidsTabMangler" style="font-size:0.82rem;padding:0.3rem 0.9rem">Mangler transkripsjon <span id="countMangler" style="background:var(--muted);color:white;border-radius:3px;padding:1px 6px;font-size:0.75rem;margin-left:4px">…</span></button>
-          <button type="button" class="btn btn-secondary" onclick="showArbeidsSection('under_arbeid')" id="arbeidsTabUnderArbeid" style="font-size:0.82rem;padding:0.3rem 0.9rem">Under arbeid <span id="countUnderArbeid" style="background:#e8a000;color:white;border-radius:3px;padding:1px 6px;font-size:0.75rem;margin-left:4px">…</span></button>
-          <button type="button" class="btn btn-secondary" onclick="showArbeidsSection('interessant')" id="arbeidsTabInteressant" style="font-size:0.82rem;padding:0.3rem 0.9rem">Interessant å undersøke <span id="countInteressant" style="background:#f0c040;color:#7a5c00;border-radius:3px;padding:1px 6px;font-size:0.75rem;margin-left:4px">…</span></button>
-        </div>
-      </div>
-    </div>
-    <div id="arbeidsListArea"></div>
   </div>
 
 </div>
