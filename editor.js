@@ -660,27 +660,15 @@ function eAddContributorRow(person, role, creditedAs)  { addContributorRow('e', 
 makePubLookup('e_publisherSearch', 'e_publisherResults', 'e_publisherId', ePubState, 'id');
 
 let editSearchTimeout;
-document.getElementById('editApprovalFilter').addEventListener('change', () => {
-  const q = document.getElementById('editSearch').value.trim();
-  if (q.length >= 2) searchCompositions(q);
-});
 
-document.getElementById('editMusescoreFilter').addEventListener('change', () => {
-  const q = document.getElementById('editSearch').value.trim();
-  if (q.length >= 2) searchCompositions(q);
-});
-
-document.getElementById('editInvestigateFilter').addEventListener('change', () => {
-  const q = document.getElementById('editSearch').value.trim();
-  if (q.length >= 2) searchCompositions(q);
-});
-
-document.getElementById('editSearchMode').addEventListener('change', () => {
-  const mode = document.getElementById('editSearchMode').value;
+function setSearchMode(mode) {
+  document.getElementById('editSearchMode').value = mode;
   document.getElementById('editSearch').placeholder = mode === 'composer' ? 'Søk på komponist…' : 'Søk på tittel…';
   document.getElementById('editSearch').value = '';
   document.getElementById('editSearchResults').innerHTML = '';
-});
+  document.getElementById('searchModeComposer').style.fontWeight = mode === 'composer' ? '700' : '';
+  document.getElementById('searchModeTitle').style.fontWeight    = mode === 'title'    ? '700' : '';
+}
 
 document.getElementById('editSearch').addEventListener('input', () => {
   clearTimeout(editSearchTimeout);
@@ -691,25 +679,17 @@ document.getElementById('editSearch').addEventListener('input', () => {
 });
 
 async function searchCompositions(q) {
-  const approvalFilter    = document.getElementById('editApprovalFilter').value;
-  const mode              = document.getElementById('editSearchMode').value;
-  const container         = document.getElementById('editSearchResults');
+  const mode      = document.getElementById('editSearchMode').value;
+  const container = document.getElementById('editSearchResults');
   container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">Søker…</div>';
 
-  const msFilter          = document.getElementById('editMusescoreFilter').value;
-  const investigateFilter = document.getElementById('editInvestigateFilter').value;
-  const underArbeidFilter = document.getElementById('editUnderArbeidFilter').value;
-  const approvalQ   = approvalFilter === 'approved' ? '&approved=eq.true' : (approvalFilter === 'unapproved' || approvalFilter === 'hide_approved') ? '&approved=eq.false' : '';
-  const msQ         = msFilter === 'with_link' ? '&musescore_link=not.is.null' : msFilter === 'without_link' ? '&musescore_link=is.null' : '';
-  const invQ        = investigateFilter === 'investigate' ? '&to_investigate=eq.true' : '';
-  const arbeidQ     = underArbeidFilter === 'under_arbeid' ? '&under_arbeid=eq.true' : '';
   let results = [];
 
   if (mode === 'title') {
-    results = await get(`/composition?title=ilike.*${encodeURIComponent(q)}*&select=composition_id,title,year_composed,public_domain,approved,musescore_link,to_investigate,under_arbeid${approvalQ}${msQ}${invQ}${arbeidQ}&limit=30&order=title`);
+    results = await get(`/composition?title=ilike.*${encodeURIComponent(q)}*&select=composition_id,title,year_composed,public_domain,approved,musescore_link,to_investigate,under_arbeid&limit=30&order=title`);
 
   } else {
-    // Composer mode only — find persons, then their compositions
+    // Composer mode — find persons by last name, then their compositions
     const persons = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name&limit=10&order=last_name`);
     for (const p of persons) {
       const cc = await get(`/composition_person?person_id=eq.${p.person_id}&role=eq.Composer&select=composition_id`);
@@ -724,12 +704,6 @@ async function searchCompositions(q) {
         }
       });
     }
-    if (approvalFilter === 'approved')                                           results = results.filter(r => r.approved);
-    if (approvalFilter === 'unapproved' || approvalFilter === 'hide_approved')   results = results.filter(r => !r.approved);
-    if (msFilter === 'with_link')    results = results.filter(r => r.musescore_link);
-    if (msFilter === 'without_link') results = results.filter(r => !r.musescore_link);
-    if (investigateFilter === 'investigate') results = results.filter(r => r.to_investigate);
-    if (underArbeidFilter === 'under_arbeid') results = results.filter(r => r.under_arbeid);
     results.sort((a,b) => a.title.localeCompare(b.title));
   }
 
@@ -766,12 +740,9 @@ async function loadEditForm(compId) {
   try {
   // Save search state so we can restore it on Back
   window._savedSearch = {
-    query:             document.getElementById('editSearch').value,
-    mode:              document.getElementById('editSearchMode').value,
-    approvalFilter:    document.getElementById('editApprovalFilter').value,
-    msFilter:          document.getElementById('editMusescoreFilter').value,
-    investigateFilter: document.getElementById('editInvestigateFilter').value,
-    results:           document.getElementById('editSearchResults').innerHTML
+    query:   document.getElementById('editSearch').value,
+    mode:    document.getElementById('editSearchMode').value,
+    results: document.getElementById('editSearchResults').innerHTML
   };
   document.getElementById('editSearchResults').innerHTML = '';
   document.getElementById('editSearch').value = '';
@@ -1015,12 +986,8 @@ function closeEditPanel() {
   // Restore previous search state
   if (window._savedSearch) {
     const s = window._savedSearch;
-    document.getElementById('editSearchMode').value        = s.mode;
-    document.getElementById('editApprovalFilter').value    = s.approvalFilter;
-    document.getElementById('editMusescoreFilter').value   = s.msFilter;
-    document.getElementById('editInvestigateFilter').value = s.investigateFilter || '';
-    document.getElementById('editSearch').value            = s.query;
-    // Re-run search to reflect any approval changes
+    setSearchMode(s.mode || 'composer');
+    document.getElementById('editSearch').value = s.query;
     if (s.query.length >= 2) {
       searchCompositions(s.query);
     } else {
@@ -1990,30 +1957,6 @@ async function loadArbeidsliste() {
     get('/composition?to_investigate=eq.true&select=composition_id,title,year_composed,musescore_link&order=title&limit=500'),
   ]);
 
-  // Attach composer names: batch fetch composition_person for all IDs
-  const allIds = [...new Set([...mangler, ...underArbeid, ...interessant].map(c => c.composition_id))];
-  if (allIds.length) {
-    const cpRows = await get(`/composition_person?composition_id=in.(${allIds.join(',')})&role=eq.Composer&select=composition_id,person_id,credited_as`);
-    const personIds = [...new Set(cpRows.map(r => r.person_id))];
-    const persons = personIds.length
-      ? await get(`/person?person_id=in.(${personIds.join(',')})&select=person_id,first_name,last_name`)
-      : [];
-    const personMap = Object.fromEntries(persons.map(p => [p.person_id, ((p.first_name||'') + ' ' + (p.last_name||'')).trim()]));
-
-    // Build composer string per composition (may have multiple)
-    const composerMap = {};
-    for (const row of cpRows) {
-      const name = row.credited_as || personMap[row.person_id] || '';
-      if (!name) continue;
-      composerMap[row.composition_id] = composerMap[row.composition_id]
-        ? composerMap[row.composition_id] + ', ' + name
-        : name;
-    }
-    [...mangler, ...underArbeid, ...interessant].forEach(c => {
-      c._composer = composerMap[c.composition_id] || '';
-    });
-  }
-
   arbeidsData.mangler      = mangler;
   arbeidsData.under_arbeid = underArbeid;
   arbeidsData.interessant  = interessant;
@@ -2066,14 +2009,13 @@ function showArbeidsSection(section) {
         <a href="#" onclick="event.preventDefault();switchTab('edit');loadEditForm(${c.composition_id})"
            style="color:var(--ink);text-decoration:none;border-bottom:1px solid var(--border)">${c.title}</a>
       </td>
-      <td style="padding:0.35rem 0.6rem;color:var(--muted);font-size:0.85rem">${c._composer || '—'}</td>
       <td style="padding:0.35rem 0.6rem;color:var(--muted);font-size:0.85rem">${c.year_composed || '—'}</td>
       ${msCell}
       ${checkCell}
     </tr>`;
   }).join('');
 
-  const msHeader    = msCol                 ? '<th style="padding:0.35rem 0.6rem;font-weight:600;text-align:left">MuseScore</th>' : '';
+  const msHeader    = msCol           ? '<th style="padding:0.35rem 0.6rem;font-weight:600;text-align:left">MuseScore</th>' : '';
   const checkHeader = section === 'mangler' ? '<th style="padding:0.35rem 0.6rem;font-weight:600;text-align:center;width:2.5rem">⚙</th>' : '';
 
   area.innerHTML = `
@@ -2082,7 +2024,6 @@ function showArbeidsSection(section) {
       <thead>
         <tr style="border-bottom:2px solid var(--border);background:var(--surface)">
           <th style="padding:0.35rem 0.6rem;font-weight:600;text-align:left">Tittel</th>
-          <th style="padding:0.35rem 0.6rem;font-weight:600;text-align:left">Komponist</th>
           <th style="padding:0.35rem 0.6rem;font-weight:600;text-align:left">År</th>
           ${msHeader}
           ${checkHeader}
