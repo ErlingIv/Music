@@ -377,6 +377,7 @@
     <button type="button" class="tab" onclick="switchTab('edit')">Rediger</button>
     <button type="button" class="tab" onclick="switchTab('person')">Person</button>
     <button type="button" class="tab" onclick="switchTab('biolinks')">Bio-lenker</button>
+    <button type="button" class="tab" onclick="switchTab('arbeidsliste')">Arbeidsliste</button>
   </div>
 
   <!-- ═══════════════════════ NEW ENTRY TAB ═══════════════════════ -->
@@ -908,6 +909,20 @@
     </div>
     <div id="bioAlphaNav" style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:1.2rem"></div>
     <div id="bioCardArea"></div>
+  </div>
+
+  <div id="tab-arbeidsliste" class="tab-content">
+    <div class="card">
+      <div class="card-title" style="display:flex;align-items:center;gap:1rem">
+        Arbeidsliste
+        <div style="display:flex;gap:0.5rem;margin-left:auto">
+          <button type="button" class="btn btn-secondary" onclick="showArbeidsSection('mangler')" id="arbeidsTabMangler" style="font-size:0.82rem;padding:0.3rem 0.9rem">Mangler transkripsjon <span id="countMangler" style="background:var(--muted);color:white;border-radius:3px;padding:1px 6px;font-size:0.75rem;margin-left:4px">…</span></button>
+          <button type="button" class="btn btn-secondary" onclick="showArbeidsSection('under_arbeid')" id="arbeidsTabUnderArbeid" style="font-size:0.82rem;padding:0.3rem 0.9rem">Under arbeid <span id="countUnderArbeid" style="background:#e8a000;color:white;border-radius:3px;padding:1px 6px;font-size:0.75rem;margin-left:4px">…</span></button>
+          <button type="button" class="btn btn-secondary" onclick="showArbeidsSection('interessant')" id="arbeidsTabInteressant" style="font-size:0.82rem;padding:0.3rem 0.9rem">Interessant å undersøke <span id="countInteressant" style="background:#f0c040;color:#7a5c00;border-radius:3px;padding:1px 6px;font-size:0.75rem;margin-left:4px">…</span></button>
+        </div>
+      </div>
+    </div>
+    <div id="arbeidsListArea"></div>
   </div>
 
 </div>
