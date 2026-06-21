@@ -38,10 +38,12 @@ async function del(table, filter) {
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
-let bioLoaded = false;
+let bioLoaded        = false;
+let arbeidslisteLoaded = false;
 
 function switchTab(name) {
   if (name === 'biolinks' && !bioLoaded) loadBioPersons();
+  if (name === 'arbeidsliste' && !arbeidslisteLoaded) loadArbeidsliste();
   document.querySelectorAll('.tab').forEach(t => {
     t.classList.toggle('active', t.getAttribute('onclick') === `switchTab('${name}')`);
   });
@@ -1965,3 +1967,117 @@ async function uploadScoreFile(input, type, urlFieldId, linkId, progressId) {
     loadEditForm(parseInt(editId));
   }
 })();
+
+// ── Arbeidsliste ──────────────────────────────────────────────────────────────
+
+let arbeidsData   = { mangler: [], under_arbeid: [], interessant: [] };
+let arbeidsSection = 'mangler';
+
+async function loadArbeidsliste() {
+  if (arbeidslisteLoaded) return;
+  arbeidslisteLoaded = true;
+
+  document.getElementById('arbeidsListArea').innerHTML =
+    '<div style="color:var(--muted);font-size:.85rem;padding:1rem 0">Laster…</div>';
+
+  // Fetch in parallel: all three categories
+  const [mangler, underArbeid, interessant] = await Promise.all([
+    // PD scores without MuseScore link, not flagged under_arbeid or to_investigate
+    get('/composition?public_domain=eq.Yes&musescore_link=is.null&under_arbeid=not.eq.true&to_investigate=not.eq.true&select=composition_id,title,year_composed&order=title&limit=500'),
+    // Under arbeid
+    get('/composition?under_arbeid=eq.true&select=composition_id,title,year_composed,musescore_link&order=title&limit=500'),
+    // To investigate
+    get('/composition?to_investigate=eq.true&select=composition_id,title,year_composed,musescore_link&order=title&limit=500'),
+  ]);
+
+  arbeidsData.mangler      = mangler;
+  arbeidsData.under_arbeid = underArbeid;
+  arbeidsData.interessant  = interessant;
+
+  document.getElementById('countMangler').textContent     = mangler.length;
+  document.getElementById('countUnderArbeid').textContent = underArbeid.length;
+  document.getElementById('countInteressant').textContent = interessant.length;
+
+  showArbeidsSection('mangler');
+}
+
+function showArbeidsSection(section) {
+  arbeidsSection = section;
+
+  // Highlight active sub-tab button
+  ['Mangler','UnderArbeid','Interessant'].forEach(s => {
+    const btn = document.getElementById('arbeidsTab' + s);
+    if (btn) btn.style.fontWeight = (s.toLowerCase().replace(' ','') === section.replace('_','')) ? '700' : '';
+  });
+  // Simpler: just match by section key
+  document.getElementById('arbeidsTabMangler').style.fontWeight     = section === 'mangler'      ? '700' : '';
+  document.getElementById('arbeidsTabUnderArbeid').style.fontWeight = section === 'under_arbeid' ? '700' : '';
+  document.getElementById('arbeidsTabInteressant').style.fontWeight = section === 'interessant'  ? '700' : '';
+
+  const items = arbeidsData[section] || [];
+  const area  = document.getElementById('arbeidsListArea');
+
+  if (!items.length) {
+    area.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:1rem 0">Ingen innføringer i denne kategorien.</div>';
+    return;
+  }
+
+  const msCol = (section !== 'mangler');
+
+  const rows = items.map(c => {
+    const msCell = msCol
+      ? `<td style="padding:0.35rem 0.6rem">${c.musescore_link
+          ? `<a href="${c.musescore_link}" target="_blank" style="color:var(--accent);font-size:0.8rem">MuseScore ↗</a>`
+          : '<span style="color:var(--muted);font-size:0.8rem">—</span>'}</td>`
+      : '';
+    const checkCell = section === 'mangler'
+      ? `<td style="padding:0.35rem 0.6rem;text-align:center">
+           <input type="checkbox" title="Merk som under arbeid"
+             style="width:auto;margin:0;accent-color:#c07000;cursor:pointer"
+             onchange="toggleUnderArbeid(this, ${c.composition_id})">
+         </td>`
+      : '';
+    return `<tr id="arbeid-row-${c.composition_id}" style="border-bottom:1px solid var(--border)">
+      <td style="padding:0.35rem 0.6rem">
+        <a href="#" onclick="event.preventDefault();switchTab('edit');loadEditForm(${c.composition_id})"
+           style="color:var(--ink);text-decoration:none;border-bottom:1px solid var(--border)">${c.title}</a>
+      </td>
+      <td style="padding:0.35rem 0.6rem;color:var(--muted);font-size:0.85rem">${c.year_composed || '—'}</td>
+      ${msCell}
+      ${checkCell}
+    </tr>`;
+  }).join('');
+
+  const msHeader    = msCol           ? '<th style="padding:0.35rem 0.6rem;font-weight:600;text-align:left">MuseScore</th>' : '';
+  const checkHeader = section === 'mangler' ? '<th style="padding:0.35rem 0.6rem;font-weight:600;text-align:center;width:2.5rem">⚙</th>' : '';
+
+  area.innerHTML = `
+    <div style="font-size:0.82rem;color:var(--muted);margin-bottom:0.75rem">${items.length} innføringer</div>
+    <table style="width:100%;border-collapse:collapse;font-size:0.88rem">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border);background:var(--surface)">
+          <th style="padding:0.35rem 0.6rem;font-weight:600;text-align:left">Tittel</th>
+          <th style="padding:0.35rem 0.6rem;font-weight:600;text-align:left">År</th>
+          ${msHeader}
+          ${checkHeader}
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+async function toggleUnderArbeid(checkbox, compositionId) {
+  checkbox.disabled = true;
+  try {
+    await patch('composition', `composition_id=eq.${compositionId}`, { under_arbeid: true });
+    // Remove from local data and re-render
+    arbeidsData.mangler = arbeidsData.mangler.filter(c => c.composition_id !== compositionId);
+    document.getElementById('countMangler').textContent = arbeidsData.mangler.length;
+    const row = document.getElementById(`arbeid-row-${compositionId}`);
+    if (row) row.remove();
+  } catch(e) {
+    checkbox.disabled = false;
+    checkbox.checked  = false;
+    showStatus('Kunne ikke lagre: ' + e.message, 'error');
+  }
+}
