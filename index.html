@@ -418,6 +418,9 @@
   <div class="tab" data-section="dedications" onclick="switchTab('dedications'); loadDedications()">
     <span class="tab-flag">🎀</span>Dedications
   </div>
+  <div class="tab" data-section="illustrators" onclick="switchTab('illustrators'); loadIllustrators()">
+    <span class="tab-flag">🎨</span>Illustrators
+  </div>
 </nav>
 
 <main>
@@ -484,6 +487,16 @@
       <span class="section-count" id="count-dedications"></span>
     </div>
     <div id="dedications-list"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
+  </div>
+
+  <!-- Illustrators -->
+  <div class="section-panel" id="panel-illustrators">
+    <div class="section-header">
+      <span class="section-flag">🎨</span>
+      <span class="section-title">Illustrators</span>
+      <span class="section-count" id="count-illustrators"></span>
+    </div>
+    <div id="illustrators-list"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
   </div>
 </main>
 
@@ -951,6 +964,106 @@ async function loadDedications() {
             <td class="ded-composer">${(composerMap[c.composition_id] || []).join(', ') || '—'}</td>
             <td class="ded-year">${c.year_composed || ''}</td>
             <td class="ded-dedication">${c.dedication}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+// ── Illustrators ──────────────────────────────────────────────────────────────
+let _illustratorsLoaded = false;
+
+async function loadIllustrators() {
+  if (_illustratorsLoaded) return;
+  _illustratorsLoaded = true;
+
+  const listEl  = document.getElementById('illustrators-list');
+  const countEl = document.getElementById('count-illustrators');
+
+  // Fetch all composition_person rows with role=Illustrator
+  let cpRows = [], offset = 0;
+  while (true) {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/composition_person?role=eq.Illustrator&select=composition_id,person_id,credited_as&limit=1000&offset=${offset}`,
+      { headers: H }
+    );
+    const batch = await r.json();
+    cpRows = cpRows.concat(batch);
+    if (batch.length < 1000) break;
+    offset += 1000;
+  }
+
+  if (!cpRows.length) {
+    listEl.innerHTML = '<div class="loading-state">No illustrated scores found.</div>';
+    countEl.textContent = '0 works';
+    return;
+  }
+
+  const compIds   = [...new Set(cpRows.map(r => r.composition_id))].join(',');
+  const personIds = [...new Set(cpRows.map(r => r.person_id))];
+
+  // Fetch compositions and persons in parallel
+  const [compR, ...personBatches] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&select=composition_id,title,year_composed&order=title.asc`, { headers: H }),
+    ...Array.from({ length: Math.ceil(personIds.length / 200) }, (_, i) =>
+      fetch(`${SUPABASE_URL}/rest/v1/person?person_id=in.(${personIds.slice(i*200, i*200+200).join(',')})&select=person_id,first_name,last_name`, { headers: H })
+    )
+  ]);
+
+  const comps   = await compR.json();
+  let persons   = [];
+  for (const pb of personBatches) persons = persons.concat(await pb.json());
+
+  const compMap   = Object.fromEntries(comps.map(c => [c.composition_id, c]));
+  const personMap = Object.fromEntries(persons.map(p => [p.person_id, p]));
+
+  // Build per-composition illustrator list
+  const illMap = {};
+  cpRows.forEach(row => {
+    if (!illMap[row.composition_id]) illMap[row.composition_id] = [];
+    const p    = personMap[row.person_id];
+    const name = row.credited_as || (p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : '—');
+    illMap[row.composition_id].push(name);
+  });
+
+  // Also fetch composers for these compositions
+  const ccR = await fetch(
+    `${SUPABASE_URL}/rest/v1/composition_person?composition_id=in.(${compIds})&role=eq.Composer&select=composition_id,person_id`,
+    { headers: H }
+  );
+  const ccRows = await ccR.json();
+  const ccPersonIds = [...new Set(ccRows.map(r => r.person_id).filter(id => !personMap[id]))];
+  if (ccPersonIds.length) {
+    for (let i = 0; i < ccPersonIds.length; i += 200) {
+      const chunk = ccPersonIds.slice(i, i+200).join(',');
+      const pr = await fetch(`${SUPABASE_URL}/rest/v1/person?person_id=in.(${chunk})&select=person_id,first_name,last_name`, { headers: H });
+      (await pr.json()).forEach(p => { personMap[p.person_id] = p; });
+    }
+  }
+  const composerMap = {};
+  ccRows.forEach(row => {
+    if (!composerMap[row.composition_id]) composerMap[row.composition_id] = [];
+    const p = personMap[row.person_id];
+    if (p) composerMap[row.composition_id].push(`${p.first_name || ''} ${p.last_name || ''}`.trim());
+  });
+
+  countEl.textContent = comps.length + ' work' + (comps.length !== 1 ? 's' : '');
+
+  listEl.innerHTML = `
+    <table class="ded-table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Composer</th>
+          <th>Year</th>
+          <th>Illustrator</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${comps.map(c => `
+          <tr>
+            <td class="ded-title"><a href="score.html?id=${c.composition_id}">${c.title}</a></td>
+            <td class="ded-composer">${(composerMap[c.composition_id] || []).join(', ') || '—'}</td>
+            <td class="ded-year">${c.year_composed || ''}</td>
+            <td class="ded-dedication">${(illMap[c.composition_id] || []).join(', ')}</td>
           </tr>`).join('')}
       </tbody>
     </table>`;
