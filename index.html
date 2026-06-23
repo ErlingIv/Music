@@ -258,6 +258,24 @@
   }
 
   /* ── Loading / empty states ── */
+  /* ── Dedications table ── */
+  .ded-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  .ded-table th {
+    text-align: left; padding: 0.55rem 0.8rem;
+    font-family: var(--body); font-size: 0.72rem; font-weight: 500;
+    letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--muted); border-bottom: 2px solid var(--border);
+    background: var(--paper);
+  }
+  .ded-table td { padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--faint); vertical-align: top; }
+  .ded-table tr:last-child td { border-bottom: none; }
+  .ded-table tr:hover td { background: var(--bg); }
+  .ded-title a { font-family: var(--serif); font-weight: 500; color: var(--ink); text-decoration: none; }
+  .ded-title a:hover { color: var(--accent); text-decoration: underline; }
+  .ded-composer { color: var(--muted); font-size: 0.82rem; }
+  .ded-year { color: var(--muted); font-size: 0.82rem; white-space: nowrap; }
+  .ded-dedication { color: var(--ink); font-style: italic; }
+
   .loading-state {
     text-align: center;
     padding: 3rem;
@@ -397,6 +415,9 @@
   <div class="tab" data-section="unknown" onclick="switchTab('unknown')">
     <span class="tab-flag">❓</span>Unknown
   </div>
+  <div class="tab" data-section="dedications" onclick="switchTab('dedications'); loadDedications()">
+    <span class="tab-flag">🎀</span>Dedications
+  </div>
 </nav>
 
 <main>
@@ -454,6 +475,15 @@
     </div>
     <div class="alpha-bar" id="alpha-unknown"></div>
     <div id="composers-unknown"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
+  </div>
+  <!-- Dedications -->
+  <div class="section-panel" id="panel-dedications">
+    <div class="section-header">
+      <span class="section-flag">🎀</span>
+      <span class="section-title">Dedications</span>
+      <span class="section-count" id="count-dedications"></span>
+    </div>
+    <div id="dedications-list"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
   </div>
 </main>
 
@@ -846,6 +876,85 @@ document.addEventListener('click', e => {
     document.getElementById('searchResults').style.display = 'none';
   }
 });
+
+// ── Dedications ───────────────────────────────────────────────────────────────
+let _dedicationsLoaded = false;
+
+async function loadDedications() {
+  if (_dedicationsLoaded) return;
+  _dedicationsLoaded = true;
+
+  const listEl = document.getElementById('dedications-list');
+  const countEl = document.getElementById('count-dedications');
+
+  // Fetch all compositions with a dedication, paginated
+  let all = [], offset = 0;
+  while (true) {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/composition?dedication=not.is.null&dedication=neq.&select=composition_id,title,year_composed,dedication&order=title.asc&limit=1000&offset=${offset}`,
+      { headers: H }
+    );
+    const batch = await r.json();
+    all = all.concat(batch);
+    if (batch.length < 1000) break;
+    offset += 1000;
+  }
+
+  if (!all.length) {
+    listEl.innerHTML = '<div class="loading-state">No dedications found.</div>';
+    return;
+  }
+
+  // Fetch composers for these compositions
+  const compIds = all.map(c => c.composition_id).join(',');
+  const cpR = await fetch(
+    `${SUPABASE_URL}/rest/v1/composition_person?composition_id=in.(${compIds})&role=eq.Composer&select=composition_id,person_id`,
+    { headers: H }
+  );
+  const cpRows = await cpR.json();
+
+  const personIds = [...new Set(cpRows.map(r => r.person_id))];
+  let persons = [];
+  for (let i = 0; i < personIds.length; i += 200) {
+    const chunk = personIds.slice(i, i + 200).join(',');
+    const pr = await fetch(
+      `${SUPABASE_URL}/rest/v1/person?person_id=in.(${chunk})&select=person_id,first_name,last_name`,
+      { headers: H }
+    );
+    persons = persons.concat(await pr.json());
+  }
+
+  const personMap = Object.fromEntries(persons.map(p => [p.person_id, p]));
+  const composerMap = {};
+  cpRows.forEach(row => {
+    if (!composerMap[row.composition_id]) composerMap[row.composition_id] = [];
+    const p = personMap[row.person_id];
+    if (p) composerMap[row.composition_id].push(`${p.first_name || ''} ${p.last_name || ''}`.trim());
+  });
+
+  countEl.textContent = all.length + ' work' + (all.length !== 1 ? 's' : '');
+
+  listEl.innerHTML = `
+    <table class="ded-table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Composer</th>
+          <th>Year</th>
+          <th>Dedicated to</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${all.map(c => `
+          <tr>
+            <td class="ded-title"><a href="score.html?id=${c.composition_id}">${c.title}</a></td>
+            <td class="ded-composer">${(composerMap[c.composition_id] || []).join(', ') || '—'}</td>
+            <td class="ded-year">${c.year_composed || ''}</td>
+            <td class="ded-dedication">${c.dedication}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
 
 </script>
 </body>
