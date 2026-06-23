@@ -740,9 +740,8 @@ async function loadEditForm(compId) {
   try {
   // Save search state so we can restore it on Back
   window._savedSearch = {
-    query:   document.getElementById('editSearch').value,
-    mode:    document.getElementById('editSearchMode').value,
-    results: document.getElementById('editSearchResults').innerHTML
+    query: document.getElementById('editSearch').value,
+    mode:  document.getElementById('editSearchMode').value,
   };
   document.getElementById('editSearchResults').innerHTML = '';
   document.getElementById('editSearch').value = '';
@@ -990,8 +989,6 @@ function closeEditPanel() {
     document.getElementById('editSearch').value = s.query;
     if (s.query.length >= 2) {
       searchCompositions(s.query);
-    } else {
-      document.getElementById('editSearchResults').innerHTML = s.results;
     }
     window._savedSearch = null;
   }
