@@ -265,8 +265,12 @@
     font-family: var(--body); font-size: 0.72rem; font-weight: 500;
     letter-spacing: 0.07em; text-transform: uppercase;
     color: var(--muted); border-bottom: 2px solid var(--border);
-    background: var(--paper);
+    background: var(--paper); cursor: pointer; user-select: none;
+    white-space: nowrap;
   }
+  .ded-table th:hover { color: var(--ink); }
+  .ded-table th.sort-asc::after  { content: ' ↑'; }
+  .ded-table th.sort-desc::after { content: ' ↓'; }
   .ded-table td { padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--faint); vertical-align: top; }
   .ded-table tr:last-child td { border-bottom: none; }
   .ded-table tr:hover td { background: var(--bg); }
@@ -890,6 +894,63 @@ document.addEventListener('click', e => {
   }
 });
 
+// ── Shared sort helper ────────────────────────────────────────────────────────
+function makeSortable(tableId, rows, renderRow, columns) {
+  let sortCol = 0, sortDir = 1;
+  function sortAndRender() {
+    const col = columns[sortCol];
+    rows.sort((a, b) => {
+      const va = col.getValue(a) || '';
+      const vb = col.getValue(b) || '';
+      return va.localeCompare(vb, 'no', { numeric: true }) * sortDir;
+    });
+    const tbody = document.querySelector('#' + tableId + ' tbody');
+    tbody.innerHTML = rows.map(renderRow).join('');
+    document.querySelectorAll('#' + tableId + ' th').forEach((th, i) => {
+      th.classList.remove('sort-asc', 'sort-desc');
+      if (i === sortCol) th.classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
+    });
+  }
+  document.getElementById(tableId).querySelectorAll('th').forEach((th, i) => {
+    th.addEventListener('click', () => {
+      if (sortCol === i) { sortDir *= -1; } else { sortCol = i; sortDir = 1; }
+      sortAndRender();
+    });
+  });
+  sortAndRender();
+}
+
+// ── Shared: fetch composer names for a list of composition IDs ────────────────
+async function fetchComposers(compIds) {
+  const unique = [...new Set(compIds)];
+  let cpRows = [];
+  for (let i = 0; i < unique.length; i += 200) {
+    const chunk = unique.slice(i, i + 200).join(',');
+    const r = await fetch(
+      SUPABASE_URL + '/rest/v1/composition_person?composition_id=in.(' + chunk + ')&role=eq.Composer&select=composition_id,person_id',
+      { headers: H }
+    );
+    cpRows = cpRows.concat(await r.json());
+  }
+  const personIds = [...new Set(cpRows.map(r => r.person_id))];
+  const personMap = {};
+  for (let i = 0; i < personIds.length; i += 200) {
+    const chunk = personIds.slice(i, i + 200).join(',');
+    const r = await fetch(
+      SUPABASE_URL + '/rest/v1/person?person_id=in.(' + chunk + ')&select=person_id,first_name,last_name',
+      { headers: H }
+    );
+    (await r.json()).forEach(p => { personMap[p.person_id] = p; });
+  }
+  const composerMap = {};
+  cpRows.forEach(row => {
+    if (!composerMap[row.composition_id]) composerMap[row.composition_id] = [];
+    const p = personMap[row.person_id];
+    if (p) composerMap[row.composition_id].push((p.first_name || '') + ' ' + (p.last_name || '').trim());
+  });
+  return composerMap;
+}
+
 // ── Dedications ───────────────────────────────────────────────────────────────
 let _dedicationsLoaded = false;
 
@@ -897,14 +958,13 @@ async function loadDedications() {
   if (_dedicationsLoaded) return;
   _dedicationsLoaded = true;
 
-  const listEl = document.getElementById('dedications-list');
+  const listEl  = document.getElementById('dedications-list');
   const countEl = document.getElementById('count-dedications');
 
-  // Fetch all compositions with a dedication, paginated
   let all = [], offset = 0;
   while (true) {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition?dedication=not.is.null&dedication=neq.&select=composition_id,title,year_composed,dedication&order=title.asc&limit=1000&offset=${offset}`,
+      SUPABASE_URL + '/rest/v1/composition?public_domain=eq.Yes&dedication=not.is.null&dedication=neq.&select=composition_id,title,year_composed,dedication&limit=1000&offset=' + offset,
       { headers: H }
     );
     const batch = await r.json();
@@ -918,56 +978,31 @@ async function loadDedications() {
     return;
   }
 
-  // Fetch composers for these compositions
-  const compIds = all.map(c => c.composition_id).join(',');
-  const cpR = await fetch(
-    `${SUPABASE_URL}/rest/v1/composition_person?composition_id=in.(${compIds})&role=eq.Composer&select=composition_id,person_id`,
-    { headers: H }
-  );
-  const cpRows = await cpR.json();
-
-  const personIds = [...new Set(cpRows.map(r => r.person_id))];
-  let persons = [];
-  for (let i = 0; i < personIds.length; i += 200) {
-    const chunk = personIds.slice(i, i + 200).join(',');
-    const pr = await fetch(
-      `${SUPABASE_URL}/rest/v1/person?person_id=in.(${chunk})&select=person_id,first_name,last_name`,
-      { headers: H }
-    );
-    persons = persons.concat(await pr.json());
-  }
-
-  const personMap = Object.fromEntries(persons.map(p => [p.person_id, p]));
-  const composerMap = {};
-  cpRows.forEach(row => {
-    if (!composerMap[row.composition_id]) composerMap[row.composition_id] = [];
-    const p = personMap[row.person_id];
-    if (p) composerMap[row.composition_id].push(`${p.first_name || ''} ${p.last_name || ''}`.trim());
-  });
-
+  const composerMap = await fetchComposers(all.map(c => c.composition_id));
   countEl.textContent = all.length + ' work' + (all.length !== 1 ? 's' : '');
 
-  listEl.innerHTML = `
-    <table class="ded-table">
-      <thead>
-        <tr>
-          <th>Title</th>
-          <th>Composer</th>
-          <th>Year</th>
-          <th>Dedicated to</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${all.map(c => `
-          <tr>
-            <td class="ded-title"><a href="score.html?id=${c.composition_id}">${c.title}</a></td>
-            <td class="ded-composer">${(composerMap[c.composition_id] || []).join(', ') || '—'}</td>
-            <td class="ded-year">${c.year_composed || ''}</td>
-            <td class="ded-dedication">${c.dedication}</td>
-          </tr>`).join('')}
-      </tbody>
-    </table>`;
+  listEl.innerHTML = '<table class="ded-table" id="ded-table-dedications">' +
+    '<thead><tr><th>Title</th><th>Composer</th><th>Year</th><th>Dedicated to</th></tr></thead>' +
+    '<tbody></tbody></table>';
+
+  makeSortable('ded-table-dedications', all,
+    function(c) {
+      return '<tr>' +
+        '<td class="ded-title"><a href="score.html?id=' + c.composition_id + '">' + c.title + '</a></td>' +
+        '<td class="ded-composer">' + ((composerMap[c.composition_id] || []).join(', ') || '—') + '</td>' +
+        '<td class="ded-year">' + (c.year_composed || '') + '</td>' +
+        '<td class="ded-dedication">' + c.dedication + '</td>' +
+        '</tr>';
+    },
+    [
+      { getValue: function(c) { return c.title; } },
+      { getValue: function(c) { return (composerMap[c.composition_id] || [])[0] || ''; } },
+      { getValue: function(c) { return c.year_composed || ''; } },
+      { getValue: function(c) { return c.dedication; } }
+    ]
+  );
 }
+
 // ── Illustrators ──────────────────────────────────────────────────────────────
 let _illustratorsLoaded = false;
 
@@ -978,11 +1013,10 @@ async function loadIllustrators() {
   const listEl  = document.getElementById('illustrators-list');
   const countEl = document.getElementById('count-illustrators');
 
-  // Fetch all composition_person rows with role=Illustrator
   let cpRows = [], offset = 0;
   while (true) {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition_person?role=eq.Illustrator&select=composition_id,person_id,credited_as&limit=1000&offset=${offset}`,
+      SUPABASE_URL + '/rest/v1/composition_person?role=eq.Illustrator&select=composition_id,person_id,credited_as&limit=1000&offset=' + offset,
       { headers: H }
     );
     const batch = await r.json();
@@ -997,76 +1031,71 @@ async function loadIllustrators() {
     return;
   }
 
-  const compIds   = [...new Set(cpRows.map(r => r.composition_id))].join(',');
-  const personIds = [...new Set(cpRows.map(r => r.person_id))];
+  const allCompIds = [...new Set(cpRows.map(r => r.composition_id))];
 
-  // Fetch compositions and persons in parallel
-  const [compR, ...personBatches] = await Promise.all([
-    fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&select=composition_id,title,year_composed&order=title.asc`, { headers: H }),
-    ...Array.from({ length: Math.ceil(personIds.length / 200) }, (_, i) =>
-      fetch(`${SUPABASE_URL}/rest/v1/person?person_id=in.(${personIds.slice(i*200, i*200+200).join(',')})&select=person_id,first_name,last_name`, { headers: H })
-    )
-  ]);
+  // Fetch PD compositions only
+  let comps = [];
+  for (let i = 0; i < allCompIds.length; i += 200) {
+    const chunk = allCompIds.slice(i, i + 200).join(',');
+    const r = await fetch(
+      SUPABASE_URL + '/rest/v1/composition?composition_id=in.(' + chunk + ')&public_domain=eq.Yes&select=composition_id,title,year_composed',
+      { headers: H }
+    );
+    comps = comps.concat(await r.json());
+  }
+  comps.sort((a, b) => a.title.localeCompare(b.title, 'no'));
 
-  const comps   = await compR.json();
-  let persons   = [];
-  for (const pb of personBatches) persons = persons.concat(await pb.json());
+  if (!comps.length) {
+    listEl.innerHTML = '<div class="loading-state">No public domain illustrated scores found.</div>';
+    countEl.textContent = '0 works';
+    return;
+  }
 
-  const compMap   = Object.fromEntries(comps.map(c => [c.composition_id, c]));
-  const personMap = Object.fromEntries(persons.map(p => [p.person_id, p]));
+  const pdIds = new Set(comps.map(c => c.composition_id));
+  const pdCpRows = cpRows.filter(r => pdIds.has(r.composition_id));
 
-  // Build per-composition illustrator list
+  const personIds = [...new Set(pdCpRows.map(r => r.person_id))];
+  const personMap = {};
+  for (let i = 0; i < personIds.length; i += 200) {
+    const chunk = personIds.slice(i, i + 200).join(',');
+    const r = await fetch(
+      SUPABASE_URL + '/rest/v1/person?person_id=in.(' + chunk + ')&select=person_id,first_name,last_name',
+      { headers: H }
+    );
+    (await r.json()).forEach(p => { personMap[p.person_id] = p; });
+  }
+
   const illMap = {};
-  cpRows.forEach(row => {
+  pdCpRows.forEach(function(row) {
     if (!illMap[row.composition_id]) illMap[row.composition_id] = [];
     const p    = personMap[row.person_id];
-    const name = row.credited_as || (p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : '—');
+    const name = row.credited_as || (p ? ((p.first_name || '') + ' ' + (p.last_name || '')).trim() : '—');
     illMap[row.composition_id].push(name);
   });
 
-  // Also fetch composers for these compositions
-  const ccR = await fetch(
-    `${SUPABASE_URL}/rest/v1/composition_person?composition_id=in.(${compIds})&role=eq.Composer&select=composition_id,person_id`,
-    { headers: H }
-  );
-  const ccRows = await ccR.json();
-  const ccPersonIds = [...new Set(ccRows.map(r => r.person_id).filter(id => !personMap[id]))];
-  if (ccPersonIds.length) {
-    for (let i = 0; i < ccPersonIds.length; i += 200) {
-      const chunk = ccPersonIds.slice(i, i+200).join(',');
-      const pr = await fetch(`${SUPABASE_URL}/rest/v1/person?person_id=in.(${chunk})&select=person_id,first_name,last_name`, { headers: H });
-      (await pr.json()).forEach(p => { personMap[p.person_id] = p; });
-    }
-  }
-  const composerMap = {};
-  ccRows.forEach(row => {
-    if (!composerMap[row.composition_id]) composerMap[row.composition_id] = [];
-    const p = personMap[row.person_id];
-    if (p) composerMap[row.composition_id].push(`${p.first_name || ''} ${p.last_name || ''}`.trim());
-  });
-
+  const composerMap = await fetchComposers(comps.map(c => c.composition_id));
   countEl.textContent = comps.length + ' work' + (comps.length !== 1 ? 's' : '');
 
-  listEl.innerHTML = `
-    <table class="ded-table">
-      <thead>
-        <tr>
-          <th>Title</th>
-          <th>Composer</th>
-          <th>Year</th>
-          <th>Illustrator</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${comps.map(c => `
-          <tr>
-            <td class="ded-title"><a href="score.html?id=${c.composition_id}">${c.title}</a></td>
-            <td class="ded-composer">${(composerMap[c.composition_id] || []).join(', ') || '—'}</td>
-            <td class="ded-year">${c.year_composed || ''}</td>
-            <td class="ded-dedication">${(illMap[c.composition_id] || []).join(', ')}</td>
-          </tr>`).join('')}
-      </tbody>
-    </table>`;
+  listEl.innerHTML = '<table class="ded-table" id="ded-table-illustrators">' +
+    '<thead><tr><th>Title</th><th>Composer</th><th>Year</th><th>Illustrator</th></tr></thead>' +
+    '<tbody></tbody></table>';
+
+  makeSortable('ded-table-illustrators', comps,
+    function(c) {
+      return '<tr>' +
+        '<td class="ded-title"><a href="score.html?id=' + c.composition_id + '">' + c.title + '</a></td>' +
+        '<td class="ded-composer">' + ((composerMap[c.composition_id] || []).join(', ') || '—') + '</td>' +
+        '<td class="ded-year">' + (c.year_composed || '') + '</td>' +
+        '<td class="ded-dedication">' + ((illMap[c.composition_id] || []).join(', ')) + '</td>' +
+        '</tr>';
+    },
+    [
+      { getValue: function(c) { return c.title; } },
+      { getValue: function(c) { return (composerMap[c.composition_id] || [])[0] || ''; } },
+      { getValue: function(c) { return c.year_composed || ''; } },
+      { getValue: function(c) { return (illMap[c.composition_id] || [])[0] || ''; } }
+    ]
+  );
 }
 
 </script>
