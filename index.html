@@ -1030,7 +1030,7 @@ async function loadRecentlyAdded() {
   const el = document.getElementById('recentlyScroll');
   try {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition?musescore_uploaded=not.is.null&musescore_link=not.is.null&select=composition_id,title,musescore_link,musescore_uploaded&order=musescore_uploaded.desc&limit=12`,
+      `${SUPABASE_URL}/rest/v1/composition?musescore_uploaded=not.is.null&musescore_link=not.is.null&public_domain=eq.Yes&select=composition_id,title,musescore_link,musescore_uploaded&order=musescore_uploaded.desc&limit=12`,
       { headers: H }
     );
     const comps = await r.json();
