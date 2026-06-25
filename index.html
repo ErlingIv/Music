@@ -1061,7 +1061,7 @@ async function loadRecentlyAdded() {
     el.innerHTML = comps.map(c => {
       const composer = composerMap[c.composition_id] || '';
       const date = c.musescore_uploaded ? c.musescore_uploaded.slice(0, 7) : ''; // YYYY-MM
-      return `<a class="recently-card" href="${c.musescore_link}" target="_blank" rel="noopener">
+      return `<a class="recently-card" href="score.html?id=${c.composition_id}">
         <span class="recently-card-title">${c.title}</span>
         ${composer ? `<span class="recently-card-composer">${composer}</span>` : ''}
         <span class="recently-card-date">${date}</span>
