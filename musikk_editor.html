@@ -447,7 +447,7 @@
 
       <div class="card">
         <div class="card-title">Noteeksemplar</div>
-        <div class="row2">
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:1rem">
           <div class="field">
             <label>Forlag</label>
             <div class="lookup-wrap">
@@ -455,6 +455,10 @@
               <div id="n_publisherResults" class="lookup-results"></div>
               <input type="hidden" id="n_publisherId">
             </div>
+          </div>
+          <div class="field">
+            <label>Utgivelsår</label>
+            <input type="text" id="n_yearPublished" placeholder="f.eks. 1905">
           </div>
           <div class="field">
             <label>Platenummer</label>
@@ -615,7 +619,7 @@
       <div class="card">
         <div class="card-title">Noteeksemplar</div>
         <input type="hidden" id="e_scoreId">
-        <div class="row2">
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:1rem">
           <div class="field">
             <label>Forlag</label>
             <div class="lookup-wrap">
@@ -623,6 +627,10 @@
               <div id="e_publisherResults" class="lookup-results"></div>
               <input type="hidden" id="e_publisherId">
             </div>
+          </div>
+          <div class="field">
+            <label>Utgivelsår</label>
+            <input type="text" id="e_yearPublished" placeholder="f.eks. 1905">
           </div>
           <div class="field">
             <label>Platenummer</label>

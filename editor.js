@@ -584,7 +584,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
         document.getElementById('scoreDupConfirm').onclick = async () => {
           msgEl.innerHTML = '';
           btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Lagrer…';
-          await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, pdf_url: document.getElementById('n_pdfUrl').value.trim()||null, mp3_url: document.getElementById('n_mp3Url').value.trim()||null, source_id: getSourceId(source)||null });
+          await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, year_published: document.getElementById('n_yearPublished').value.trim()||null, pdf_url: document.getElementById('n_pdfUrl').value.trim()||null, mp3_url: document.getElementById('n_mp3Url').value.trim()||null, source_id: getSourceId(source)||null });
           showMsg('newMsg', `✓ "${title}" er lagret (id=${compId})`, 'success');
           resetNewForm();
           btn.disabled = false; btn.textContent = 'Lagre innføring';
@@ -593,7 +593,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
       }
     }
 
-    await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, pdf_url: document.getElementById('n_pdfUrl').value.trim()||null, mp3_url: document.getElementById('n_mp3Url').value.trim()||null, source_id: getSourceId(source)||null });
+    await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, year_published: document.getElementById('n_yearPublished').value.trim()||null, pdf_url: document.getElementById('n_pdfUrl').value.trim()||null, mp3_url: document.getElementById('n_mp3Url').value.trim()||null, source_id: getSourceId(source)||null });
 
     showMsg('newMsg', `✓ "${title}" er lagret (id=${compId})`, 'success');
     resetNewForm();
@@ -789,6 +789,7 @@ async function loadEditForm(compId) {
   const score = scores[0];
   document.getElementById('e_scoreId').value = score ? score.score_id : '';
   document.getElementById('e_plateNumber').value = score?.plate_number || '';
+  document.getElementById('e_yearPublished').value = score?.year_published || '';
   // Fetch publisher separately to avoid FK join issues
   if (score?.publisher_id) {
     const pubRows = await get(`/publisher?publisher_id=eq.${score.publisher_id}&select=publisher_id,publisher_name`);
@@ -940,7 +941,7 @@ async function saveEdit() {
     const pubId   = await resolvePublisher('e_publisherSearch', ePubState, 'id');
     const plate   = document.getElementById('e_plateNumber').value.trim();
     const catName = cat === 'pd' ? 'Eldre klassisk' : 'Eldre populærmusikk';
-    const scoreData = { plate_number: plate||null, publisher_id: pubId||null, category: catName, pdf_url: document.getElementById('e_pdfUrl').value.trim()||null, mp3_url: document.getElementById('e_mp3Url').value.trim()||null, source_id: getSourceId(esource)||null };
+    const scoreData = { plate_number: plate||null, publisher_id: pubId||null, year_published: document.getElementById('e_yearPublished').value.trim()||null, category: catName, pdf_url: document.getElementById('e_pdfUrl').value.trim()||null, mp3_url: document.getElementById('e_mp3Url').value.trim()||null, source_id: getSourceId(esource)||null };
 
     if (scoreId) {
       await patch('score', `score_id=eq.${scoreId}`, scoreData);
@@ -1841,12 +1842,12 @@ function makeClearable(id) {
 
 // New-entry form
 ['n_title','n_year','n_opus','n_notes','n_msLink','n_dedication',
- 'n_publisherSearch','n_plateNumber','n_source','n_pdfUrl','n_mp3Url'].forEach(makeClearable);
+ 'n_publisherSearch','n_yearPublished','n_plateNumber','n_source','n_pdfUrl','n_mp3Url'].forEach(makeClearable);
 
 // Edit form
 ['e_title','e_year','e_opus','e_msLink','e_notes','e_dedication',
  'e_msNotes','e_displayCountry',
- 'e_publisherSearch','e_plateNumber','e_source','e_pdfUrl','e_mp3Url'].forEach(makeClearable);
+ 'e_publisherSearch','e_yearPublished','e_plateNumber','e_source','e_pdfUrl','e_mp3Url'].forEach(makeClearable);
 
 // ── Supabase Storage upload ───────────────────────────────────────────────────
 
