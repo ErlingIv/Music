@@ -350,15 +350,16 @@ async function load() {
         <p class="score-sub">${composerDisplay}</p>
       </div>
 
-      <div class="meta-grid">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:2rem;margin-bottom:1.5rem;margin-top:1rem;flex-wrap:wrap;">
         <div>
           ${comp.year_composed ? `<p class="meta-year">Composed ${comp.year_composed}</p>` : ''}
           ${lyricistDisplay    ? `<p class="meta-value" style="margin-top:0.3rem">Lyricist: ${lyricistDisplay}</p>` : ''}
-          ${(publisherName || score?.plate_number) ? `<p class="meta-value" style="margin-top:0.3rem;font-size:0.85rem;color:var(--muted)">${publisherName ? publisherName : ''}${publisherName && score?.plate_number ? ' · ' : ''}${score?.plate_number ? 'Pl. ' + score.plate_number : ''}</p>` : ''}
         </div>
-        <div>
+        ${(comp.opus_number || publisherName || score?.plate_number) ? `
+        <div style="text-align:right">
           ${comp.opus_number ? `<p class="meta-opus">${comp.opus_number}</p>` : ''}
-        </div>
+          ${(publisherName || score?.plate_number) ? `<p style="font-size:0.85rem;color:var(--muted);margin-top:${comp.opus_number ? '0.3rem' : '0'}">${publisherName || ''}${publisherName && score?.plate_number ? ' · ' : ''}${score?.plate_number ? 'Pl.\u00a0' + score.plate_number : ''}</p>` : ''}
+        </div>` : ''}
       </div>
 
       ${notesHtml ? `
