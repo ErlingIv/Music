@@ -548,7 +548,8 @@ document.getElementById('newForm').addEventListener('submit', async e => {
     const source   = document.getElementById('n_source').value;
     if (!validateSource('n_source')) { btn.disabled = false; btn.textContent = 'Lagre innføring'; return; }
 
-    const comp = await post('composition', { title, public_domain: pubDomain, year_composed: year||null, opus_number: document.getElementById('n_opus').value.trim()||null, composition_notes: notes||null, musescore_link: msLink||null, dedication: dedication||null, to_investigate: toInvestigate||null, under_arbeid: underArbeid||null });
+    const today = new Date().toISOString().slice(0,10);
+    const comp = await post('composition', { title, public_domain: pubDomain, year_composed: year||null, opus_number: document.getElementById('n_opus').value.trim()||null, composition_notes: notes||null, musescore_link: msLink||null, dedication: dedication||null, to_investigate: toInvestigate||null, under_arbeid: underArbeid||null, musescore_uploaded: document.getElementById('n_uploadedToday').checked ? today : null });
     const compId = comp.composition_id;
     if (!compId) throw new Error('Feil ved lagring.');
 
@@ -790,6 +791,7 @@ async function loadEditForm(compId) {
   document.getElementById('e_scoreId').value = score ? score.score_id : '';
   document.getElementById('e_plateNumber').value = score?.plate_number || '';
   document.getElementById('e_yearPublished').value = score?.year_published || '';
+  document.getElementById('e_uploadedToday').checked = false;
   // Fetch publisher separately to avoid FK join issues
   if (score?.publisher_id) {
     const pubRows = await get(`/publisher?publisher_id=eq.${score.publisher_id}&select=publisher_id,publisher_name`);
@@ -921,6 +923,7 @@ async function saveEdit() {
       to_investigate:    document.getElementById('e_toInvestigate').checked,
       under_arbeid:      document.getElementById('e_underArbeid').checked,
       display_country:   document.getElementById('e_displayCountry').value.trim().toUpperCase() || null,
+      ...(document.getElementById('e_uploadedToday').checked ? { musescore_uploaded: new Date().toISOString().slice(0,10) } : {}),
     });
 
     // Update contributors
