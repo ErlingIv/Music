@@ -271,13 +271,25 @@ async function load() {
     // Fetch composition, score, and all contributors in parallel
     const [compR, scoreR, cpR] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${compId}&select=composition_id,title,year_composed,opus_number,musescore_link,musescore_notes`, { headers: H }),
-      fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=eq.${compId}&select=pdf_url,mp3_url`, { headers: H }),
+      fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=eq.${compId}&select=pdf_url,mp3_url,publisher_id,plate_number`, { headers: H }),
       fetch(`${SUPABASE_URL}/rest/v1/composition_person?composition_id=eq.${compId}&select=person_id,role,credited_as`, { headers: H }),
     ]);
 
     const comp  = (await compR.json())[0];
     const score = (await scoreR.json())[0];
     const cp    = await cpR.json();
+
+    // Fetch publisher name if present
+    let publisherName = null;
+    if (score?.publisher_id) {
+      const pubR = await fetch(
+        `${SUPABASE_URL}/rest/v1/publisher?publisher_id=eq.${score.publisher_id}&select=publisher_name`,
+        { headers: H }
+      );
+      const pub = (await pubR.json())[0];
+      if (pub) publisherName = pub.publisher_name;
+    }
+
     const cc    = cp.filter(r => r.role === 'Composer');
     const cl    = cp.filter(r => r.role === 'Lyricist');
     if (!comp) throw new Error('Score not found');
@@ -342,6 +354,7 @@ async function load() {
         <div>
           ${comp.year_composed ? `<p class="meta-year">Composed ${comp.year_composed}</p>` : ''}
           ${lyricistDisplay    ? `<p class="meta-value" style="margin-top:0.3rem">Lyricist: ${lyricistDisplay}</p>` : ''}
+          ${(publisherName || score?.plate_number) ? `<p class="meta-value" style="margin-top:0.3rem;font-size:0.85rem;color:var(--muted)">${publisherName ? publisherName : ''}${publisherName && score?.plate_number ? ' · ' : ''}${score?.plate_number ? 'Pl. ' + score.plate_number : ''}</p>` : ''}
         </div>
         <div>
           ${comp.opus_number ? `<p class="meta-opus">${comp.opus_number}</p>` : ''}
