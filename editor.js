@@ -1924,8 +1924,10 @@ async function uploadScoreFile(input, type, urlFieldId, linkId, progressId) {
 })();
 
 (function() {
+  // Support both ?edit=ID (hosted) and #edit=ID (local file://)
   const p = new URLSearchParams(window.location.search);
-  const editId = p.get('edit');
+  const h = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const editId = p.get('edit') || h.get('edit');
   if (editId) {
     switchTab('edit');
     loadEditForm(parseInt(editId));
