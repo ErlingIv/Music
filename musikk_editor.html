@@ -378,6 +378,7 @@
     <button type="button" class="tab" onclick="switchTab('person')">Person</button>
     <button type="button" class="tab" onclick="switchTab('biolinks')">Bio-lenker</button>
     <button type="button" class="tab" onclick="switchTab('arbeidsliste')">Arbeidsliste</button>
+    <button type="button" class="tab" onclick="switchTab('siste')">Siste</button>
   </div>
 
   <!-- ═══════════════════════ NEW ENTRY TAB ═══════════════════════ -->
@@ -927,6 +928,17 @@
     </div>
     <div id="bioAlphaNav" style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:1.2rem"></div>
     <div id="bioCardArea"></div>
+  </div>
+
+  <!-- ═══════════════════════ SISTE TAB ═══════════════════════ -->
+  <div id="tab-siste" class="tab-content">
+    <div class="card">
+      <div class="card-title" style="display:flex;align-items:center;gap:1rem">
+        Siste innføringer
+        <button type="button" class="btn btn-secondary" onclick="loadSiste()" style="font-size:0.8rem;padding:0.25rem 0.8rem;margin-left:auto">↺ Last på nytt</button>
+      </div>
+      <div id="sisteArea"><div style="color:var(--muted);font-size:.85rem;padding:0.5rem 0">Laster…</div></div>
+    </div>
   </div>
 
   <div id="tab-arbeidsliste" class="tab-content">

@@ -40,10 +40,12 @@ async function del(table, filter) {
 
 let bioLoaded        = false;
 let arbeidslisteLoaded = false;
+let sisteLoaded      = false;
 
 function switchTab(name) {
   if (name === 'biolinks' && !bioLoaded) loadBioPersons();
   if (name === 'arbeidsliste' && !arbeidslisteLoaded) loadArbeidsliste();
+  if (name === 'siste' && !sisteLoaded) loadSiste();
   document.querySelectorAll('.tab').forEach(t => {
     t.classList.toggle('active', t.getAttribute('onclick') === `switchTab('${name}')`);
   });
@@ -2076,5 +2078,101 @@ async function toggleUnderArbeid(checkbox, compositionId) {
     checkbox.disabled = false;
     checkbox.checked  = false;
     showStatus('Kunne ikke lagre: ' + e.message, 'error');
+  }
+}
+
+// ── Siste innføringer ─────────────────────────────────────────────────────────
+
+async function loadSiste() {
+  sisteLoaded = true;
+  const area = document.getElementById('sisteArea');
+  area.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:0.5rem 0">Laster…</div>';
+
+  try {
+    // Fetch last 10 compositions by id descending
+    const comps = await get('/composition?select=composition_id,title,year_composed&order=composition_id.desc&limit=10');
+
+    if (!comps.length) {
+      area.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:0.5rem 0">Ingen innføringer funnet.</div>';
+      return;
+    }
+
+    // Batch fetch composers
+    const ids = comps.map(c => c.composition_id);
+    const cpRows = await get(`/composition_person?composition_id=in.(${ids.join(',')})&role=eq.Composer&select=composition_id,person_id,credited_as&limit=50`);
+    const personIds = [...new Set(cpRows.map(r => r.person_id))];
+    const persons = personIds.length
+      ? await get(`/person?person_id=in.(${personIds.join(',')})&select=person_id,first_name,last_name`)
+      : [];
+    const personMap = Object.fromEntries(persons.map(p => [p.person_id, ((p.first_name||'') + ' ' + (p.last_name||'')).trim()]));
+    const composerMap = {};
+    for (const row of cpRows) {
+      const name = row.credited_as || personMap[row.person_id] || '';
+      if (!name) continue;
+      composerMap[row.composition_id] = composerMap[row.composition_id]
+        ? composerMap[row.composition_id] + ', ' + name
+        : name;
+    }
+
+    const rows = comps.map(c => `
+      <tr id="siste-row-${c.composition_id}" style="border-bottom:1px solid var(--border)">
+        <td style="padding:0.35rem 0.5rem;font-size:0.8rem;color:var(--muted);white-space:nowrap">#${c.composition_id}</td>
+        <td style="padding:0.35rem 0.5rem">
+          <a href="#" onclick="event.preventDefault();switchTab('edit');loadEditForm(${c.composition_id})"
+             style="color:var(--ink);text-decoration:none;border-bottom:1px solid var(--border)">${c.title||'(uten tittel)'}</a>
+        </td>
+        <td style="padding:0.35rem 0.5rem;color:var(--muted);font-size:0.85rem">${composerMap[c.composition_id]||'—'}</td>
+        <td style="padding:0.35rem 0.5rem;color:var(--muted);font-size:0.85rem;text-align:right">${c.year_composed||'—'}</td>
+        <td style="padding:0.35rem 0.5rem;text-align:right;white-space:nowrap">
+          <button type="button" onclick="deleteSiste(${c.composition_id}, '${(c.title||'').replace(/'/g, "\\'")}')"
+            style="background:none;border:1px solid #c07070;color:#a03030;border-radius:3px;padding:0.2rem 0.6rem;font-size:0.8rem;cursor:pointer;font-family:inherit">
+            Slett
+          </button>
+        </td>
+      </tr>`).join('');
+
+    area.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:0.88rem">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);background:var(--surface)">
+            <th style="padding:0.35rem 0.5rem;font-weight:600;text-align:left;color:var(--muted);font-size:0.8rem">ID</th>
+            <th style="padding:0.35rem 0.5rem;font-weight:600;text-align:left">Tittel</th>
+            <th style="padding:0.35rem 0.5rem;font-weight:600;text-align:left">Komponist</th>
+            <th style="padding:0.35rem 0.5rem;font-weight:600;text-align:right">År</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  } catch(e) {
+    area.innerHTML = `<div style="color:#a03030;font-size:.85rem;padding:0.5rem 0">Feil: ${e.message}</div>`;
+  }
+}
+
+async function deleteSiste(id, title) {
+  // Check for attached scores first
+  const scores = await get(`/score?composition_id=eq.${id}&select=score_id&limit=10`);
+  let msg = `Slette «${title}» (ID ${id})?`;
+  if (scores.length) {
+    msg = `«${title}» har ${scores.length} tilknyttet score-rad${scores.length > 1 ? 'er' : ''}.\n\nSlett komposisjonen og alle tilknyttede score-rader?`;
+  }
+  if (!confirm(msg)) return;
+
+  try {
+    // Delete scores first (FK constraint), then composition_person, then composition
+    if (scores.length) {
+      await del('score', `composition_id=eq.${id}`);
+    }
+    await del('composition_person', `composition_id=eq.${id}`);
+    await del('composition_tag', `composition_id=eq.${id}`);
+    await del('composition', `composition_id=eq.${id}`);
+
+    const row = document.getElementById(`siste-row-${id}`);
+    if (row) row.remove();
+
+    // Force reload next time
+    sisteLoaded = false;
+  } catch(e) {
+    alert('Sletting mislyktes: ' + e.message);
   }
 }
