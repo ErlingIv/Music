@@ -1026,6 +1026,71 @@
   </div>
 </div>
 
-<script src="editor.js"></script>
+<!-- Key prompt overlay -->
+<div id="keyOverlay" style="
+  position:fixed;inset:0;background:rgba(26,22,18,0.85);
+  display:flex;align-items:center;justify-content:center;z-index:99999;">
+  <div style="
+    background:var(--paper);border:1px solid var(--border);border-radius:6px;
+    padding:2rem 2.5rem;max-width:420px;width:90%;text-align:center;
+    box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+    <div style="font-family:'Playfair Display',serif;font-size:1.4rem;margin-bottom:0.4rem;">
+      Musikk Admin
+    </div>
+    <div style="color:var(--muted);font-size:0.9rem;margin-bottom:1.5rem;">
+      Skriv inn Supabase service role key
+    </div>
+    <input id="keyInput" type="password" autocomplete="off" spellcheck="false"
+      placeholder="eyJ…"
+      style="width:100%;padding:0.6rem 0.8rem;font-family:monospace;font-size:0.85rem;
+        border:1px solid var(--border);border-radius:4px;background:white;
+        margin-bottom:1rem;outline:none;" />
+    <div id="keyError" style="color:#c0392b;font-size:0.85rem;margin-bottom:0.8rem;display:none;">
+      Feil nøkkel — prøv igjen
+    </div>
+    <button id="keyBtn" style="
+      background:var(--accent);color:white;border:none;border-radius:4px;
+      padding:0.6rem 2rem;font-size:1rem;cursor:pointer;width:100%;">
+      Logg inn
+    </button>
+  </div>
+</div>
+
+<script>
+(function() {
+  const overlay = document.getElementById('keyOverlay');
+  const input   = document.getElementById('keyInput');
+  const btn     = document.getElementById('keyBtn');
+  const err     = document.getElementById('keyError');
+
+  function loadEditor(key) {
+    window.__SUPABASE_KEY__ = key;
+    overlay.remove();
+    const s = document.createElement('script');
+    s.src = 'editor.js';
+    document.body.appendChild(s);
+  }
+
+  // If key already saved, skip prompt entirely
+  const saved = localStorage.getItem('sb_service_key');
+  if (saved) { loadEditor(saved); return; }
+
+  function tryKey() {
+    const key = input.value.trim();
+    if (!key) return;
+    if (!key.startsWith('eyJ')) {
+      err.style.display = 'block';
+      input.focus();
+      return;
+    }
+    localStorage.setItem('sb_service_key', key);
+    loadEditor(key);
+  }
+
+  btn.addEventListener('click', tryKey);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') tryKey(); });
+  input.focus();
+})();
+</script>
 </body>
 </html>
