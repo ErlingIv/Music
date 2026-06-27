@@ -1,5 +1,5 @@
 const SB   = 'https://tfqnzszyjsdgdeksizel.supabase.co/rest/v1';
-const KEY  = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
+const KEY  = window.__SUPABASE_KEY__;
 const H    = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`,
                'Content-Type': 'application/json', 'Prefer': 'return=representation' };
 
