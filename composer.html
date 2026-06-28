@@ -372,24 +372,25 @@ async function load() {
           <div>
             <h1 class="composer-name">${person.first_name} ${person.last_name} ${flag}</h1>
             ${years ? `<p class="composer-dates">${years}</p>` : ''}
-            <div class="badges">
+            <div class="badges" style="margin-top:0.5rem">
               ${female ? '<span class="badge badge-female">♀ Female composer</span>' : ''}
               ${person.nationality ? `<span class="badge badge-nation">${person.nationality.toUpperCase()}</span>` : ''}
               ${roleParam === 'Lyricist' && !hasComposer ? '<span class="badge badge-lyricist">Lyricist</span>' : ''}
             </div>
+            ${person.pseudonym ? `<p class="composer-dates" style="font-style:italic;margin-top:0.5rem">Also known as: ${person.pseudonym}</p>` : ''}
           </div>
+          ${person.bio_url ? `
+          <div style="flex-shrink:0">
+            <a class="bio-link" href="${person.bio_url}" target="_blank" style="margin-top:0">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M4.5 1.5H2a1 1 0 00-1 1v7a1 1 0 001 1h7a1 1 0 001-1V7m-3-5.5h4m0 0v4m0-4L5.5 7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Biography
+            </a>
+          </div>` : ''}
         </div>
 
         ${bioHtml ? `<div class="bio-text">${bioHtml}</div>` : ''}
-        ${person.pseudonym ? `<p class="composer-dates" style="font-style:italic">Also known as: ${person.pseudonym}</p>` : ''}
-
-        ${person.bio_url ? `
-          <a class="bio-link" href="${person.bio_url}" target="_blank">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M4.5 1.5H2a1 1 0 00-1 1v7a1 1 0 001 1h7a1 1 0 001-1V7m-3-5.5h4m0 0v4m0-4L5.5 7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Biography
-          </a>` : ''}
       </div>
 
       ${switcherHtml}
