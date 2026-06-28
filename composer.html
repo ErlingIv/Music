@@ -330,7 +330,7 @@ async function load() {
       // 5. Fetch scores (pdf_url, mp3_url) and tags for these compositions
       const allCompIds = cc.map(r => r.composition_id).join(',');
       const [scoreR, ctR, tagR] = await Promise.all([
-        fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=in.(${allCompIds})&select=composition_id,pdf_url,mp3_url`, { headers: H }),
+        fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=in.(${allCompIds})&select=composition_id,pdf_url,mp3_url,plate_number,publisher:publisher_id(publisher_name)`, { headers: H }),
         fetch(`${SUPABASE_URL}/rest/v1/composition_tag?composition_id=in.(${allCompIds})&select=composition_id,tag_id`, { headers: H }),
         fetch(`${SUPABASE_URL}/rest/v1/tag?select=tag_id,tag_name`, { headers: H }),
       ]);
@@ -415,6 +415,8 @@ async function load() {
                     <div class="score-title">${c.title}</div>
                     <div class="score-meta">
                       ${c.year_composed ? `<span>${c.year_composed}</span>` : ''}
+                      ${s?.publisher?.publisher_name ? `<span>${s.publisher.publisher_name}</span>` : ''}
+                      ${s?.plate_number ? `<span style="font-family:monospace;font-size:0.72rem;opacity:0.85">${s.plate_number}</span>` : ''}
                       ${creditedAsMap[c.composition_id] ? `<span style="font-style:italic;color:var(--muted)">as ${creditedAsMap[c.composition_id]}</span>` : ''}
                       ${(tagMap[c.composition_id]||[]).map(t => `<span style="background:#eaf3ee;color:var(--accent2);border:1px solid #b8d4c0;border-radius:3px;padding:1px 6px;font-size:0.7rem;">${t}</span>`).join('')}
                     </div>
