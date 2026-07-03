@@ -207,6 +207,54 @@
   .ms-dot.ms-med  { background: #3a6ea8; }
   .ms-dot.ms-high { background: #cc2200; }
 
+  /* ── Opus groups (mini-tags within composer page) ── */
+  .opus-group {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .opus-group-header {
+    width: 100%;
+    background: var(--faint);
+    border: none;
+    padding: 0.8rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    cursor: pointer;
+    font-family: var(--body);
+    text-align: left;
+  }
+  .opus-group-header:hover { background: #e0dac8; }
+  .opus-group-title {
+    font-family: var(--serif);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .opus-group-count {
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  .opus-group-chevron {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 0.75rem;
+    transition: transform 0.15s;
+    flex-shrink: 0;
+  }
+  .opus-group.open .opus-group-chevron { transform: rotate(180deg); }
+  .opus-group-body {
+    display: none;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-top: 1px solid var(--border);
+  }
+  .opus-group.open .opus-group-body { display: flex; }
+  .opus-group-body .score-row { border-radius: 4px; }
+
   .loading-state {
     text-align: center;
     padding: 3rem;
@@ -322,7 +370,7 @@ async function load() {
     if (cc.length) {
       const compIds = cc.map(r => r.composition_id).join(',');
       const cR = await fetch(
-        `${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&public_domain=eq.Yes&musescore_link=not.is.null&select=composition_id,title,year_composed,musescore_link,public_domain,musescore_notes&order=title.asc`,
+        `${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&public_domain=eq.Yes&musescore_link=not.is.null&select=composition_id,title,year_composed,musescore_link,public_domain,musescore_notes,opus_number&order=title.asc`,
         { headers: H }
       );
       compositions = await cR.json();
@@ -407,30 +455,7 @@ async function load() {
       ${compositions.length === 0
         ? `<div class="loading-state">No public domain scores found${roleParam === 'Lyricist' ? ' as lyricist' : ''}.</div>`
         : `<div class="score-list" id="scoreList">
-            ${compositions.map(c => {
-              const s = scoreMap[c.composition_id];
-              const hasMedia = !!(s?.pdf_url || s?.mp3_url);
-              return `
-                <a class="score-row" href="score.html?id=${c.composition_id}" data-has-media="${hasMedia}">
-                  <div>
-                    <div class="score-title">${c.title}</div>
-                    <div class="score-meta">
-                      ${c.year_composed ? `<span>${c.year_composed}</span>` : ''}
-                      ${s?.publisher?.publisher_name ? `<span>${s.publisher.publisher_name}</span>` : ''}
-                      ${s?.plate_number ? `<span style="font-family:monospace;font-size:0.72rem;opacity:0.85">${s.plate_number}</span>` : ''}
-                      ${creditedAsMap[c.composition_id] ? `<span style="font-style:italic;color:var(--muted)">as ${creditedAsMap[c.composition_id]}</span>` : ''}
-                      ${(tagMap[c.composition_id]||[]).map(t => `<span style="background:#eaf3ee;color:var(--accent2);border:1px solid #b8d4c0;border-radius:3px;padding:1px 6px;font-size:0.7rem;">${t}</span>`).join('')}
-                    </div>
-                  </div>
-                  <div class="score-icons">
-                    ${s?.pdf_url ? '<span class="icon-badge has-pdf">PDF</span>' : ''}
-                    ${s?.mp3_url ? '<span class="icon-badge has-mp3">MP3</span>' : ''}
-                    ${c.musescore_link ? '<span class="icon-badge">♪</span>' : ''}
-                    ${c.public_domain === 'Yes' ? '<span class="icon-badge" style="color:var(--accent2);border-color:var(--accent2)">PD</span>' : ''}
-                    ${msInfoBadge(c.musescore_notes)}
-                  </div>
-                </a>`;
-            }).join('')}
+            ${renderScoreItems(compositions, scoreMap, tagMap, creditedAsMap)}
           </div>`
       }
     `;
@@ -440,10 +465,85 @@ async function load() {
   }
 }
 
+function scoreRowHtml(c, scoreMap, tagMap, creditedAsMap) {
+  const s = scoreMap[c.composition_id];
+  const hasMedia = !!(s?.pdf_url || s?.mp3_url);
+  return `
+    <a class="score-row" href="score.html?id=${c.composition_id}" data-has-media="${hasMedia}">
+      <div>
+        <div class="score-title">${c.title}</div>
+        <div class="score-meta">
+          ${c.year_composed ? `<span>${c.year_composed}</span>` : ''}
+          ${s?.publisher?.publisher_name ? `<span>${s.publisher.publisher_name}</span>` : ''}
+          ${s?.plate_number ? `<span style="font-family:monospace;font-size:0.72rem;opacity:0.85">${s.plate_number}</span>` : ''}
+          ${creditedAsMap[c.composition_id] ? `<span style="font-style:italic;color:var(--muted)">as ${creditedAsMap[c.composition_id]}</span>` : ''}
+          ${(tagMap[c.composition_id]||[]).map(t => `<span style="background:#eaf3ee;color:var(--accent2);border:1px solid #b8d4c0;border-radius:3px;padding:1px 6px;font-size:0.7rem;">${t}</span>`).join('')}
+        </div>
+      </div>
+      <div class="score-icons">
+        ${s?.pdf_url ? '<span class="icon-badge has-pdf">PDF</span>' : ''}
+        ${s?.mp3_url ? '<span class="icon-badge has-mp3">MP3</span>' : ''}
+        ${c.musescore_link ? '<span class="icon-badge">♪</span>' : ''}
+        ${c.public_domain === 'Yes' ? '<span class="icon-badge" style="color:var(--accent2);border-color:var(--accent2)">PD</span>' : ''}
+        ${msInfoBadge(c.musescore_notes)}
+      </div>
+    </a>`;
+}
+
+function groupByOpus(compositions) {
+  // Only group compositions that share a non-empty opus_number, 2+ works.
+  const byOpus = {};
+  compositions.forEach(c => {
+    const key = (c.opus_number || '').trim();
+    if (!key) return;
+    (byOpus[key] = byOpus[key] || []).push(c);
+  });
+  Object.keys(byOpus).forEach(k => { if (byOpus[k].length < 2) delete byOpus[k]; });
+
+  const rendered = new Set();
+  const items = [];
+  compositions.forEach(c => {
+    const key = (c.opus_number || '').trim();
+    if (key && byOpus[key]) {
+      if (!rendered.has(key)) {
+        rendered.add(key);
+        items.push({ type: 'group', opus: key, list: byOpus[key] });
+      }
+    } else {
+      items.push({ type: 'single', c });
+    }
+  });
+  return items;
+}
+
+function renderScoreItems(compositions, scoreMap, tagMap, creditedAsMap) {
+  const items = groupByOpus(compositions);
+  return items.map(item => {
+    if (item.type === 'single') {
+      return scoreRowHtml(item.c, scoreMap, tagMap, creditedAsMap);
+    }
+    const rowsHtml = item.list.map(c => scoreRowHtml(c, scoreMap, tagMap, creditedAsMap)).join('');
+    return `
+      <div class="opus-group">
+        <button type="button" class="opus-group-header" onclick="this.parentElement.classList.toggle('open')">
+          <span class="opus-group-title">${item.opus}</span>
+          <span class="opus-group-count">${item.list.length} works</span>
+          <span class="opus-group-chevron">▾</span>
+        </button>
+        <div class="opus-group-body">${rowsHtml}</div>
+      </div>`;
+  }).join('');
+}
+
 function filterScores() {
   const checked = document.getElementById('filterMedia').checked;
   document.querySelectorAll('#scoreList .score-row').forEach(row => {
     row.style.display = (!checked || row.dataset.hasMedia === 'true') ? '' : 'none';
+  });
+  document.querySelectorAll('#scoreList .opus-group').forEach(group => {
+    const anyVisible = [...group.querySelectorAll('.score-row')].some(r => r.style.display !== 'none');
+    group.style.display = anyVisible ? '' : 'none';
+    if (checked && anyVisible) group.classList.add('open');
   });
 }
 
