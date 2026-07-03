@@ -490,24 +490,38 @@ function scoreRowHtml(c, scoreMap, tagMap, creditedAsMap) {
     </a>`;
 }
 
+function opusBaseKey(opus) {
+  if (!opus) return null;
+  const trimmed = opus.trim();
+  if (!trimmed) return null;
+  // Strip a trailing "no. X" / "nr. X" movement number to find the shared opus, e.g.
+  // "Opus 10 no. 1" / "op. 23 no. 2" → "Opus 10" / "op. 23". Plain values like
+  // "op. 16" or "WoO 14" pass through unchanged.
+  const m = trimmed.match(/^(.*?)[\s,]+(?:no|nr)\.?\s*\d+[a-z]?\.?\s*$/i);
+  return (m ? m[1] : trimmed).trim();
+}
+
 function groupByOpus(compositions) {
-  // Only group compositions that share a non-empty opus_number, 2+ works.
-  const byOpus = {};
+  // Only group compositions that share a non-empty base opus, 2+ works.
+  const byOpus = {}; // normalized key → { label, list }
   compositions.forEach(c => {
-    const key = (c.opus_number || '').trim();
-    if (!key) return;
-    (byOpus[key] = byOpus[key] || []).push(c);
+    const base = opusBaseKey(c.opus_number);
+    if (!base) return;
+    const key = base.toLowerCase();
+    if (!byOpus[key]) byOpus[key] = { label: base, list: [] };
+    byOpus[key].list.push(c);
   });
-  Object.keys(byOpus).forEach(k => { if (byOpus[k].length < 2) delete byOpus[k]; });
+  Object.keys(byOpus).forEach(k => { if (byOpus[k].list.length < 2) delete byOpus[k]; });
 
   const rendered = new Set();
   const items = [];
   compositions.forEach(c => {
-    const key = (c.opus_number || '').trim();
+    const base = opusBaseKey(c.opus_number);
+    const key = base ? base.toLowerCase() : null;
     if (key && byOpus[key]) {
       if (!rendered.has(key)) {
         rendered.add(key);
-        items.push({ type: 'group', opus: key, list: byOpus[key] });
+        items.push({ type: 'group', opus: byOpus[key].label, list: byOpus[key].list });
       }
     } else {
       items.push({ type: 'single', c });
