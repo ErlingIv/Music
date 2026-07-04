@@ -816,6 +816,23 @@
           </select>
         </div>
         <div class="field">
+          <label>Bilde</label>
+          <div style="display:flex;gap:0.75rem;align-items:center">
+            <img id="p_photoPreview" src="" alt="" style="display:none;width:48px;height:48px;border-radius:50%;object-fit:cover;border:1px solid var(--border)">
+            <div class="file-upload-wrap" style="flex:1">
+              <input type="text" id="p_photoUrl" placeholder="https://… (eller last opp fil nedenfor)" oninput="updatePersonPhotoPreview()">
+              <a id="p_photoLink" href="#" target="_blank" class="btn-upload" style="display:none">Åpne</a>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.4rem">
+            <label class="btn-upload" style="cursor:pointer">
+              Velg bilde…
+              <input type="file" id="p_photoFile" accept=".jpg,.jpeg,.png,.webp,image/*" style="display:none" onchange="uploadPersonPhoto(this)">
+            </label>
+            <span id="p_photoProgress" class="upload-progress"></span>
+          </div>
+        </div>
+        <div class="field">
           <label>Bio-lenke (Wikipedia e.l.)</label>
           <div style="display:flex;gap:0.5rem;align-items:center">
             <input type="text" id="p_bioUrl" placeholder="https://…" style="flex:1">

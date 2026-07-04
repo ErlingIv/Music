@@ -1157,6 +1157,8 @@ async function loadPersonForm(personId) {
   document.getElementById('p_bioUrl').value          = p.bio_url       || '';
   document.getElementById('p_bioUrlVerified').checked = (p.bio_url_verified === true);
   document.getElementById('p_bioText').value         = p.bio_text      || '';
+  document.getElementById('p_photoUrl').value        = p.photo_url     || '';
+  updatePersonPhotoPreview();
   document.getElementById('p_flag').textContent      = countryCodeToFlag(p.nationality || '');
   document.getElementById('p_birth_flag').textContent = (p.birth_country && p.birth_country !== p.nationality)
     ? countryCodeToFlag(p.birth_country) : '';
@@ -1286,6 +1288,7 @@ async function savePerson() {
       bio_url:              document.getElementById('p_bioUrl').value.trim() || null,
       bio_url_verified:     document.getElementById('p_bioUrlVerified').checked,
       bio_text:             document.getElementById('p_bioText').value.trim() || null,
+      photo_url:            document.getElementById('p_photoUrl').value.trim() || null,
     });
     showMsg('personMsg', '✓ Person oppdatert', 'success');
     closePerson();
@@ -1913,6 +1916,70 @@ async function uploadScoreFile(input, type, urlFieldId, linkId, progressId) {
   }
 
   // Reset the file input so the same file can be re-selected if needed
+  input.value = '';
+}
+
+// ── Person photo upload ────────────────────────────────────────────────────
+
+const PHOTO_BUCKET = 'person-photos';
+
+function updatePersonPhotoPreview() {
+  const url  = document.getElementById('p_photoUrl').value.trim();
+  const img  = document.getElementById('p_photoPreview');
+  const link = document.getElementById('p_photoLink');
+  if (url) {
+    img.src = url;
+    img.style.display = 'inline-block';
+    link.href = url;
+    link.style.display = 'inline-block';
+  } else {
+    img.style.display = 'none';
+    link.style.display = 'none';
+  }
+}
+
+async function uploadPersonPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const progress = document.getElementById('p_photoProgress');
+  progress.textContent = 'Laster opp…';
+  progress.style.display = 'inline';
+
+  // Sanitise filename: strip path separators/spaces, prefix with person id + timestamp to avoid collisions
+  const personId = document.getElementById('p_personId').value || 'new';
+  const cleanName = file.name.replace(/[/\\]/g, '_').replace(/\s+/g, '_');
+  const filename = `${personId}_${Date.now()}_${cleanName}`;
+  const uploadUrl = `${SB.replace('/rest/v1','')}/storage/v1/object/${PHOTO_BUCKET}/${encodeURIComponent(filename)}`;
+
+  try {
+    const res = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        'apikey':        KEY,
+        'Authorization': `Bearer ${KEY}`,
+        'Content-Type':  file.type || 'image/jpeg',
+        'x-upsert':      'true',
+      },
+      body: file,
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`${res.status}: ${err}`);
+    }
+
+    const publicUrl = `${SB.replace('/rest/v1','')}/storage/v1/object/public/${PHOTO_BUCKET}/${encodeURIComponent(filename)}`;
+    document.getElementById('p_photoUrl').value = publicUrl;
+    updatePersonPhotoPreview();
+
+    progress.textContent = '✓ Opplastet';
+    setTimeout(() => { progress.style.display = 'none'; }, 3000);
+  } catch (err) {
+    progress.textContent = '✗ Feil: ' + err.message;
+    console.error('Photo upload error:', err);
+  }
+
   input.value = '';
 }
 

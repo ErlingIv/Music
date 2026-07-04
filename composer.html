@@ -67,6 +67,14 @@
     gap: 1rem;
     margin-bottom: 1rem;
   }
+  .composer-photo {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
   .composer-name {
     font-family: var(--serif);
     font-size: clamp(1.6rem, 3vw, 2.2rem);
@@ -336,7 +344,7 @@ async function load() {
   try {
     // 1. Fetch person
     const pR = await fetch(
-      `${SUPABASE_URL}/rest/v1/person?person_id=eq.${personId}&select=person_id,first_name,last_name,born,died,died_uncertain,nationality,birth_country,birth_country_primary,gender,bio_url,bio_text,pseudonym`,
+      `${SUPABASE_URL}/rest/v1/person?person_id=eq.${personId}&select=person_id,first_name,last_name,born,died,died_uncertain,nationality,birth_country,birth_country_primary,gender,bio_url,bio_text,pseudonym,photo_url`,
       { headers: H }
     );
     const person = (await pR.json())[0];
@@ -417,7 +425,9 @@ async function load() {
     el.innerHTML = `
       <div class="composer-hero">
         <div class="hero-top">
-          <div>
+          <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+            ${person.photo_url ? `<img src="${person.photo_url}" alt="" class="composer-photo">` : ''}
+            <div>
             <h1 class="composer-name">${person.first_name} ${person.last_name} ${flag}</h1>
             ${years ? `<p class="composer-dates">${years}</p>` : ''}
             <div class="badges" style="margin-top:0.5rem">
@@ -426,6 +436,7 @@ async function load() {
               ${roleParam === 'Lyricist' && !hasComposer ? '<span class="badge badge-lyricist">Lyricist</span>' : ''}
             </div>
             ${person.pseudonym ? `<p class="composer-dates" style="font-style:italic;margin-top:0.5rem">Also known as: ${person.pseudonym}</p>` : ''}
+            </div>
           </div>
           ${person.bio_url ? `
           <div style="flex-shrink:0">
