@@ -106,6 +106,28 @@ td.wrap-cell { white-space: normal; line-height: 1.4; }
 <script>
 var BASE = 'https://tfqnzszyjsdgdeksizel.supabase.co/rest/v1/';
 var KEY  = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function linkifyNotes(text) {
+  if (!text) return '';
+  var esc = escapeHtml(text);
+  // markdown-style [label](url)
+  esc = esc.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, function(m, label, url) {
+    return '<a href="' + url + '" target="_blank" rel="noopener">' + label + '</a>';
+  });
+  // bare urls not already inside a tag we just built
+  esc = esc.replace(/(^|[^"'>])(https?:\/\/[^\s<]+)/g, function(m, pre, url) {
+    return pre + '<a href="' + url + '" target="_blank" rel="noopener">' + url + '</a>';
+  });
+  return esc;
+}
+function notesPlainTitle(text) {
+  // strip markdown syntax for use in a plain-text title="" tooltip
+  if (!text) return '';
+  return text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '$1 ($2)').replace(/"/g,'&quot;');
+}
 var NORDIC = ['SE','DK','FI','IS'];
 var NO_ALPHA_TABS = 5;
 
@@ -424,7 +446,7 @@ function cellHtml(col, row) {
   if (col.k === 'year_composed') return row.year_composed || '<span class="empty">—</span>';
   if (col.k === 'notes') {
     if (!row.notes) return '<span class="empty">—</span>';
-    return '<span title="' + row.notes.replace(/"/g,'&quot;') + '" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + row.notes + '</span>';
+    return '<span title="' + notesPlainTitle(row.notes) + '" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + linkifyNotes(row.notes) + '</span>';
   }
   return '<span class="empty">—</span>';
 }
@@ -446,7 +468,7 @@ function showDetail(row) {
   if (row.composers.length) h += '<div><span class="dl">Composer: </span>' + row.composers.map(function(p){ var n=personName(p); return p.bio_url?'<a class="person-link" href="'+p.bio_url+'" target="_blank">'+n+'</a>':n; }).join(', ') + (row.comp_dates ? ' <span class="person-dates">'+row.comp_dates+'</span>' : '') + '</div>';
   if (row.lyricists.length) h += '<div><span class="dl">Lyricist: </span>' + row.lyricists.map(function(p){ var n=personName(p); return p.bio_url?'<a class="person-link" href="'+p.bio_url+'" target="_blank">'+n+'</a>':n; }).join(', ') + (row.lyr_dates ? ' <span class="person-dates">'+row.lyr_dates+'</span>' : '') + '</div>';
   if (row.year_composed) h += '<div><span class="dl">Year: </span>' + row.year_composed + '</div>';
-  if (row.notes) h += '<div><span class="dl">Notes: </span>' + row.notes + '</div>';
+  if (row.notes) h += '<div><span class="dl">Notes: </span>' + linkifyNotes(row.notes) + '</div>';
   document.getElementById('detail-fields').innerHTML = h || '<span style="color:#999">No additional info</span>';
 }
 
