@@ -673,15 +673,19 @@ function setSearchMode(mode) {
   document.getElementById('searchModeTitle').style.fontWeight    = mode === 'title'    ? '700' : '';
 }
 
+let editSearchToken = 0;
+
 document.getElementById('editSearch').addEventListener('input', () => {
   clearTimeout(editSearchTimeout);
   const q = document.getElementById('editSearch').value.trim();
   document.getElementById('editSearchResults').innerHTML = '';
+  editSearchToken++; // invalidate any in-flight search from a previous keystroke
   if (q.length < 2) return;
-  editSearchTimeout = setTimeout(() => searchCompositions(q), 300);
+  const myToken = editSearchToken;
+  editSearchTimeout = setTimeout(() => searchCompositions(q, myToken), 300);
 });
 
-async function searchCompositions(q) {
+async function searchCompositions(q, myToken) {
   const mode      = document.getElementById('editSearchMode').value;
   const container = document.getElementById('editSearchResults');
   container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">Søker…</div>';
@@ -709,6 +713,9 @@ async function searchCompositions(q) {
     }
     results.sort((a,b) => a.title.localeCompare(b.title));
   }
+
+  // A newer search has started since this one began — drop these stale results
+  if (myToken !== editSearchToken) return;
 
   if (!results.length) {
     container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">Ingen treff.</div>';
@@ -752,7 +759,7 @@ async function loadEditForm(compId) {
   const [comp, cpRaw, scores] = await Promise.all([
     get(`/composition?composition_id=eq.${compId}&select=*`),
     get(`/composition_person?composition_id=eq.${compId}&select=person_id,role,credited_as`),
-    get(`/score?composition_id=eq.${compId}&select=*`)
+    get(`/score?composition_id=eq.${compId}&select=*&order=score_id.desc`)
   ]);
 
   // Fetch person details separately
