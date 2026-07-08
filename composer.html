@@ -215,6 +215,17 @@
   .ms-dot.ms-med  { background: #3a6ea8; }
   .ms-dot.ms-high { background: #cc2200; }
 
+  /* Discrete Godkjent (approved) mark — small muted dot, no visible label */
+  .godkjent-mark {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent2);
+    opacity: 0.5;
+    flex-shrink: 0;
+  }
+
   /* ── Opus groups (mini-tags within composer page) ── */
   .opus-group {
     background: var(--paper);
@@ -378,7 +389,7 @@ async function load() {
     if (cc.length) {
       const compIds = cc.map(r => r.composition_id).join(',');
       const cR = await fetch(
-        `${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&public_domain=eq.Yes&musescore_link=not.is.null&select=composition_id,title,year_composed,musescore_link,public_domain,musescore_notes,opus_number&order=title.asc`,
+        `${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&public_domain=eq.Yes&musescore_link=not.is.null&select=composition_id,title,year_composed,musescore_link,public_domain,musescore_notes,opus_number,approved&order=title.asc`,
         { headers: H }
       );
       compositions = await cR.json();
@@ -497,6 +508,7 @@ function scoreRowHtml(c, scoreMap, tagMap, creditedAsMap) {
         ${c.musescore_link ? '<span class="icon-badge">♪</span>' : ''}
         ${c.public_domain === 'Yes' ? '<span class="icon-badge" style="color:var(--accent2);border-color:var(--accent2)">PD</span>' : ''}
         ${msInfoBadge(c.musescore_notes)}
+        ${c.approved ? '<span class="godkjent-mark"></span>' : ''}
       </div>
     </a>`;
 }
