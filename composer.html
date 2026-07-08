@@ -223,6 +223,8 @@
     border-radius: 50%;
     background: var(--accent2);
     opacity: 0.5;
+    margin-left: 7px;
+    vertical-align: middle;
     flex-shrink: 0;
   }
 
@@ -493,7 +495,7 @@ function scoreRowHtml(c, scoreMap, tagMap, creditedAsMap) {
   return `
     <a class="score-row" href="score.html?id=${c.composition_id}" data-has-media="${hasMedia}">
       <div>
-        <div class="score-title">${c.title}</div>
+        <div class="score-title">${c.title}${c.approved ? '<span class="godkjent-mark"></span>' : ''}</div>
         <div class="score-meta">
           ${c.year_composed ? `<span>${c.year_composed}</span>` : ''}
           ${s?.publisher?.publisher_name ? `<span>${s.publisher.publisher_name}</span>` : ''}
@@ -508,7 +510,6 @@ function scoreRowHtml(c, scoreMap, tagMap, creditedAsMap) {
         ${c.musescore_link ? '<span class="icon-badge">♪</span>' : ''}
         ${c.public_domain === 'Yes' ? '<span class="icon-badge" style="color:var(--accent2);border-color:var(--accent2)">PD</span>' : ''}
         ${msInfoBadge(c.musescore_notes)}
-        ${c.approved ? '<span class="godkjent-mark"></span>' : ''}
       </div>
     </a>`;
 }
