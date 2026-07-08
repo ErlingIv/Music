@@ -749,9 +749,13 @@ async function fetchAllComposers(copyrightMode = false) {
     }
   });
 
-  // Sort each section by last_name
+  // Sort each section by last_name, then first_name as tiebreaker
   ['no', 'nordic', 'others', 'unknown'].forEach(sec => {
-    allComposers[sec].sort((a, b) => a.last_name.localeCompare(b.last_name, 'no'));
+    allComposers[sec].sort((a, b) => {
+      const byLast = a.last_name.localeCompare(b.last_name, 'no');
+      if (byLast !== 0) return byLast;
+      return (a.first_name || '').localeCompare(b.first_name || '', 'no');
+    });
   });
 
   renderSection('no');
@@ -1197,7 +1201,11 @@ async function loadIllustrators() {
   }
 
   persons.forEach(p => { p.work_count = countMap[p.person_id] || 0; });
-  persons.sort((a, b) => (a.last_name || '').localeCompare(b.last_name || '', 'no'));
+  persons.sort((a, b) => {
+    const byLast = (a.last_name || '').localeCompare(b.last_name || '', 'no');
+    if (byLast !== 0) return byLast;
+    return (a.first_name || '').localeCompare(b.first_name || '', 'no');
+  });
 
   illustratorsData = persons;
   renderIllustrators();
