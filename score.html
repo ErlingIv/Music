@@ -95,6 +95,18 @@
   .composer-link { color: var(--accent); text-decoration: none; }
   .composer-link:hover { text-decoration: underline; }
 
+  /* Discrete Godkjent (approved) mark — small muted dot, no visible label */
+  .godkjent-mark {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent2);
+    opacity: 0.5;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
   .section-label {
     font-size: 0.7rem;
     color: var(--muted);
@@ -277,7 +289,7 @@ async function load() {
   try {
     // Fetch composition, score, and all contributors in parallel
     const [compR, scoreR, cpR] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${compId}&select=composition_id,title,year_composed,opus_number,musescore_link,musescore_notes`, { headers: H }),
+      fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${compId}&select=composition_id,title,year_composed,opus_number,musescore_link,musescore_notes,approved`, { headers: H }),
       fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=eq.${compId}&select=pdf_url,mp3_url,publisher_id,plate_number`, { headers: H }),
       fetch(`${SUPABASE_URL}/rest/v1/composition_person?composition_id=eq.${compId}&select=person_id,role,credited_as`, { headers: H }),
     ]);
@@ -353,7 +365,7 @@ async function load() {
 
     el.innerHTML = `
       <div class="title-row">
-        <h1 class="score-title">${comp.title}${comp.opus_number ? ` <span class="meta-opus">${comp.opus_number}</span>` : ''}</h1>
+        <h1 class="score-title">${comp.title}${comp.opus_number ? ` <span class="meta-opus">${comp.opus_number}</span>` : ''}${comp.approved ? '<span class="godkjent-mark" title="Godkjent"></span>' : ''}</h1>
         <p class="score-sub">${composerDisplay}</p>
       </div>
 
@@ -361,7 +373,7 @@ async function load() {
         ${(comp.year_composed || publisherName || score?.plate_number) ? `
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:2rem;flex-wrap:wrap;">
           <div>${comp.year_composed ? `<p class="meta-year">Composed ${comp.year_composed}</p>` : ''}</div>
-          <div style="text-align:right">${(publisherName || score?.plate_number) ? `<p style="font-size:0.85rem;color:var(--muted)">${publisherName || ''}${publisherName && score?.plate_number ? ' · ' : ''}${score?.plate_number ? 'Pl.\u00a0' + score.plate_number : ''}</p>` : ''}</div>
+          <div style="text-align:right">${(publisherName || score?.plate_number) ? `<p style="font-size:0.85rem;color:var(--muted)">${publisherName || ''}${publisherName && score?.plate_number ? ' · ' : ''}${score?.plate_number ? 'Pl. ' + score.plate_number : ''}</p>` : ''}</div>
         </div>` : ''}
         ${lyricistDisplay ? `
         <div style="margin-top:0.3rem;">
