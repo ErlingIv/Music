@@ -289,7 +289,7 @@ async function load() {
   try {
     // Fetch composition, score, and all contributors in parallel
     const [compR, scoreR, cpR] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${compId}&select=composition_id,title,year_composed,opus_number,musescore_link,musescore_notes,approved`, { headers: H }),
+      fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${compId}&select=composition_id,title,year_composed,opus_number,musescore_link,musescore_notes,approved,dedication`, { headers: H }),
       fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=eq.${compId}&select=pdf_url,mp3_url,publisher_id,plate_number`, { headers: H }),
       fetch(`${SUPABASE_URL}/rest/v1/composition_person?composition_id=eq.${compId}&select=person_id,role,credited_as`, { headers: H }),
     ]);
@@ -311,6 +311,7 @@ async function load() {
 
     const cc    = cp.filter(r => r.role === 'Composer');
     const cl    = cp.filter(r => r.role === 'Lyricist');
+    const ci    = cp.filter(r => r.role === 'Illustrator');
     if (!comp) throw new Error('Score not found');
 
     document.title = `${comp.title} — ${SITE_NAME}`;
@@ -356,6 +357,23 @@ async function load() {
     }
     const lyricistDisplay = lyricistDisplayParts.length ? lyricistDisplayParts.join(', ') : null;
 
+    // Fetch illustrator details
+    const illustratorDisplayParts = [];
+    for (const row of ci) {
+      const pR = await fetch(
+        `${SUPABASE_URL}/rest/v1/person?person_id=eq.${row.person_id}&select=person_id,first_name,last_name,born,died,died_uncertain`,
+        { headers: H }
+      );
+      const p = (await pR.json())[0];
+      if (p) {
+        const displayName = row.credited_as || `${p.first_name} ${p.last_name}`;
+        const years = lifespan(p.born, p.died, p.died_uncertain);
+        const yearsStr = years ? ` <span style="color:var(--muted);font-size:0.88rem">(${years})</span>` : '';
+        illustratorDisplayParts.push(`<span style="white-space:nowrap"><a class="composer-link" href="composer.html?id=${p.person_id}&role=Illustrator">${displayName}</a>${yearsStr}</span>`);
+      }
+    }
+    const illustratorDisplay = illustratorDisplayParts.length ? illustratorDisplayParts.join(', ') : null;
+
     // Render notes: linkify URLs, newlines → <br>
     const notesHtml = comp.musescore_notes
       ? linkify(comp.musescore_notes.replace(/\n/g, '<br>'))
@@ -378,6 +396,14 @@ async function load() {
         ${lyricistDisplay ? `
         <div style="margin-top:0.3rem;">
           <p class="meta-value">Lyricist: ${lyricistDisplay}</p>
+        </div>` : ''}
+        ${illustratorDisplay ? `
+        <div style="margin-top:0.3rem;">
+          <p class="meta-value">Illustrator: ${illustratorDisplay}</p>
+        </div>` : ''}
+        ${comp.dedication ? `
+        <div style="margin-top:0.3rem;">
+          <p class="meta-value" style="font-style:italic;color:var(--muted);">Dedicated to ${comp.dedication}</p>
         </div>` : ''}
       </div>
 
