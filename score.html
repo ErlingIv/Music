@@ -397,13 +397,10 @@ async function load() {
         <div style="margin-top:0.3rem;">
           <p class="meta-value">Lyricist: ${lyricistDisplay}</p>
         </div>` : ''}
-        ${illustratorDisplay ? `
-        <div style="margin-top:0.3rem;">
-          <p class="meta-value">Illustrator: ${illustratorDisplay}</p>
-        </div>` : ''}
-        ${comp.dedication ? `
-        <div style="margin-top:0.3rem;">
-          <p class="meta-value" style="font-style:italic;color:var(--muted);">Dedicated to ${comp.dedication}</p>
+        ${(illustratorDisplay || comp.dedication) ? `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:2rem;flex-wrap:wrap;margin-top:0.3rem;">
+          <div>${comp.dedication ? `<p class="meta-value" style="font-style:italic;color:var(--muted);">Dedicated to ${comp.dedication}</p>` : ''}</div>
+          <div style="text-align:right">${illustratorDisplay ? `<p class="meta-value">Illustrator: ${illustratorDisplay}</p>` : ''}</div>
         </div>` : ''}
       </div>
 
