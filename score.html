@@ -374,6 +374,7 @@ async function load() {
         if (translatorLines) {
           line = `<span style="display:inline-flex;flex-direction:column;gap:0.1rem;">${line}${translatorLines}</span>`;
         }
+        lyricistDisplayParts.push(line);
       }
     }
     const lyricistDisplay = lyricistDisplayParts.length
