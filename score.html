@@ -291,7 +291,7 @@ async function load() {
     const [compR, scoreR, cpR] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${compId}&select=composition_id,title,year_composed,opus_number,musescore_link,musescore_notes,approved,dedication`, { headers: H }),
       fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=eq.${compId}&select=pdf_url,mp3_url,publisher_id,plate_number`, { headers: H }),
-      fetch(`${SUPABASE_URL}/rest/v1/composition_person?composition_id=eq.${compId}&select=person_id,role,credited_as`, { headers: H }),
+      fetch(`${SUPABASE_URL}/rest/v1/composition_person?composition_id=eq.${compId}&select=person_id,role,credited_as,translates_person_id`, { headers: H }),
     ]);
 
     const comp  = (await compR.json())[0];
@@ -312,6 +312,7 @@ async function load() {
     const cc    = cp.filter(r => r.role === 'Composer');
     const cl    = cp.filter(r => r.role === 'Lyricist');
     const ci    = cp.filter(r => r.role === 'Illustrator');
+    const ct    = cp.filter(r => r.role === 'Translator');
     if (!comp) throw new Error('Score not found');
 
     document.title = `${comp.title} — ${SITE_NAME}`;
@@ -352,10 +353,32 @@ async function load() {
         const displayName = row.credited_as || `${p.first_name} ${p.last_name}`;
         const years = lifespan(p.born, p.died, p.died_uncertain);
         const yearsStr = years ? ` <span style="color:var(--muted);font-size:0.88rem">(${years})</span>` : '';
-        lyricistDisplayParts.push(`<span style="white-space:nowrap"><a class="composer-link" href="composer.html?id=${p.person_id}&role=Lyricist">${displayName}</a>${yearsStr}</span>`);
+        let line = `<span class="lyricist-line"><a class="composer-link" href="composer.html?id=${p.person_id}&role=Lyricist">${displayName}</a>${yearsStr}</span>`;
+
+        // Any translators of this specific lyricist's text, on this composition
+        const translatorsOfThis = ct.filter(t => t.translates_person_id === p.person_id);
+        let translatorLines = '';
+        for (const tRow of translatorsOfThis) {
+          const tR = await fetch(
+            `${SUPABASE_URL}/rest/v1/person?person_id=eq.${tRow.person_id}&select=person_id,first_name,last_name,born,died,died_uncertain`,
+            { headers: H }
+          );
+          const tp = (await tR.json())[0];
+          if (tp) {
+            const tDisplayName = tRow.credited_as || `${tp.first_name} ${tp.last_name}`;
+            const tYears = lifespan(tp.born, tp.died, tp.died_uncertain);
+            const tYearsStr = tYears ? ` <span style="color:var(--muted);font-size:0.88rem">(${tYears})</span>` : '';
+            translatorLines += `<span style="font-size:0.88rem;color:var(--muted);">translated by <a class="composer-link" href="composer.html?id=${tp.person_id}&role=Translator">${tDisplayName}</a>${tYearsStr}</span>`;
+          }
+        }
+        if (translatorLines) {
+          line = `<span style="display:inline-flex;flex-direction:column;gap:0.1rem;">${line}${translatorLines}</span>`;
+        }
       }
     }
-    const lyricistDisplay = lyricistDisplayParts.length ? lyricistDisplayParts.join(', ') : null;
+    const lyricistDisplay = lyricistDisplayParts.length
+      ? `<span style="display:inline-flex;flex-direction:column;gap:0.15rem;vertical-align:top;">${lyricistDisplayParts.map((p, i) => `<span>${i > 0 ? ', ' : ''}${p}</span>`).join('')}</span>`
+      : null;
 
     // Fetch illustrator details
     const illustratorDisplayParts = [];
