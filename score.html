@@ -393,15 +393,27 @@ async function load() {
           <div>${comp.year_composed ? `<p class="meta-year">Composed ${comp.year_composed}</p>` : ''}</div>
           <div style="text-align:right">${(publisherName || score?.plate_number) ? `<p style="font-size:0.85rem;color:var(--muted)">${publisherName || ''}${publisherName && score?.plate_number ? ' · ' : ''}${score?.plate_number ? 'Pl. ' + score.plate_number : ''}</p>` : ''}</div>
         </div>` : ''}
-        ${lyricistDisplay ? `
-        <div style="margin-top:0.3rem;">
-          <p class="meta-value">Lyricist: ${lyricistDisplay}</p>
-        </div>` : ''}
-        ${(illustratorDisplay || comp.dedication) ? `
+        ${(() => {
+          // If there's no dedication, pair illustrator with the lyricist row to save a line.
+          const illustratorOnLyricistRow = !comp.dedication && illustratorDisplay;
+          const illustratorOnDedicationRow = comp.dedication && illustratorDisplay;
+          let html = '';
+          if (lyricistDisplay || illustratorOnLyricistRow) {
+            html += `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:2rem;flex-wrap:wrap;margin-top:0.3rem;">
+          <div>${lyricistDisplay ? `<p class="meta-value">Lyricist: ${lyricistDisplay}</p>` : ''}</div>
+          <div style="text-align:right">${illustratorOnLyricistRow ? `<p class="meta-value">Illustrator: ${illustratorDisplay}</p>` : ''}</div>
+        </div>`;
+          }
+          if (comp.dedication || illustratorOnDedicationRow) {
+            html += `
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:2rem;flex-wrap:wrap;margin-top:0.3rem;">
           <div>${comp.dedication ? `<p class="meta-value" style="font-style:italic;color:var(--muted);">Dedicated to ${comp.dedication}</p>` : ''}</div>
-          <div style="text-align:right">${illustratorDisplay ? `<p class="meta-value">Illustrator: ${illustratorDisplay}</p>` : ''}</div>
-        </div>` : ''}
+          <div style="text-align:right">${illustratorOnDedicationRow ? `<p class="meta-value">Illustrator: ${illustratorDisplay}</p>` : ''}</div>
+        </div>`;
+          }
+          return html;
+        })()}
       </div>
 
       ${notesHtml ? `
