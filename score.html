@@ -343,6 +343,7 @@ async function load() {
 
     // Fetch lyricist details
     const lyricistDisplayParts = [];
+    const translatorLinesAll = [];
     for (const row of cl) {
       const pR = await fetch(
         `${SUPABASE_URL}/rest/v1/person?person_id=eq.${row.person_id}&select=person_id,first_name,last_name,born,died,died_uncertain`,
@@ -353,11 +354,12 @@ async function load() {
         const displayName = row.credited_as || `${p.first_name} ${p.last_name}`;
         const years = lifespan(p.born, p.died, p.died_uncertain);
         const yearsStr = years ? ` <span style="color:var(--muted);font-size:0.88rem">(${years})</span>` : '';
-        let line = `<span class="lyricist-line"><a class="composer-link" href="composer.html?id=${p.person_id}&role=Lyricist">${displayName}</a>${yearsStr}</span>`;
+        const line = `<span class="lyricist-line"><a class="composer-link" href="composer.html?id=${p.person_id}&role=Lyricist">${displayName}</a>${yearsStr}</span>`;
+        lyricistDisplayParts.push(line);
 
-        // Any translators of this specific lyricist's text, on this composition
+        // Any translators of this specific lyricist's text, on this composition —
+        // rendered as their own flush-left line(s) below, not nested under the name.
         const translatorsOfThis = ct.filter(t => t.translates_person_id === p.person_id);
-        let translatorLines = '';
         for (const tRow of translatorsOfThis) {
           const tR = await fetch(
             `${SUPABASE_URL}/rest/v1/person?person_id=eq.${tRow.person_id}&select=person_id,first_name,last_name,born,died,died_uncertain`,
@@ -368,18 +370,15 @@ async function load() {
             const tDisplayName = tRow.credited_as || `${tp.first_name} ${tp.last_name}`;
             const tYears = lifespan(tp.born, tp.died, tp.died_uncertain);
             const tYearsStr = tYears ? ` <span style="color:var(--muted);font-size:0.88rem">(${tYears})</span>` : '';
-            translatorLines += `<span style="font-size:0.88rem;color:var(--muted);">translated by <a class="composer-link" href="composer.html?id=${tp.person_id}&role=Translator">${tDisplayName}</a>${tYearsStr}</span>`;
+            translatorLinesAll.push(`translated by <a class="composer-link" href="composer.html?id=${tp.person_id}&role=Translator">${tDisplayName}</a>${tYearsStr}`);
           }
         }
-        if (translatorLines) {
-          line = `<span style="display:inline-flex;flex-direction:column;gap:0.1rem;">${line}${translatorLines}</span>`;
-        }
-        lyricistDisplayParts.push(line);
       }
     }
     const lyricistDisplay = lyricistDisplayParts.length
       ? `<span style="display:inline-flex;flex-direction:column;gap:0.15rem;vertical-align:top;">${lyricistDisplayParts.map((p, i) => `<span>${i > 0 ? ', ' : ''}${p}</span>`).join('')}</span>`
       : null;
+    const translatorRows = translatorLinesAll.map(t => `<p class="meta-value" style="font-size:0.88rem;color:var(--muted);">${t}</p>`).join('');
 
     // Fetch illustrator details
     const illustratorDisplayParts = [];
@@ -425,7 +424,7 @@ async function load() {
           if (lyricistDisplay || illustratorOnLyricistRow) {
             html += `
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:2rem;flex-wrap:wrap;margin-top:0.3rem;">
-          <div>${lyricistDisplay ? `<p class="meta-value">Lyricist: ${lyricistDisplay}</p>` : ''}</div>
+          <div>${lyricistDisplay ? `<p class="meta-value">Lyricist: ${lyricistDisplay}</p>${translatorRows}` : ''}</div>
           <div style="text-align:right">${illustratorOnLyricistRow ? `<p class="meta-value">Illustrator: ${illustratorDisplay}</p>` : ''}</div>
         </div>`;
           }
