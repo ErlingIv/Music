@@ -244,7 +244,64 @@ function renderCreditedAsField(prefix, idx, pseudonyms, current) {
   }
 }
 
-// ── Publisher lookup factory ──────────────────────────────────────────────────
+// ── "Translates" picker (for role = Translator) ──────────────────────────────
+
+// Returns the other rows in this contributor list currently set to role = Lyricist
+function getLyricistCandidates(prefix, contributors, excludeIdx) {
+  return contributors
+    .filter(c => c.idx !== excludeIdx && c.person_id)
+    .map(c => ({ ...c, _role: document.getElementById(`${prefix}_crole_${c.idx}`)?.value }))
+    .filter(c => c._role === 'Lyricist');
+}
+
+// Shows/hides and (re)populates the "oversetter teksten til…" dropdown for a row,
+// based on its current role. Call again after adding/removing rows if a translator
+// row was set up before its lyricist row existed, to refresh the candidate list.
+function updateTranslatesField(prefix, idx) {
+  const contributors = prefix === 'e' ? eContributors : nContributors;
+  const c = contributors.find(x => x.idx === idx);
+  const roleSel = document.getElementById(`${prefix}_crole_${idx}`);
+  const wrap = document.getElementById(`${prefix}_ctranslates_wrap_${idx}`);
+  if (!roleSel || !wrap || !c) return;
+
+  if (roleSel.value !== 'Translator') {
+    wrap.style.display = 'none';
+    wrap.innerHTML = '';
+    c.translates_person_id = null;
+    return;
+  }
+
+  const candidates = getLyricistCandidates(prefix, contributors, idx);
+  const sel = document.createElement('select');
+  sel.style.cssText = 'width:100%;font-size:0.82rem;padding:0.3rem 0.5rem;border:1px dashed var(--border);border-radius:4px;background:white;font-family:inherit';
+  sel.title = 'Hvilken tekstforfatters tekst blir oversatt';
+  const blank = document.createElement('option');
+  blank.value = '';
+  blank.textContent = candidates.length ? '— oversetter teksten til —' : '— legg til tekstforfatteren først —';
+  sel.appendChild(blank);
+  candidates.forEach(cand => {
+    const opt = document.createElement('option');
+    opt.value = cand.person_id;
+    opt.textContent = cand.name || `#${cand.person_id}`;
+    if (c.translates_person_id === cand.person_id) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  sel.onchange = () => { c.translates_person_id = parseInt(sel.value) || null; };
+  wrap.innerHTML = '';
+  wrap.appendChild(sel);
+
+  // Small refresh link, in case the lyricist row was added/edited after this one
+  const refresh = document.createElement('span');
+  refresh.textContent = '↻ oppdater liste';
+  refresh.title = 'Oppdater listen over tekstforfattere';
+  refresh.style.cssText = 'display:inline-block;margin-top:0.2rem;font-size:0.75rem;color:var(--muted);cursor:pointer;text-decoration:underline';
+  refresh.onclick = () => updateTranslatesField(prefix, idx);
+  wrap.appendChild(refresh);
+
+  wrap.style.display = 'block';
+}
+
+
 
 function makePubLookup(searchId, resultsId, hiddenId, stateObj, key) {
   const inp = document.getElementById(searchId);
@@ -426,15 +483,15 @@ loadSources();
 const nContributors = [];
 const nPubState   = {};
 const nRowIdxRef  = { value: 0 };
-function nAddContributorRow(person, role) { addContributorRow('n', nContributors, nRowIdxRef, person, role, ''); }
+function nAddContributorRow(person, role, creditedAs, translatesPersonId) { addContributorRow('n', nContributors, nRowIdxRef, person, role, creditedAs||'', translatesPersonId); }
 
-const ROLES = ['Composer','Lyricist','Arranger','Illustrator'];
-const ROLE_NO = { Composer:'Komponist', Lyricist:'Tekstforfatter', Arranger:'Arrangør', Illustrator:'Illustratør' };
+const ROLES = ['Composer','Lyricist','Arranger','Illustrator','Translator'];
+const ROLE_NO = { Composer:'Komponist', Lyricist:'Tekstforfatter', Arranger:'Arrangør', Illustrator:'Illustratør', Translator:'Oversetter' };
 
 
 // ── Shared contributor row factory ────────────────────────────────────────────
 
-function addContributorRow(prefix, contributors, rowIdxRef, person, role, creditedAs) {
+function addContributorRow(prefix, contributors, rowIdxRef, person, role, creditedAs, translatesPersonId) {
   role = role || 'Composer';
   const idx = rowIdxRef.value++;
   const name = person ? [person.first_name||'', person.last_name||''].filter(Boolean).join(' ') : null;
@@ -454,13 +511,18 @@ function addContributorRow(prefix, contributors, rowIdxRef, person, role, credit
       </div>
       <div id="${prefix}_cselected_${idx}" style="font-size:0.82rem;color:var(--accent);margin-top:0.2rem;font-weight:500">${name||''}</div>
       <div id="${prefix}_ccredited_wrap_${idx}" style="margin-top:0.3rem"></div>
+      <div id="${prefix}_ctranslates_wrap_${idx}" style="display:none;margin-top:0.3rem"></div>
     </div>
     <button type="button" id="${prefix}_cremove_${idx}" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--muted);padding:0.2rem;line-height:1;margin-top:1.8rem">✕</button>`;
   list.appendChild(div);
-  contributors.push({ idx, person_id: person?.person_id||null, name, credited_as: creditedAs||'' });
+  contributors.push({ idx, person_id: person?.person_id||null, name, credited_as: creditedAs||'', translates_person_id: translatesPersonId||null });
   if (person) {
     renderCreditedAsField(prefix, idx, person.pseudonym||'', creditedAs||'');
   }
+
+  // Role select: show/hide the "translates" picker
+  document.getElementById(`${prefix}_crole_${idx}`).addEventListener('change', () => updateTranslatesField(prefix, idx));
+  updateTranslatesField(prefix, idx);
 
   // Remove button
   document.getElementById(`${prefix}_cremove_${idx}`).addEventListener('click', () => {
@@ -558,7 +620,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
     for (const c of nContributors) {
       if (!c.person_id) continue;
       const role = document.getElementById(`n_crole_${c.idx}`)?.value || 'Composer';
-      await post('composition_person', { composition_id: compId, person_id: c.person_id, role, credited_as: c.credited_as || null });
+      await post('composition_person', { composition_id: compId, person_id: c.person_id, role, credited_as: c.credited_as || null, translates_person_id: role === 'Translator' ? (c.translates_person_id || null) : null });
     }
 
     // Score duplicate check: same plate number + same title already in DB?
@@ -658,7 +720,7 @@ const ePubState  = {};
 
 // ── e (Edit tab) ─────────────────────────────────────────────────────────────
 const eRowIdxRef = { value: 0 };
-function eAddContributorRow(person, role, creditedAs)  { addContributorRow('e', eContributors, eRowIdxRef, person, role, creditedAs); }
+function eAddContributorRow(person, role, creditedAs, translatesPersonId)  { addContributorRow('e', eContributors, eRowIdxRef, person, role, creditedAs, translatesPersonId); }
 
 makePubLookup('e_publisherSearch', 'e_publisherResults', 'e_publisherId', ePubState, 'id');
 
@@ -758,7 +820,7 @@ async function loadEditForm(compId) {
 
   const [comp, cpRaw, scores] = await Promise.all([
     get(`/composition?composition_id=eq.${compId}&select=*`),
-    get(`/composition_person?composition_id=eq.${compId}&select=person_id,role,credited_as`),
+    get(`/composition_person?composition_id=eq.${compId}&select=person_id,role,credited_as,translates_person_id`),
     get(`/score?composition_id=eq.${compId}&select=*&order=score_id.desc`)
   ]);
 
@@ -792,9 +854,11 @@ async function loadEditForm(compId) {
   eRowIdxRef.value = 0;
   document.getElementById('e_contributorList').innerHTML = '';
   for (const row of cp) {
-    eAddContributorRow(row.person, row.role || 'Composer', row.credited_as || '');
+    eAddContributorRow(row.person, row.role || 'Composer', row.credited_as || '', row.translates_person_id || null);
   }
   if (!cp.length) eAddContributorRow(null, 'Composer');
+  // Now that every row exists, refresh Translator rows so their lyricist candidate lists are complete
+  eContributors.forEach(c => updateTranslatesField('e', c.idx));
 
   const score = scores[0];
   document.getElementById('e_scoreId').value = score ? score.score_id : '';
@@ -942,7 +1006,7 @@ async function saveEdit() {
     for (const c of eContributors) {
       if (!c.person_id) continue;
       const role = document.getElementById(`e_crole_${c.idx}`)?.value || 'Composer';
-      await post('composition_person', { composition_id: parseInt(compId), person_id: c.person_id, role, credited_as: c.credited_as || null });
+      await post('composition_person', { composition_id: parseInt(compId), person_id: c.person_id, role, credited_as: c.credited_as || null, translates_person_id: role === 'Translator' ? (c.translates_person_id || null) : null });
     }
 
     // Update tags
