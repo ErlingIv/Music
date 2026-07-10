@@ -272,6 +272,25 @@ function updateTranslatesField(prefix, idx) {
   }
 
   const candidates = getLyricistCandidates(prefix, contributors, idx);
+  wrap.innerHTML = '';
+
+  if (candidates.length === 1) {
+    // Only one lyricist on this composition — no ambiguity, so just use it.
+    c.translates_person_id = candidates[0].person_id;
+    const note = document.createElement('div');
+    note.style.cssText = 'font-size:0.82rem;color:var(--muted);padding:0.3rem 0';
+    note.textContent = `Oversetter teksten til ${candidates[0].name}`;
+    wrap.appendChild(note);
+    const refresh = document.createElement('span');
+    refresh.textContent = '↻ oppdater liste';
+    refresh.title = 'Oppdater listen over tekstforfattere';
+    refresh.style.cssText = 'display:inline-block;font-size:0.75rem;color:var(--muted);cursor:pointer;text-decoration:underline';
+    refresh.onclick = () => updateTranslatesField(prefix, idx);
+    wrap.appendChild(refresh);
+    wrap.style.display = 'block';
+    return;
+  }
+
   const sel = document.createElement('select');
   sel.style.cssText = 'width:100%;font-size:0.82rem;padding:0.3rem 0.5rem;border:1px dashed var(--border);border-radius:4px;background:white;font-family:inherit';
   sel.title = 'Hvilken tekstforfatters tekst blir oversatt';
@@ -287,7 +306,6 @@ function updateTranslatesField(prefix, idx) {
     sel.appendChild(opt);
   });
   sel.onchange = () => { c.translates_person_id = parseInt(sel.value) || null; };
-  wrap.innerHTML = '';
   wrap.appendChild(sel);
 
   // Small refresh link, in case the lyricist row was added/edited after this one
