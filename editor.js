@@ -623,7 +623,6 @@ document.getElementById('newForm').addEventListener('submit', async e => {
     if (!cat)   throw new Error('Kategori er påkrevd.');
 
     const pubDomain = cat === 'pd' ? 'Yes' : 'No';
-    const catName   = cat === 'pd' ? 'Eldre klassisk' : 'Eldre populærmusikk';
     const pubId     = await resolvePublisher('n_publisherSearch', nPubState, 'id');
 
     // Validate source BEFORE writing anything to the database
@@ -667,7 +666,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
         document.getElementById('scoreDupConfirm').onclick = async () => {
           msgEl.innerHTML = '';
           btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Lagrer…';
-          await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, year_published: document.getElementById('n_yearPublished').value.trim()||null, pdf_url: document.getElementById('n_pdfUrl').value.trim()||null, mp3_url: document.getElementById('n_mp3Url').value.trim()||null, source_id: getSourceId(source)||null, has_frontpage: document.getElementById('n_hasFrontpage').checked, ai_frontpage: document.getElementById('n_aiFrontpage').checked });
+          await post('score', { composition_id: compId, plate_number: plate||null, publisher_id: pubId||null, year_published: document.getElementById('n_yearPublished').value.trim()||null, pdf_url: document.getElementById('n_pdfUrl').value.trim()||null, mp3_url: document.getElementById('n_mp3Url').value.trim()||null, source_id: getSourceId(source)||null, has_frontpage: document.getElementById('n_hasFrontpage').checked, ai_frontpage: document.getElementById('n_aiFrontpage').checked });
           showMsg('newMsg', `✓ "${title}" er lagret (id=${compId})`, 'success');
           resetNewForm();
           btn.disabled = false; btn.textContent = 'Lagre innføring';
@@ -676,7 +675,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
       }
     }
 
-    await post('score', { composition_id: compId, category: catName, plate_number: plate||null, publisher_id: pubId||null, year_published: document.getElementById('n_yearPublished').value.trim()||null, pdf_url: document.getElementById('n_pdfUrl').value.trim()||null, mp3_url: document.getElementById('n_mp3Url').value.trim()||null, source_id: getSourceId(source)||null, has_frontpage: document.getElementById('n_hasFrontpage').checked, ai_frontpage: document.getElementById('n_aiFrontpage').checked });
+    await post('score', { composition_id: compId, plate_number: plate||null, publisher_id: pubId||null, year_published: document.getElementById('n_yearPublished').value.trim()||null, pdf_url: document.getElementById('n_pdfUrl').value.trim()||null, mp3_url: document.getElementById('n_mp3Url').value.trim()||null, source_id: getSourceId(source)||null, has_frontpage: document.getElementById('n_hasFrontpage').checked, ai_frontpage: document.getElementById('n_aiFrontpage').checked });
 
     showMsg('newMsg', `✓ "${title}" er lagret (id=${compId})`, 'success');
     resetNewForm();
@@ -1036,8 +1035,7 @@ async function saveEdit() {
     // Update score
     const pubId   = await resolvePublisher('e_publisherSearch', ePubState, 'id');
     const plate   = document.getElementById('e_plateNumber').value.trim();
-    const catName = cat === 'pd' ? 'Eldre klassisk' : 'Eldre populærmusikk';
-    const scoreData = { plate_number: plate||null, publisher_id: pubId||null, year_published: document.getElementById('e_yearPublished').value.trim()||null, category: catName, pdf_url: document.getElementById('e_pdfUrl').value.trim()||null, mp3_url: document.getElementById('e_mp3Url').value.trim()||null, source_id: getSourceId(esource)||null, has_frontpage: document.getElementById('e_hasFrontpage').checked, ai_frontpage: document.getElementById('e_aiFrontpage').checked };
+    const scoreData = { plate_number: plate||null, publisher_id: pubId||null, year_published: document.getElementById('e_yearPublished').value.trim()||null, pdf_url: document.getElementById('e_pdfUrl').value.trim()||null, mp3_url: document.getElementById('e_mp3Url').value.trim()||null, source_id: getSourceId(esource)||null, has_frontpage: document.getElementById('e_hasFrontpage').checked, ai_frontpage: document.getElementById('e_aiFrontpage').checked };
 
     if (scoreId) {
       await patch('score', `score_id=eq.${scoreId}`, scoreData);
