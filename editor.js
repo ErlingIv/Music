@@ -598,96 +598,176 @@ function showMsg(tabId, text, type) {
 
 document.getElementById('newForm').addEventListener('submit', async e => {
   e.preventDefault();
-  const btn = document.getElementById('newSubmitBtn');
+  const msgEl = document.getElementById('newMsg');
 
-  // Duplicate gate
+  // Duplicate-title gate
   const warnVisible = document.getElementById('n_duplicateWarn').style.display !== 'none';
   if (warnVisible && !document.getElementById('n_notDuplicate').checked) {
     showMsg('newMsg', '⚠ Mulige duplikater funnet — bekreft at dette ikke er et duplikat før du lagrer.', 'error');
-    document.getElementById('newMsg').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    msgEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     return;
   }
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Lagrer…';
   showMsg('newMsg', '', '');
+
+  // 1. Freeze every field value up front, before any async gaps or confirmations,
+  //    so nothing can change out from under us while a warning is pending.
+  const data = {
+    title:         document.getElementById('n_title').value.trim(),
+    year:          document.getElementById('n_year').value.trim(),
+    cat:           document.getElementById('n_category').value,
+    notes:         document.getElementById('n_notes').value.trim(),
+    dedication:    document.getElementById('n_dedication').value.trim(),
+    msLink:        document.getElementById('n_msLink').value.trim(),
+    opus:          document.getElementById('n_opus').value.trim(),
+    toInvestigate: document.getElementById('n_toInvestigate').checked,
+    underArbeid:   document.getElementById('n_underArbeid').checked,
+    uploadedToday: document.getElementById('n_uploadedToday').checked,
+    plate:         document.getElementById('n_plateNumber').value.trim(),
+    publisherName: document.getElementById('n_publisherSearch').value.trim(),
+    publisherId:   nPubState.id,
+    yearPublished: document.getElementById('n_yearPublished').value.trim(),
+    pdfUrl:        document.getElementById('n_pdfUrl').value.trim(),
+    mp3Url:        document.getElementById('n_mp3Url').value.trim(),
+    source:        document.getElementById('n_source').value.trim(),
+    hasFrontpage:  document.getElementById('n_hasFrontpage').checked,
+    aiFrontpage:   document.getElementById('n_aiFrontpage').checked,
+    contributors:  nContributors.map(c => ({ ...c })),
+  };
+
+  if (!data.title) { showMsg('newMsg', 'Feil: Tittel er påkrevd.', 'error'); msgEl.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  if (!data.cat)   { showMsg('newMsg', 'Feil: Kategori er påkrevd.', 'error'); msgEl.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+
+  // 2. Contributor completeness — a name typed but never selected from the list
+  //    would otherwise be silently dropped.
+  for (const c of data.contributors) {
+    const searchVal = document.getElementById(`n_csearch_${c.idx}`)?.value.trim();
+    if (searchVal && !c.person_id) {
+      showMsg('newMsg', `Feil: En bidragsyterrad har et navn skrevet inn ("${searchVal}"), men ingen person er valgt fra listen. Velg en person fra søkeresultatene, eller tøm feltet.`, 'error');
+      msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+  }
+
+  // 3. Source validation — decide now whether an unknown source will be created,
+  //    rather than silently discarding it later.
+  let sourceIsNew = false;
+  if (data.source && !sourceMap.has(data.source)) {
+    const proceed = confirm(`"${data.source}" er ikke en kjent kilde.\n\nKlikk OK for å opprette den som en ny kilde og lagre, eller Avbryt for å velge en eksisterende kilde.`);
+    if (!proceed) return;
+    sourceIsNew = true;
+  }
+
+  // 4. Duplicate plate-number check — BEFORE any database write, so "Avbryt"
+  //    truly means nothing was saved, and nothing is left orphaned.
+  if (data.plate) {
+    const dupScores = await get(`/score?plate_number=eq.${encodeURIComponent(data.plate)}&select=score_id,composition_id,plate_number`);
+    if (dupScores.length) {
+      const dupIds = dupScores.map(s => s.composition_id).join(',');
+      const dupComps = await get(`/composition?composition_id=in.(${dupIds})&select=composition_id,title`);
+      const titleMap = Object.fromEntries(dupComps.map(c => [c.composition_id, c.title]));
+      const dupLines = dupScores.map(s => `• "${titleMap[s.composition_id] || '?'}" (score_id=${s.score_id}, plate=${s.plate_number})`).join('<br>');
+      msgEl.innerHTML = `<div style="background:#fff8e8;border:1px solid #e8c84a;border-radius:4px;padding:0.6rem 0.85rem;font-size:0.85rem;color:#5a4a00">
+        <div style="font-weight:600;margin-bottom:0.35rem">⚠ Noteeksemplar med platenummer <em>${data.plate}</em> finnes allerede (ingenting er lagret ennå):</div>
+        <div style="margin-bottom:0.5rem">${dupLines}</div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem">
+          <button id="scoreDupConfirm" class="btn" style="font-size:0.8rem;padding:0.25rem 0.6rem;background:#c8a000;color:#fff;border:none;border-radius:4px;cursor:pointer">Lagre likevel</button>
+          <button id="scoreDupCancel" class="btn btn-secondary" style="font-size:0.8rem;padding:0.25rem 0.6rem">Avbryt</button>
+        </div>
+      </div>`;
+      msgEl.className = 'msg';
+      msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.getElementById('scoreDupCancel').onclick = () => { msgEl.innerHTML = ''; };
+      document.getElementById('scoreDupConfirm').onclick = () => { msgEl.innerHTML = ''; performNewEntrySave(data, sourceIsNew); };
+      return; // Nothing written to the DB yet — safe to stop here.
+    }
+  }
+
+  await performNewEntrySave(data, sourceIsNew);
+});
+
+// Performs the actual writes for a new entry, after every validation gate above
+// has already passed. If the score insert fails partway through, the composition
+// and its contributor rows are rolled back rather than left orphaned.
+async function performNewEntrySave(data, sourceIsNew) {
+  const btn = document.getElementById('newSubmitBtn');
+  const msgEl = document.getElementById('newMsg');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Lagrer…';
+
+  let compId = null;
   try {
-    const title    = document.getElementById('n_title').value.trim();
-    const year     = document.getElementById('n_year').value.trim();
-    const cat      = document.getElementById('n_category').value;
-    const notes      = document.getElementById('n_notes').value.trim();
-    const dedication = document.getElementById('n_dedication').value.trim();
-    const msLink   = document.getElementById('n_msLink').value.trim();
-    const toInvestigate = document.getElementById('n_toInvestigate').checked;
-    const underArbeid   = document.getElementById('n_underArbeid').checked;
-    const plate    = document.getElementById('n_plateNumber').value.trim();
-    if (!title) throw new Error('Tittel er påkrevd.');
-    if (!cat)   throw new Error('Kategori er påkrevd.');
+    // Publisher (create if new)
+    let pubId = data.publisherId;
+    if (!pubId && data.publisherName) {
+      const existingPub = await get(`/publisher?publisher_name=eq.${encodeURIComponent(data.publisherName)}&select=publisher_id`);
+      pubId = existingPub.length ? existingPub[0].publisher_id : (await post('publisher', { publisher_name: data.publisherName })).publisher_id;
+    }
 
-    const pubDomain = cat === 'pd' ? 'Yes' : 'No';
-    const pubId     = await resolvePublisher('n_publisherSearch', nPubState, 'id');
+    // Source (create if new & confirmed above) — source_id is manually assigned, not autoincrement
+    let sourceId = null;
+    if (data.source) {
+      sourceId = sourceIsNew ? await ensureSourceId(data.source) : getSourceId(data.source);
+    }
 
-    // Validate source BEFORE writing anything to the database
-    const source   = document.getElementById('n_source').value;
-    if (!validateSource('n_source')) { btn.disabled = false; btn.textContent = 'Lagre innføring'; return; }
-
+    const pubDomain = data.cat === 'pd' ? 'Yes' : 'No';
     const today = new Date().toISOString().slice(0,10);
-    const comp = await post('composition', { title, public_domain: pubDomain, year_composed: year||null, opus_number: document.getElementById('n_opus').value.trim()||null, composition_notes: notes||null, musescore_link: msLink||null, dedication: dedication||null, to_investigate: toInvestigate||null, under_arbeid: underArbeid||null, musescore_uploaded: document.getElementById('n_uploadedToday').checked ? today : null });
-    const compId = comp.composition_id;
-    if (!compId) throw new Error('Feil ved lagring.');
 
-    for (const c of nContributors) {
+    const comp = await post('composition', {
+      title: data.title, public_domain: pubDomain, year_composed: data.year || null,
+      opus_number: data.opus || null, composition_notes: data.notes || null,
+      musescore_link: data.msLink || null, dedication: data.dedication || null,
+      to_investigate: data.toInvestigate || null, under_arbeid: data.underArbeid || null,
+      musescore_uploaded: data.uploadedToday ? today : null,
+    });
+    compId = comp.composition_id;
+    if (!compId) throw new Error('Feil ved lagring av komposisjon.');
+
+    for (const c of data.contributors) {
       if (!c.person_id) continue;
       const role = document.getElementById(`n_crole_${c.idx}`)?.value || 'Composer';
       await post('composition_person', { composition_id: compId, person_id: c.person_id, role, credited_as: c.credited_as || null, translates_person_id: role === 'Translator' ? (c.translates_person_id || null) : null });
     }
 
-    // Score duplicate check: same plate number + same title already in DB?
-    if (plate) {
-      const dupScores = await get(`/score?plate_number=eq.${encodeURIComponent(plate)}&select=score_id,composition_id,plate_number`);
-      if (dupScores.length) {
-        // Fetch composition titles for the matching scores
-        const dupIds = dupScores.map(s => s.composition_id).join(',');
-        const dupComps = await get(`/composition?composition_id=in.(${dupIds})&select=composition_id,title`);
-        const titleMap = Object.fromEntries(dupComps.map(c => [c.composition_id, c.title]));
-        const dupLines = dupScores.map(s => `• "${titleMap[s.composition_id] || '?'}" (score_id=${s.score_id}, plate=${s.plate_number})`).join('<br>');
-        // Show warning in newMsg and require confirmation
-        showMsg('newMsg', '', '');
-        const msgEl = document.getElementById('newMsg');
-        msgEl.innerHTML = `<div style="background:#fff8e8;border:1px solid #e8c84a;border-radius:4px;padding:0.6rem 0.85rem;font-size:0.85rem;color:#5a4a00">
-          <div style="font-weight:600;margin-bottom:0.35rem">⚠ Noteeksemplar med platenummer <em>${plate}</em> finnes allerede:</div>
-          <div style="margin-bottom:0.5rem">${dupLines}</div>
-          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem">
-            <button id="scoreDupConfirm" class="btn" style="font-size:0.8rem;padding:0.25rem 0.6rem;background:#c8a000;color:#fff;border:none;border-radius:4px;cursor:pointer">Lagre likevel</button>
-            <button onclick="document.getElementById('newMsg').innerHTML=''" class="btn btn-secondary" style="font-size:0.8rem;padding:0.25rem 0.6rem">Avbryt</button>
-          </div>
-        </div>`;
-        msgEl.className = 'msg';
-        msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        btn.disabled = false; btn.textContent = 'Lagre innføring';
-        // Wire confirm button to finish the save
-        document.getElementById('scoreDupConfirm').onclick = async () => {
-          msgEl.innerHTML = '';
-          btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Lagrer…';
-          await post('score', { composition_id: compId, plate_number: plate||null, publisher_id: pubId||null, year_published: document.getElementById('n_yearPublished').value.trim()||null, pdf_url: document.getElementById('n_pdfUrl').value.trim()||null, mp3_url: document.getElementById('n_mp3Url').value.trim()||null, source_id: getSourceId(source)||null, has_frontpage: document.getElementById('n_hasFrontpage').checked, ai_frontpage: document.getElementById('n_aiFrontpage').checked });
-          showMsg('newMsg', `✓ "${title}" er lagret (id=${compId})`, 'success');
-          document.getElementById('newMsg').scrollIntoView({ behavior: 'smooth', block: 'center' });
-          resetNewForm();
-          btn.disabled = false; btn.textContent = 'Lagre innføring';
-        };
-        return;
-      }
-    }
+    await post('score', {
+      composition_id: compId, plate_number: data.plate || null, publisher_id: pubId || null,
+      year_published: data.yearPublished || null, pdf_url: data.pdfUrl || null, mp3_url: data.mp3Url || null,
+      source_id: sourceId || null, has_frontpage: data.hasFrontpage, ai_frontpage: data.aiFrontpage,
+    });
 
-    await post('score', { composition_id: compId, plate_number: plate||null, publisher_id: pubId||null, year_published: document.getElementById('n_yearPublished').value.trim()||null, pdf_url: document.getElementById('n_pdfUrl').value.trim()||null, mp3_url: document.getElementById('n_mp3Url').value.trim()||null, source_id: getSourceId(source)||null, has_frontpage: document.getElementById('n_hasFrontpage').checked, ai_frontpage: document.getElementById('n_aiFrontpage').checked });
-
-    showMsg('newMsg', `✓ "${title}" er lagret (id=${compId})`, 'success');
-    document.getElementById('newMsg').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    showMsg('newMsg', `✓ "${data.title}" er lagret (id=${compId})`, 'success');
+    msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
     resetNewForm();
   } catch(err) {
-    showMsg('newMsg', 'Feil: ' + err.message, 'error');
-    document.getElementById('newMsg').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Best-effort rollback so a failed score insert never leaves a half-saved entry behind.
+    let rolledBack = false;
+    if (compId) {
+      try {
+        await del('composition_person', `composition_id=eq.${compId}`);
+        await del('composition', `composition_id=eq.${compId}`);
+        rolledBack = true;
+      } catch (cleanupErr) {
+        console.error('Rollback failed:', cleanupErr);
+      }
+    }
+    showMsg('newMsg', `Feil: ${err.message}${rolledBack ? ' — hele innføringen ble rullet tilbake, ingenting ble lagret.' : (compId ? ' — ADVARSEL: opprydding feilet også, sjekk komposisjon id=' + compId + ' manuelt.' : '')}`, 'error');
+    msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
   btn.disabled = false; btn.textContent = 'Lagre innføring';
-});
+}
+
+// Returns the source_id for a name, creating a new source row (with the next
+// manually-assigned id, since source_id is not autoincrement) if it doesn't exist yet.
+async function ensureSourceId(name) {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+  if (sourceMap.has(trimmed)) return sourceMap.get(trimmed);
+  const existing = await get(`/source?select=source_id&order=source_id.desc&limit=1`);
+  const nextId = (existing[0]?.source_id || 0) + 1;
+  await post('source', { source_id: nextId, source_name: trimmed });
+  sourceMap.set(trimmed, nextId);
+  const dl = document.getElementById('sourceList');
+  if (dl) dl.innerHTML = [...sourceMap.keys()].sort().map(s => `<option value="${s}">`).join('');
+  return nextId;
+}
 
 function resetNewForm() {
   document.getElementById('newForm').reset();
