@@ -661,6 +661,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
           </div>
         </div>`;
         msgEl.className = 'msg';
+        msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         btn.disabled = false; btn.textContent = 'Lagre innføring';
         // Wire confirm button to finish the save
         document.getElementById('scoreDupConfirm').onclick = async () => {
@@ -668,6 +669,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
           btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Lagrer…';
           await post('score', { composition_id: compId, plate_number: plate||null, publisher_id: pubId||null, year_published: document.getElementById('n_yearPublished').value.trim()||null, pdf_url: document.getElementById('n_pdfUrl').value.trim()||null, mp3_url: document.getElementById('n_mp3Url').value.trim()||null, source_id: getSourceId(source)||null, has_frontpage: document.getElementById('n_hasFrontpage').checked, ai_frontpage: document.getElementById('n_aiFrontpage').checked });
           showMsg('newMsg', `✓ "${title}" er lagret (id=${compId})`, 'success');
+          document.getElementById('newMsg').scrollIntoView({ behavior: 'smooth', block: 'center' });
           resetNewForm();
           btn.disabled = false; btn.textContent = 'Lagre innføring';
         };
@@ -678,9 +680,11 @@ document.getElementById('newForm').addEventListener('submit', async e => {
     await post('score', { composition_id: compId, plate_number: plate||null, publisher_id: pubId||null, year_published: document.getElementById('n_yearPublished').value.trim()||null, pdf_url: document.getElementById('n_pdfUrl').value.trim()||null, mp3_url: document.getElementById('n_mp3Url').value.trim()||null, source_id: getSourceId(source)||null, has_frontpage: document.getElementById('n_hasFrontpage').checked, ai_frontpage: document.getElementById('n_aiFrontpage').checked });
 
     showMsg('newMsg', `✓ "${title}" er lagret (id=${compId})`, 'success');
+    document.getElementById('newMsg').scrollIntoView({ behavior: 'smooth', block: 'center' });
     resetNewForm();
   } catch(err) {
     showMsg('newMsg', 'Feil: ' + err.message, 'error');
+    document.getElementById('newMsg').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
   btn.disabled = false; btn.textContent = 'Lagre innføring';
 });
