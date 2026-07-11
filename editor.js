@@ -599,91 +599,97 @@ function showMsg(tabId, text, type) {
 document.getElementById('newForm').addEventListener('submit', async e => {
   e.preventDefault();
   const msgEl = document.getElementById('newMsg');
-
-  // Duplicate-title gate
-  const warnVisible = document.getElementById('n_duplicateWarn').style.display !== 'none';
-  if (warnVisible && !document.getElementById('n_notDuplicate').checked) {
-    showMsg('newMsg', '⚠ Mulige duplikater funnet — bekreft at dette ikke er et duplikat før du lagrer.', 'error');
-    msgEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    return;
-  }
-  showMsg('newMsg', '', '');
-
-  // 1. Freeze every field value up front, before any async gaps or confirmations,
-  //    so nothing can change out from under us while a warning is pending.
-  const data = {
-    title:         document.getElementById('n_title').value.trim(),
-    year:          document.getElementById('n_year').value.trim(),
-    cat:           document.getElementById('n_category').value,
-    notes:         document.getElementById('n_notes').value.trim(),
-    dedication:    document.getElementById('n_dedication').value.trim(),
-    msLink:        document.getElementById('n_msLink').value.trim(),
-    opus:          document.getElementById('n_opus').value.trim(),
-    toInvestigate: document.getElementById('n_toInvestigate').checked,
-    underArbeid:   document.getElementById('n_underArbeid').checked,
-    uploadedToday: document.getElementById('n_uploadedToday').checked,
-    plate:         document.getElementById('n_plateNumber').value.trim(),
-    publisherName: document.getElementById('n_publisherSearch').value.trim(),
-    publisherId:   nPubState.id,
-    yearPublished: document.getElementById('n_yearPublished').value.trim(),
-    pdfUrl:        document.getElementById('n_pdfUrl').value.trim(),
-    mp3Url:        document.getElementById('n_mp3Url').value.trim(),
-    source:        document.getElementById('n_source').value.trim(),
-    hasFrontpage:  document.getElementById('n_hasFrontpage').checked,
-    aiFrontpage:   document.getElementById('n_aiFrontpage').checked,
-    contributors:  nContributors.map(c => ({ ...c })),
-  };
-
-  if (!data.title) { showMsg('newMsg', 'Feil: Tittel er påkrevd.', 'error'); msgEl.scrollIntoView({behavior:'smooth',block:'center'}); return; }
-  if (!data.cat)   { showMsg('newMsg', 'Feil: Kategori er påkrevd.', 'error'); msgEl.scrollIntoView({behavior:'smooth',block:'center'}); return; }
-
-  // 2. Contributor completeness — a name typed but never selected from the list
-  //    would otherwise be silently dropped.
-  for (const c of data.contributors) {
-    const searchVal = document.getElementById(`n_csearch_${c.idx}`)?.value.trim();
-    if (searchVal && !c.person_id) {
-      showMsg('newMsg', `Feil: En bidragsyterrad har et navn skrevet inn ("${searchVal}"), men ingen person er valgt fra listen. Velg en person fra søkeresultatene, eller tøm feltet.`, 'error');
-      msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  try {
+    // Duplicate-title gate
+    const warnVisible = document.getElementById('n_duplicateWarn').style.display !== 'none';
+    if (warnVisible && !document.getElementById('n_notDuplicate').checked) {
+      showMsg('newMsg', '⚠ Mulige duplikater funnet — bekreft at dette ikke er et duplikat før du lagrer.', 'error');
+      msgEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       return;
     }
-  }
+    showMsg('newMsg', '', '');
 
-  // 3. Source validation — decide now whether an unknown source will be created,
-  //    rather than silently discarding it later.
-  let sourceIsNew = false;
-  if (data.source && !sourceMap.has(data.source)) {
-    const proceed = confirm(`"${data.source}" er ikke en kjent kilde.\n\nKlikk OK for å opprette den som en ny kilde og lagre, eller Avbryt for å velge en eksisterende kilde.`);
-    if (!proceed) return;
-    sourceIsNew = true;
-  }
+    // 1. Freeze every field value up front, before any async gaps or confirmations,
+    //    so nothing can change out from under us while a warning is pending.
+    const data = {
+      title:         document.getElementById('n_title').value.trim(),
+      year:          document.getElementById('n_year').value.trim(),
+      cat:           document.getElementById('n_category').value,
+      notes:         document.getElementById('n_notes').value.trim(),
+      dedication:    document.getElementById('n_dedication').value.trim(),
+      msLink:        document.getElementById('n_msLink').value.trim(),
+      opus:          document.getElementById('n_opus').value.trim(),
+      toInvestigate: document.getElementById('n_toInvestigate').checked,
+      underArbeid:   document.getElementById('n_underArbeid').checked,
+      uploadedToday: document.getElementById('n_uploadedToday').checked,
+      plate:         document.getElementById('n_plateNumber').value.trim(),
+      publisherName: document.getElementById('n_publisherSearch').value.trim(),
+      publisherId:   nPubState.id,
+      yearPublished: document.getElementById('n_yearPublished').value.trim(),
+      pdfUrl:        document.getElementById('n_pdfUrl').value.trim(),
+      mp3Url:        document.getElementById('n_mp3Url').value.trim(),
+      source:        document.getElementById('n_source').value.trim(),
+      hasFrontpage:  document.getElementById('n_hasFrontpage').checked,
+      aiFrontpage:   document.getElementById('n_aiFrontpage').checked,
+      contributors:  nContributors.map(c => ({ ...c })),
+    };
 
-  // 4. Duplicate plate-number check — BEFORE any database write, so "Avbryt"
-  //    truly means nothing was saved, and nothing is left orphaned.
-  if (data.plate) {
-    const dupScores = await get(`/score?plate_number=eq.${encodeURIComponent(data.plate)}&select=score_id,composition_id,plate_number`);
-    if (dupScores.length) {
-      const dupIds = dupScores.map(s => s.composition_id).join(',');
-      const dupComps = await get(`/composition?composition_id=in.(${dupIds})&select=composition_id,title`);
-      const titleMap = Object.fromEntries(dupComps.map(c => [c.composition_id, c.title]));
-      const dupLines = dupScores.map(s => `• "${titleMap[s.composition_id] || '?'}" (score_id=${s.score_id}, plate=${s.plate_number})`).join('<br>');
-      msgEl.innerHTML = `<div style="background:#fff8e8;border:1px solid #e8c84a;border-radius:4px;padding:0.6rem 0.85rem;font-size:0.85rem;color:#5a4a00">
-        <div style="font-weight:600;margin-bottom:0.35rem">⚠ Noteeksemplar med platenummer <em>${data.plate}</em> finnes allerede (ingenting er lagret ennå):</div>
-        <div style="margin-bottom:0.5rem">${dupLines}</div>
-        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem">
-          <button id="scoreDupConfirm" class="btn" style="font-size:0.8rem;padding:0.25rem 0.6rem;background:#c8a000;color:#fff;border:none;border-radius:4px;cursor:pointer">Lagre likevel</button>
-          <button id="scoreDupCancel" class="btn btn-secondary" style="font-size:0.8rem;padding:0.25rem 0.6rem">Avbryt</button>
-        </div>
-      </div>`;
-      msgEl.className = 'msg';
-      msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      document.getElementById('scoreDupCancel').onclick = () => { msgEl.innerHTML = ''; };
-      document.getElementById('scoreDupConfirm').onclick = () => { msgEl.innerHTML = ''; performNewEntrySave(data, sourceIsNew); };
-      return; // Nothing written to the DB yet — safe to stop here.
+    if (!data.title) { showMsg('newMsg', 'Feil: Tittel er påkrevd.', 'error'); msgEl.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+    if (!data.cat)   { showMsg('newMsg', 'Feil: Kategori er påkrevd.', 'error'); msgEl.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+
+    // 2. Contributor completeness — a name typed but never selected from the list
+    //    would otherwise be silently dropped.
+    for (const c of data.contributors) {
+      const searchVal = document.getElementById(`n_csearch_${c.idx}`)?.value.trim();
+      if (searchVal && !c.person_id) {
+        showMsg('newMsg', `Feil: En bidragsyterrad har et navn skrevet inn ("${searchVal}"), men ingen person er valgt fra listen. Velg en person fra søkeresultatene, eller tøm feltet.`, 'error');
+        msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
     }
-  }
 
-  await performNewEntrySave(data, sourceIsNew);
+    // 3. Source validation — decide now whether an unknown source will be created,
+    //    rather than silently discarding it later.
+    let sourceIsNew = false;
+    if (data.source && !sourceMap.has(data.source)) {
+      const proceed = confirm(`"${data.source}" er ikke en kjent kilde.\n\nKlikk OK for å opprette den som en ny kilde og lagre, eller Avbryt for å velge en eksisterende kilde.`);
+      if (!proceed) { showMsg('newMsg', 'Lagring avbrutt — velg en eksisterende kilde eller bekreft oppretting av ny.', 'error'); return; }
+      sourceIsNew = true;
+    }
+
+    // 4. Duplicate plate-number check — BEFORE any database write, so "Avbryt"
+    //    truly means nothing was saved, and nothing is left orphaned.
+    if (data.plate) {
+      const dupScores = await get(`/score?plate_number=eq.${encodeURIComponent(data.plate)}&select=score_id,composition_id,plate_number`);
+      if (dupScores.length) {
+        const dupIds = dupScores.map(s => s.composition_id).join(',');
+        const dupComps = await get(`/composition?composition_id=in.(${dupIds})&select=composition_id,title`);
+        const titleMap = Object.fromEntries(dupComps.map(c => [c.composition_id, c.title]));
+        const dupLines = dupScores.map(s => `• "${titleMap[s.composition_id] || '?'}" (score_id=${s.score_id}, plate=${s.plate_number})`).join('<br>');
+        msgEl.innerHTML = `<div style="background:#fff8e8;border:1px solid #e8c84a;border-radius:4px;padding:0.6rem 0.85rem;font-size:0.85rem;color:#5a4a00">
+          <div style="font-weight:600;margin-bottom:0.35rem">⚠ Noteeksemplar med platenummer <em>${data.plate}</em> finnes allerede (ingenting er lagret ennå):</div>
+          <div style="margin-bottom:0.5rem">${dupLines}</div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem">
+            <button id="scoreDupConfirm" class="btn" style="font-size:0.8rem;padding:0.25rem 0.6rem;background:#c8a000;color:#fff;border:none;border-radius:4px;cursor:pointer">Lagre likevel</button>
+            <button id="scoreDupCancel" class="btn btn-secondary" style="font-size:0.8rem;padding:0.25rem 0.6rem">Avbryt</button>
+          </div>
+        </div>`;
+        msgEl.className = 'msg';
+        msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        document.getElementById('scoreDupCancel').onclick = () => { msgEl.innerHTML = ''; };
+        document.getElementById('scoreDupConfirm').onclick = () => { msgEl.innerHTML = ''; performNewEntrySave(data, sourceIsNew); };
+        return; // Nothing written to the DB yet — safe to stop here.
+      }
+    }
+
+    await performNewEntrySave(data, sourceIsNew);
+  } catch (err) {
+    console.error('Ny innføring — uventet feil før lagring:', err);
+    showMsg('newMsg', 'Uventet feil: ' + err.message, 'error');
+    msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 });
+
 
 // Performs the actual writes for a new entry, after every validation gate above
 // has already passed. If the score insert fails partway through, the composition
