@@ -485,7 +485,20 @@ async function loadSources() {
 }
 
 function getSourceId(name) {
-  return sourceMap.get(name.trim()) || null;
+  const match = findSourceMatch(name);
+  return match ? sourceMap.get(match) : null;
+}
+
+// Case/whitespace-insensitive lookup: returns the actual stored key if a case-insensitive
+// match exists in sourceMap, or null if this source name is genuinely new.
+function findSourceMatch(name) {
+  const trimmed = name.trim();
+  if (sourceMap.has(trimmed)) return trimmed;
+  const lower = trimmed.toLowerCase();
+  for (const key of sourceMap.keys()) {
+    if (key.toLowerCase() === lower) return key;
+  }
+  return null;
 }
 
 function validateSource(inputId) {
@@ -599,12 +612,17 @@ function showMsg(tabId, text, type) {
 document.getElementById('newForm').addEventListener('submit', async e => {
   e.preventDefault();
   const msgEl = document.getElementById('newMsg');
+  const btn = document.getElementById('newSubmitBtn');
+  if (btn.disabled) return; // already mid-submit — ignore extra clicks entirely
+  btn.disabled = true; // disabled synchronously, before any await, so a rapid second click can't slip in
+  const resetBtn = () => { btn.disabled = false; btn.textContent = 'Lagre innføring'; };
   try {
     // Duplicate-title gate
     const warnVisible = document.getElementById('n_duplicateWarn').style.display !== 'none';
     if (warnVisible && !document.getElementById('n_notDuplicate').checked) {
       showMsg('newMsg', '⚠ Mulige duplikater funnet — bekreft at dette ikke er et duplikat før du lagrer.', 'error');
       msgEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      resetBtn();
       return;
     }
     showMsg('newMsg', '', '');
@@ -631,11 +649,14 @@ document.getElementById('newForm').addEventListener('submit', async e => {
       source:        document.getElementById('n_source').value.trim(),
       hasFrontpage:  document.getElementById('n_hasFrontpage').checked,
       aiFrontpage:   document.getElementById('n_aiFrontpage').checked,
-      contributors:  nContributors.map(c => ({ ...c })),
+      contributors:  nContributors.map(c => ({
+        ...c,
+        role: document.getElementById(`n_crole_${c.idx}`)?.value || 'Composer',
+      })),
     };
 
-    if (!data.title) { showMsg('newMsg', 'Feil: Tittel er påkrevd.', 'error'); msgEl.scrollIntoView({behavior:'smooth',block:'center'}); return; }
-    if (!data.cat)   { showMsg('newMsg', 'Feil: Kategori er påkrevd.', 'error'); msgEl.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+    if (!data.title) { showMsg('newMsg', 'Feil: Tittel er påkrevd.', 'error'); msgEl.scrollIntoView({behavior:'smooth',block:'center'}); resetBtn(); return; }
+    if (!data.cat)   { showMsg('newMsg', 'Feil: Kategori er påkrevd.', 'error'); msgEl.scrollIntoView({behavior:'smooth',block:'center'}); resetBtn(); return; }
 
     // 2. Contributor completeness — a name typed but never selected from the list
     //    would otherwise be silently dropped.
@@ -644,6 +665,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
       if (searchVal && !c.person_id) {
         showMsg('newMsg', `Feil: En bidragsyterrad har et navn skrevet inn ("${searchVal}"), men ingen person er valgt fra listen. Velg en person fra søkeresultatene, eller tøm feltet.`, 'error');
         msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        resetBtn();
         return;
       }
     }
@@ -651,34 +673,47 @@ document.getElementById('newForm').addEventListener('submit', async e => {
     // 3. Source validation — decide now whether an unknown source will be created,
     //    rather than silently discarding it later.
     let sourceIsNew = false;
-    if (data.source && !sourceMap.has(data.source)) {
+    if (data.source && !findSourceMatch(data.source)) {
       const proceed = confirm(`"${data.source}" er ikke en kjent kilde.\n\nKlikk OK for å opprette den som en ny kilde og lagre, eller Avbryt for å velge en eksisterende kilde.`);
-      if (!proceed) { showMsg('newMsg', 'Lagring avbrutt — velg en eksisterende kilde eller bekreft oppretting av ny.', 'error'); return; }
+      if (!proceed) { showMsg('newMsg', 'Lagring avbrutt — velg en eksisterende kilde eller bekreft oppretting av ny.', 'error'); resetBtn(); return; }
       sourceIsNew = true;
     }
 
-    // 4. Duplicate plate-number check — BEFORE any database write, so "Avbryt"
-    //    truly means nothing was saved, and nothing is left orphaned.
+    // 4. Duplicate plate-number check — scoped to the same publisher, since different
+    //    publishers can legitimately reuse the same plate number. Runs BEFORE any
+    //    database write, so "Avbryt" truly means nothing was saved.
     if (data.plate) {
-      const dupScores = await get(`/score?plate_number=eq.${encodeURIComponent(data.plate)}&select=score_id,composition_id,plate_number`);
-      if (dupScores.length) {
-        const dupIds = dupScores.map(s => s.composition_id).join(',');
-        const dupComps = await get(`/composition?composition_id=in.(${dupIds})&select=composition_id,title`);
-        const titleMap = Object.fromEntries(dupComps.map(c => [c.composition_id, c.title]));
-        const dupLines = dupScores.map(s => `• "${titleMap[s.composition_id] || '?'}" (score_id=${s.score_id}, plate=${s.plate_number})`).join('<br>');
-        msgEl.innerHTML = `<div style="background:#fff8e8;border:1px solid #e8c84a;border-radius:4px;padding:0.6rem 0.85rem;font-size:0.85rem;color:#5a4a00">
-          <div style="font-weight:600;margin-bottom:0.35rem">⚠ Noteeksemplar med platenummer <em>${data.plate}</em> finnes allerede (ingenting er lagret ennå):</div>
-          <div style="margin-bottom:0.5rem">${dupLines}</div>
-          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem">
-            <button id="scoreDupConfirm" class="btn" style="font-size:0.8rem;padding:0.25rem 0.6rem;background:#c8a000;color:#fff;border:none;border-radius:4px;cursor:pointer">Lagre likevel</button>
-            <button id="scoreDupCancel" class="btn btn-secondary" style="font-size:0.8rem;padding:0.25rem 0.6rem">Avbryt</button>
-          </div>
-        </div>`;
-        msgEl.className = 'msg';
-        msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        document.getElementById('scoreDupCancel').onclick = () => { msgEl.innerHTML = ''; };
-        document.getElementById('scoreDupConfirm').onclick = () => { msgEl.innerHTML = ''; performNewEntrySave(data, sourceIsNew); };
-        return; // Nothing written to the DB yet — safe to stop here.
+      // Read-only publisher resolution just for this check — does NOT create a new
+      // publisher row. If the publisher is new or unspecified, nothing existing could
+      // share both that publisher and this plate number, so the check is skipped.
+      let checkPubId = data.publisherId;
+      if (!checkPubId && data.publisherName) {
+        const pubLookup = await get(`/publisher?publisher_name=ilike.${encodeURIComponent(data.publisherName)}&select=publisher_id`);
+        checkPubId = pubLookup[0]?.publisher_id || null;
+      }
+
+      if (checkPubId) {
+        const dupScores = await get(`/score?plate_number=eq.${encodeURIComponent(data.plate)}&publisher_id=eq.${checkPubId}&select=score_id,composition_id,plate_number`);
+        if (dupScores.length) {
+          const dupIds = dupScores.map(s => s.composition_id).join(',');
+          const dupComps = await get(`/composition?composition_id=in.(${dupIds})&select=composition_id,title`);
+          const titleMap = Object.fromEntries(dupComps.map(c => [c.composition_id, c.title]));
+          const dupLines = dupScores.map(s => `• "${titleMap[s.composition_id] || '?'}" (score_id=${s.score_id}, plate=${s.plate_number})`).join('<br>');
+          msgEl.innerHTML = `<div style="background:#fff8e8;border:1px solid #e8c84a;border-radius:4px;padding:0.6rem 0.85rem;font-size:0.85rem;color:#5a4a00">
+            <div style="font-weight:600;margin-bottom:0.35rem">⚠ Denne utgiveren har allerede et noteeksemplar med platenummer <em>${data.plate}</em> (ingenting er lagret ennå):</div>
+            <div style="margin-bottom:0.5rem">${dupLines}</div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem">
+              <button id="scoreDupConfirm" class="btn" style="font-size:0.8rem;padding:0.25rem 0.6rem;background:#c8a000;color:#fff;border:none;border-radius:4px;cursor:pointer">Lagre likevel</button>
+              <button id="scoreDupCancel" class="btn btn-secondary" style="font-size:0.8rem;padding:0.25rem 0.6rem">Avbryt</button>
+            </div>
+          </div>`;
+          msgEl.className = 'msg';
+          msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Button stays disabled while this choice is pending, so a stray click elsewhere can't start a second save.
+          document.getElementById('scoreDupCancel').onclick = () => { msgEl.innerHTML = ''; resetBtn(); };
+          document.getElementById('scoreDupConfirm').onclick = () => { msgEl.innerHTML = ''; performNewEntrySave(data, sourceIsNew); };
+          return;
+        }
       }
     }
 
@@ -687,6 +722,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
     console.error('Ny innføring — uventet feil før lagring:', err);
     showMsg('newMsg', 'Uventet feil: ' + err.message, 'error');
     msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    resetBtn();
   }
 });
 
@@ -704,7 +740,7 @@ async function performNewEntrySave(data, sourceIsNew) {
     // Publisher (create if new)
     let pubId = data.publisherId;
     if (!pubId && data.publisherName) {
-      const existingPub = await get(`/publisher?publisher_name=eq.${encodeURIComponent(data.publisherName)}&select=publisher_id`);
+      const existingPub = await get(`/publisher?publisher_name=ilike.${encodeURIComponent(data.publisherName)}&select=publisher_id`);
       pubId = existingPub.length ? existingPub[0].publisher_id : (await post('publisher', { publisher_name: data.publisherName })).publisher_id;
     }
 
@@ -729,8 +765,7 @@ async function performNewEntrySave(data, sourceIsNew) {
 
     for (const c of data.contributors) {
       if (!c.person_id) continue;
-      const role = document.getElementById(`n_crole_${c.idx}`)?.value || 'Composer';
-      await post('composition_person', { composition_id: compId, person_id: c.person_id, role, credited_as: c.credited_as || null, translates_person_id: role === 'Translator' ? (c.translates_person_id || null) : null });
+      await post('composition_person', { composition_id: compId, person_id: c.person_id, role: c.role, credited_as: c.credited_as || null, translates_person_id: c.role === 'Translator' ? (c.translates_person_id || null) : null });
     }
 
     await post('score', {
@@ -765,14 +800,28 @@ async function performNewEntrySave(data, sourceIsNew) {
 async function ensureSourceId(name) {
   const trimmed = name.trim();
   if (!trimmed) return null;
-  if (sourceMap.has(trimmed)) return sourceMap.get(trimmed);
-  const existing = await get(`/source?select=source_id&order=source_id.desc&limit=1`);
-  const nextId = (existing[0]?.source_id || 0) + 1;
-  await post('source', { source_id: nextId, source_name: trimmed });
-  sourceMap.set(trimmed, nextId);
-  const dl = document.getElementById('sourceList');
-  if (dl) dl.innerHTML = [...sourceMap.keys()].sort().map(s => `<option value="${s}">`).join('');
-  return nextId;
+  const match = findSourceMatch(trimmed);
+  if (match) return sourceMap.get(match);
+
+  // source_id is manually assigned (not autoincrement), so two near-simultaneous creates
+  // could compute the same "next" id. Retry once against a fresh max if that happens.
+  // NOTE: the only real fix is making source_id an identity/sequence column in Postgres —
+  // this is a mitigation, not a guarantee, for the current schema.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const existing = await get(`/source?select=source_id&order=source_id.desc&limit=1`);
+    const nextId = (existing[0]?.source_id || 0) + 1;
+    try {
+      await post('source', { source_id: nextId, source_name: trimmed });
+      sourceMap.set(trimmed, nextId);
+      const dl = document.getElementById('sourceList');
+      if (dl) dl.innerHTML = [...sourceMap.keys()].sort().map(s => `<option value="${s}">`).join('');
+      return nextId;
+    } catch (err) {
+      const isConflict = /409|23505|duplicate/i.test(err.message);
+      if (isConflict && attempt === 0) continue; // someone else took nextId — retry once
+      throw err;
+    }
+  }
 }
 
 function resetNewForm() {
