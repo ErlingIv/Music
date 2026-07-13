@@ -12,8 +12,8 @@ function downloadSelf() {
 
 // ── API ───────────────────────────────────────────────────────────────────────
 
-async function get(path) {
-  const r = await fetch(SB + path, { headers: H });
+async function get(path, signal) {
+  const r = await fetch(SB + path, { headers: H, signal });
   if (!r.ok) throw new Error(`GET ${path} → ${r.status}`);
   return r.json();
 }
@@ -34,6 +34,27 @@ async function del(table, filter) {
   const r = await fetch(`${SB}/${table}?${filter}`, { method: 'DELETE', headers: H });
   if (!r.ok) throw new Error(`DELETE ${table} → ${r.status}: ${await r.text()}`);
   return r.status;
+}
+
+// Escapes a value for safe interpolation into innerHTML template strings. Database text
+// (titles, names, notes, source/publisher names, error messages) is never trusted verbatim —
+// without this, a title or note containing "<" or "&" could break rendering or inject markup.
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;',
+  })[ch]);
+}
+
+// Escapes a value for safe interpolation into a single-quoted JS string literal that itself
+// sits inside a double-quoted inline onclick="..." HTML attribute (a nested context that plain
+// escapeHtml doesn't fully cover, since the browser HTML-decodes the attribute before running it
+// as JS — an apostrophe surviving that decode would still break out of the JS string).
+function escapeJsAttr(value) {
+  return String(value ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -65,16 +86,16 @@ async function openComposerScores(personId, name) {
   const box = document.createElement('div');
   box.style.cssText = 'background:white;border-radius:8px;padding:1.5rem;max-width:600px;width:90%;max-height:80vh;overflow-y:auto';
   box.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-    <h3 style="margin:0;font-size:1rem">${name} — ${comps.length} komposisjoner</h3>
+    <h3 style="margin:0;font-size:1rem">${escapeHtml(name)} — ${comps.length} komposisjoner</h3>
     <button type="button" onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:1.2rem;cursor:pointer">✕</button>
   </div>
   <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
     <tr style="border-bottom:2px solid #eee"><th style="text-align:left;padding:0.3rem">Tittel</th><th>År</th><th>PD</th><th>MS</th></tr>
     ${comps.map(c => `<tr style="border-bottom:1px solid #f0f0f0">
-      <td style="padding:0.3rem">${c.title}</td>
-      <td style="text-align:center;color:#666">${c.year_composed||'—'}</td>
+      <td style="padding:0.3rem">${escapeHtml(c.title)}</td>
+      <td style="text-align:center;color:#666">${escapeHtml(c.year_composed||'—')}</td>
       <td style="text-align:center">${c.public_domain==='Yes'?'✓':''}</td>
-      <td style="text-align:center">${c.musescore_link?`<a href="${c.musescore_link}" target="_blank">🔗</a>`:''}</td>
+      <td style="text-align:center">${c.musescore_link?`<a href="${escapeHtml(c.musescore_link)}" target="_blank" rel="noopener noreferrer">🔗</a>`:''}</td>
     </tr>`).join('')}
   </table>`;
   modal.className = 'modal-overlay';
@@ -86,14 +107,22 @@ async function openComposerScores(personId, name) {
 function makeLookup(searchId, resultsId, tagsId, list, modalTarget) {
   const inp = document.getElementById(searchId);
   const res = document.getElementById(resultsId);
-  let t;
+  let t, controller;
 
   inp.addEventListener('input', () => {
     clearTimeout(t);
     const q = inp.value.trim();
     if (q.length < 2) { res.classList.remove('open'); return; }
     t = setTimeout(async () => {
-      const rows = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name,nationality,born,died,pseudonym&limit=12&order=last_name`);
+      controller?.abort();
+      controller = new AbortController();
+      let rows;
+      try {
+        rows = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name,nationality,born,died,pseudonym&limit=12&order=last_name`, controller.signal);
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        throw err;
+      }
       res.innerHTML = '';
       rows.forEach(p => {
         const name = [p.first_name, p.last_name].filter(Boolean).join(' ');
@@ -103,7 +132,7 @@ function makeLookup(searchId, resultsId, tagsId, list, modalTarget) {
         d.className = 'lookup-item';
         d.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:0.5rem';
         const left = document.createElement('span');
-        left.innerHTML = `${flag} ${name}<span style="color:var(--muted);font-size:0.8rem">${years}</span>`;
+        left.innerHTML = `${flag} ${escapeHtml(name)}<span style="color:var(--muted);font-size:0.8rem">${escapeHtml(years)}</span>`;
         left.style.cursor = 'pointer';
         left.onclick = () => { addTag(p.person_id, name, tagsId, list, '', p.pseudonym || ''); inp.value = ''; res.classList.remove('open'); };
         const btn = document.createElement('button');
@@ -324,7 +353,7 @@ function updateTranslatesField(prefix, idx) {
 function makePubLookup(searchId, resultsId, hiddenId, stateObj, key) {
   const inp = document.getElementById(searchId);
   const res = document.getElementById(resultsId);
-  let t;
+  let t, controller;
 
   inp.addEventListener('input', () => {
     clearTimeout(t);
@@ -333,7 +362,15 @@ function makePubLookup(searchId, resultsId, hiddenId, stateObj, key) {
     const q = inp.value.trim();
     if (q.length < 2) { res.classList.remove('open'); return; }
     t = setTimeout(async () => {
-      const rows = await get(`/publisher?publisher_name=ilike.*${encodeURIComponent(q)}*&select=publisher_id,publisher_name&limit=10&order=publisher_name`);
+      controller?.abort();
+      controller = new AbortController();
+      let rows;
+      try {
+        rows = await get(`/publisher?publisher_name=ilike.*${encodeURIComponent(q)}*&select=publisher_id,publisher_name&limit=10&order=publisher_name`, controller.signal);
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        throw err;
+      }
       res.innerHTML = '';
       rows.forEach(p => {
         const d = document.createElement('div');
@@ -361,13 +398,15 @@ function makePubLookup(searchId, resultsId, hiddenId, stateObj, key) {
   });
 }
 
-async function resolvePublisher(searchId, stateObj, key) {
-  if (stateObj[key]) return stateObj[key];
-  const name = document.getElementById(searchId).value.trim();
-  if (!name) return null;
-  const existing = await get(`/publisher?publisher_name=eq.${encodeURIComponent(name)}&select=publisher_id`);
+// Shared publisher resolution used by both Ny innføring and Rediger: returns an existing
+// publisher_id (case/whitespace-insensitive name match) or creates a new publisher row.
+async function resolveOrCreatePublisher(name, existingId) {
+  if (existingId) return existingId;
+  const trimmed = (name || '').trim();
+  if (!trimmed) return null;
+  const existing = await get(`/publisher?publisher_name=ilike.${encodeURIComponent(trimmed)}&select=publisher_id`);
   if (existing.length > 0) return existing[0].publisher_id;
-  const np = await post('publisher', { publisher_name: name });
+  const np = await post('publisher', { publisher_name: trimmed });
   return np.publisher_id;
 }
 
@@ -540,7 +579,7 @@ function addContributorRow(prefix, contributors, rowIdxRef, person, role, credit
           style="width:100%;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem">
         <div id="${prefix}_cresults_${idx}" class="lookup-results"></div>
       </div>
-      <div id="${prefix}_cselected_${idx}" style="font-size:0.82rem;color:var(--accent);margin-top:0.2rem;font-weight:500">${name||''}</div>
+      <div id="${prefix}_cselected_${idx}" style="font-size:0.82rem;color:var(--accent);margin-top:0.2rem;font-weight:500">${escapeHtml(name||'')}</div>
       <div id="${prefix}_ccredited_wrap_${idx}" style="margin-top:0.3rem"></div>
       <div id="${prefix}_ctranslates_wrap_${idx}" style="display:none;margin-top:0.3rem"></div>
     </div>
@@ -563,20 +602,28 @@ function addContributorRow(prefix, contributors, rowIdxRef, person, role, credit
   });
 
   // Search input
-  let searchTimer;
+  let searchTimer, searchController;
   document.getElementById(`${prefix}_csearch_${idx}`).addEventListener('input', function() {
     clearTimeout(searchTimer);
     const val = this.value;
     const res = document.getElementById(`${prefix}_cresults_${idx}`);
     if (val.length < 2) { res.innerHTML = ''; res.style.display = 'none'; return; }
     searchTimer = setTimeout(async () => {
-      const rows = await get(`/person?last_name=ilike.${encodeURIComponent(val)}*&select=person_id,first_name,last_name,born,died&order=last_name.asc&limit=10`);
+      searchController?.abort();
+      searchController = new AbortController();
+      let rows;
+      try {
+        rows = await get(`/person?last_name=ilike.${encodeURIComponent(val)}*&select=person_id,first_name,last_name,born,died&order=last_name.asc&limit=10`, searchController.signal);
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        throw err;
+      }
       if (!rows.length) { res.innerHTML = ''; res.style.display = 'none'; return; }
       res.style.display = 'block';
       res.innerHTML = rows.map(p => {
         const pname = [p.first_name,p.last_name].filter(Boolean).join(' ');
         const dates = p.born||p.died ? ` (${[p.born,p.died].filter(Boolean).join('–')})` : '';
-        return `<div class="lookup-item" data-pid="${p.person_id}" data-name="${pname.replace(/"/g,'&quot;')}"><span class="lookup-name">${pname}</span><span class="lookup-meta">${dates}</span></div>`;
+        return `<div class="lookup-item" data-pid="${p.person_id}" data-name="${escapeHtml(pname)}"><span class="lookup-name">${escapeHtml(pname)}</span><span class="lookup-meta">${escapeHtml(dates)}</span></div>`;
       }).join('');
       // Wire result clicks
       res.querySelectorAll('.lookup-item').forEach(item => {
@@ -698,9 +745,9 @@ document.getElementById('newForm').addEventListener('submit', async e => {
           const dupIds = dupScores.map(s => s.composition_id).join(',');
           const dupComps = await get(`/composition?composition_id=in.(${dupIds})&select=composition_id,title`);
           const titleMap = Object.fromEntries(dupComps.map(c => [c.composition_id, c.title]));
-          const dupLines = dupScores.map(s => `• "${titleMap[s.composition_id] || '?'}" (score_id=${s.score_id}, plate=${s.plate_number})`).join('<br>');
+          const dupLines = dupScores.map(s => `• "${escapeHtml(titleMap[s.composition_id] || '?')}" (score_id=${s.score_id}, plate=${escapeHtml(s.plate_number)})`).join('<br>');
           msgEl.innerHTML = `<div style="background:#fff8e8;border:1px solid #e8c84a;border-radius:4px;padding:0.6rem 0.85rem;font-size:0.85rem;color:#5a4a00">
-            <div style="font-weight:600;margin-bottom:0.35rem">⚠ Denne utgiveren har allerede et noteeksemplar med platenummer <em>${data.plate}</em> (ingenting er lagret ennå):</div>
+            <div style="font-weight:600;margin-bottom:0.35rem">⚠ Denne utgiveren har allerede et noteeksemplar med platenummer <em>${escapeHtml(data.plate)}</em> (ingenting er lagret ennå):</div>
             <div style="margin-bottom:0.5rem">${dupLines}</div>
             <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem">
               <button id="scoreDupConfirm" class="btn" style="font-size:0.8rem;padding:0.25rem 0.6rem;background:#c8a000;color:#fff;border:none;border-radius:4px;cursor:pointer">Lagre likevel</button>
@@ -738,11 +785,7 @@ async function performNewEntrySave(data, sourceIsNew) {
   let compId = null;
   try {
     // Publisher (create if new)
-    let pubId = data.publisherId;
-    if (!pubId && data.publisherName) {
-      const existingPub = await get(`/publisher?publisher_name=ilike.${encodeURIComponent(data.publisherName)}&select=publisher_id`);
-      pubId = existingPub.length ? existingPub[0].publisher_id : (await post('publisher', { publisher_name: data.publisherName })).publisher_id;
-    }
+    const pubId = await resolveOrCreatePublisher(data.publisherName, data.publisherId);
 
     // Source (create if new & confirmed above) — source_id is manually assigned, not autoincrement
     let sourceId = null;
@@ -846,21 +889,29 @@ function hideDuplicateWarn() {
   document.getElementById('n_notDuplicate').checked = false;
 }
 
-let dupCheckTimeout;
+let dupCheckTimeout, dupCheckController;
 document.getElementById('n_title').addEventListener('input', () => {
   clearTimeout(dupCheckTimeout);
   hideDuplicateWarn();
   const q = document.getElementById('n_title').value.trim();
   if (q.length < 2) return;
   dupCheckTimeout = setTimeout(async () => {
-    const results = await get(`/composition?title=ilike.*${encodeURIComponent(q)}*&select=composition_id,title,year_composed,public_domain&limit=8&order=title`);
+    dupCheckController?.abort();
+    dupCheckController = new AbortController();
+    let results;
+    try {
+      results = await get(`/composition?title=ilike.*${encodeURIComponent(q)}*&select=composition_id,title,year_composed,public_domain&limit=8&order=title`, dupCheckController.signal);
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      throw err;
+    }
     if (!results.length) return;
     const list = document.getElementById('n_duplicateList');
     list.innerHTML = results.map(c => {
-      const year = c.year_composed ? ` (${c.year_composed})` : '';
+      const year = c.year_composed ? ` (${escapeHtml(c.year_composed)})` : '';
       const pd   = c.public_domain === 'Yes' ? ' · PD' : '';
       return `<div style="padding:0.2rem 0;border-bottom:1px solid #e8d88a;display:flex;align-items:center;justify-content:space-between;gap:0.75rem">
-        <span>${c.title}${year}${pd}</span>
+        <span>${escapeHtml(c.title)}${year}${pd}</span>
         <a href="#" onclick="event.preventDefault();switchTab('edit');loadEditForm(${c.composition_id})"
            style="font-size:0.78rem;white-space:nowrap;color:var(--accent);text-decoration:underline">Åpne →</a>
       </div>`;
@@ -948,10 +999,10 @@ async function searchCompositions(q, myToken) {
     const investigateBadge = c.to_investigate ? ' <span style="font-size:0.75rem;background:#fff3cd;border:1px solid #f0c040;border-radius:2px;padding:0.1rem 0.4rem;color:#7a5c00;font-weight:500;vertical-align:middle">🔍 Undersøke</span>' : '';
     const underArbeidBadge = c.under_arbeid   ? ' <span style="font-size:0.75rem;background:#fff0d6;border:1px solid #e8a000;border-radius:2px;padding:0.1rem 0.4rem;color:#7a4500;font-weight:500;vertical-align:middle">⚙ Under arbeid</span>' : '';
     const composerMeta = c._composer
-      ? ` · <span style="cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();openComposerScores(${c._composer_id||'null'},'${(c._composer||'').replace(/'/g,"\\'")}')">🎵 ${c._composer}</span>`
+      ? ` · <span style="cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();openComposerScores(${c._composer_id||'null'},'${escapeJsAttr(c._composer||'')}')">🎵 ${escapeHtml(c._composer)}</span>`
       : '';
-    d.innerHTML = `<div class="result-title">${c.title}${approvedBadge}${investigateBadge}${underArbeidBadge}</div>
-                   <div class="result-meta">${c.year_composed || '—'} · ${c.public_domain === 'Yes' ? 'PD' : 'Opphavsrett'}${composerMeta}</div>`;
+    d.innerHTML = `<div class="result-title">${escapeHtml(c.title)}${approvedBadge}${investigateBadge}${underArbeidBadge}</div>
+                   <div class="result-meta">${escapeHtml(c.year_composed || '—')} · ${c.public_domain === 'Yes' ? 'PD' : 'Opphavsrett'}${composerMeta}</div>`;
     if (c.approved) d.classList.add('is-approved');
     d.onclick = () => loadEditForm(c.composition_id);
     container.appendChild(d);
@@ -1131,6 +1182,13 @@ async function toggleApproval() {
 async function saveEdit() {
   const btn = document.getElementById('editSaveBtn');
 
+  // Freeze contributor roles now, before the confirm() pause below, so the save can't pick
+  // up a role changed while that dialog was open (same fix applied to Ny innføring).
+  const frozenContributors = eContributors.map(c => ({
+    ...c,
+    role: document.getElementById(`e_crole_${c.idx}`)?.value || 'Composer',
+  }));
+
   // Validate source BEFORE touching the database or showing the spinner —
   // and remember whether it needs to be created, rather than discarding it later.
   const esource = document.getElementById('e_source').value.trim();
@@ -1165,10 +1223,9 @@ async function saveEdit() {
 
     // Update contributors
     await del('composition_person', `composition_id=eq.${compId}`);
-    for (const c of eContributors) {
+    for (const c of frozenContributors) {
       if (!c.person_id) continue;
-      const role = document.getElementById(`e_crole_${c.idx}`)?.value || 'Composer';
-      await post('composition_person', { composition_id: parseInt(compId), person_id: c.person_id, role, credited_as: c.credited_as || null, translates_person_id: role === 'Translator' ? (c.translates_person_id || null) : null });
+      await post('composition_person', { composition_id: parseInt(compId), person_id: c.person_id, role: c.role, credited_as: c.credited_as || null, translates_person_id: c.role === 'Translator' ? (c.translates_person_id || null) : null });
     }
 
     // Update tags
@@ -1178,7 +1235,7 @@ async function saveEdit() {
     }
 
     // Update score
-    const pubId   = await resolvePublisher('e_publisherSearch', ePubState, 'id');
+    const pubId   = await resolveOrCreatePublisher(document.getElementById('e_publisherSearch').value.trim(), ePubState.id);
     const plate   = document.getElementById('e_plateNumber').value.trim();
     const sourceId = esource ? (sourceIsNew ? await ensureSourceId(esource) : getSourceId(esource)) : null;
     const scoreData = { plate_number: plate||null, publisher_id: pubId||null, year_published: document.getElementById('e_yearPublished').value.trim()||null, pdf_url: document.getElementById('e_pdfUrl').value.trim()||null, mp3_url: document.getElementById('e_mp3Url').value.trim()||null, source_id: sourceId||null, has_frontpage: document.getElementById('e_hasFrontpage').checked, ai_frontpage: document.getElementById('e_aiFrontpage').checked };
@@ -1332,7 +1389,7 @@ document.getElementById('p_bioUrl').addEventListener('input', function() {
   else { link.style.display = 'none'; }
 });
 
-let personSearchTimeout;
+let personSearchTimeout, personSearchController;
 document.getElementById('personSearch').addEventListener('input', () => {
   clearTimeout(personSearchTimeout);
   // Clear form when user starts typing a new search
@@ -1341,7 +1398,15 @@ document.getElementById('personSearch').addEventListener('input', () => {
   const q = document.getElementById('personSearch').value.trim();
   if (q.length < 2) { document.getElementById('personSearchResults').innerHTML = ''; return; }
   personSearchTimeout = setTimeout(async () => {
-    const rows = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name,born,died,nationality,gender&limit=20&order=last_name`);
+    personSearchController?.abort();
+    personSearchController = new AbortController();
+    let rows;
+    try {
+      rows = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name,born,died,nationality,gender&limit=20&order=last_name`, personSearchController.signal);
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      throw err;
+    }
     const container = document.getElementById('personSearchResults');
     container.innerHTML = '';
     if (!rows.length) { container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">Ingen treff.</div>'; return; }
@@ -1354,8 +1419,8 @@ document.getElementById('personSearch').addEventListener('input', () => {
       d.style.cssText = 'display:flex;justify-content:space-between;align-items:center;cursor:pointer';
       d.onclick = () => loadPersonForm(p.person_id);
       const personLeft = document.createElement('div');
-      personLeft.innerHTML = `<div class="result-title">${flag} ${p.first_name || ''} ${p.last_name}${femBadge}</div>
-                     <div class="result-meta">${years}</div>`;
+      personLeft.innerHTML = `<div class="result-title">${flag} ${escapeHtml(p.first_name || '')} ${escapeHtml(p.last_name)}${femBadge}</div>
+                     <div class="result-meta">${escapeHtml(years)}</div>`;
       const scoreBtn = document.createElement('button');
       scoreBtn.type = 'button';
       scoreBtn.title = 'Vis komposisjoner';
@@ -1554,11 +1619,11 @@ async function loadPersonCompositions(personId) {
           <th style="text-align:center;padding:0.3rem">Rediger</th>
         </tr>
         ${comps.map(c => `<tr style="border-bottom:1px solid var(--border)">
-          <td style="padding:0.3rem 0.5rem">${c.title}</td>
-          <td style="padding:0.3rem;color:var(--muted);font-size:0.78rem">${ROLE_NO[c.role]||c.role||''}</td>
-          <td style="text-align:center;color:var(--muted);padding:0.3rem">${c.year_composed||'—'}</td>
+          <td style="padding:0.3rem 0.5rem">${escapeHtml(c.title)}</td>
+          <td style="padding:0.3rem;color:var(--muted);font-size:0.78rem">${escapeHtml(ROLE_NO[c.role]||c.role||'')}</td>
+          <td style="text-align:center;color:var(--muted);padding:0.3rem">${escapeHtml(c.year_composed||'—')}</td>
           <td style="text-align:center;padding:0.3rem">${c.public_domain==='Yes'?'✓':''}</td>
-          <td style="text-align:center;padding:0.3rem">${c.musescore_link?`<a href="${c.musescore_link}" target="_blank">🔗</a>`:''}</td>
+          <td style="text-align:center;padding:0.3rem">${c.musescore_link?`<a href="${escapeHtml(c.musescore_link)}" target="_blank" rel="noopener noreferrer">🔗</a>`:''}</td>
           <td style="text-align:center;padding:0.3rem"><button type="button" onclick="switchTab('edit');loadEditForm(${c.composition_id})" style="background:none;border:1px solid var(--border);border-radius:3px;padding:0.1rem 0.4rem;cursor:pointer;font-size:0.8rem">✏️</button></td>
         </tr>`).join('')}
       </table>
@@ -1652,7 +1717,7 @@ async function addNewPerson() {
     window._personDupMatch = { person_id: match.person_id, fullName, yrs, pseudonym: match.pseudonym };
     const msgEl = document.getElementById('personMsg');
     msgEl.innerHTML = `<div style="background:#fff8e8;border:1px solid #e8c84a;border-radius:4px;padding:0.6rem 0.85rem;font-size:0.85rem;color:#5a4a00">
-      <div style="font-weight:600;margin-bottom:0.35rem">&#9888; Person finnes allerede: ${fullName}${yrs} [ID ${match.person_id}]</div>
+      <div style="font-weight:600;margin-bottom:0.35rem">&#9888; Person finnes allerede: ${escapeHtml(fullName)}${escapeHtml(yrs)} [ID ${match.person_id}]</div>
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem">
         <button onclick="addAsPseudonymFromMatch()" class="btn btn-secondary" style="font-size:0.8rem;padding:0.25rem 0.6rem">Legg til som pseudonym</button>
         <button onclick="forceAddPerson(this)" class="btn" style="font-size:0.8rem;padding:0.25rem 0.6rem;background:#c8a000;color:#fff;border:none;border-radius:4px;cursor:pointer">Opprett likevel som ny person</button>
@@ -1891,9 +1956,9 @@ function biOpenPanel(pid) {
   let panelHtml = '';
   if (bioMode === 'unverified') {
     panelHtml = `
-      <div style="background:var(--paper);border:1px solid var(--border);border-radius:5px;padding:0.6rem 0.9rem;font-size:0.82rem;word-break:break-all;margin-bottom:1rem;font-family:monospace">${p.bio_url}</div>
+      <div style="background:var(--paper);border:1px solid var(--border);border-radius:5px;padding:0.6rem 0.9rem;font-size:0.82rem;word-break:break-all;margin-bottom:1rem;font-family:monospace">${escapeHtml(p.bio_url)}</div>
       <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
-        <a class="btn btn-secondary" href="${p.bio_url}" target="_blank" style="font-size:0.85rem">🔗 Åpne lenke</a>
+        <a class="btn btn-secondary" href="${escapeHtml(p.bio_url)}" target="_blank" rel="noopener noreferrer" style="font-size:0.85rem">🔗 Åpne lenke</a>
         <button type="button" class="btn btn-primary" id="btnBioVerify" onclick="biDoVerify(${p.person_id})" style="font-size:0.85rem">✓ Verifiser</button>
         <button type="button" class="btn btn-secondary" onclick="biDoNull(${p.person_id})" style="font-size:0.85rem;color:var(--accent);border-color:var(--accent)">✗ Fjern lenke</button>
         <button type="button" class="btn btn-secondary" onclick="biToggleScores(${p.person_id}, this)" style="font-size:0.85rem">♪ Vis komposisjoner</button>
@@ -1927,9 +1992,9 @@ function biOpenPanel(pid) {
   panel.style.cssText = 'position:sticky;top:1rem;z-index:10;border:2px solid var(--accent);margin-bottom:1.5rem';
   panel.innerHTML = `
     <div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:600;margin-bottom:0.2rem">
-      <a href="#" onclick="switchTab('person');loadPersonForm(${p.person_id});return false;" style="color:inherit;text-decoration:none;border-bottom:1px solid var(--border)">${name}</a>
+      <a href="#" onclick="switchTab('person');loadPersonForm(${p.person_id});return false;" style="color:inherit;text-decoration:none;border-bottom:1px solid var(--border)">${escapeHtml(name)}</a>
     </div>
-    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem">${meta}</div>
+    <div style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem">${escapeHtml(meta)}</div>
     ${panelHtml}
     <div id="bioMsg" style="font-size:0.82rem;margin-top:0.5rem;color:var(--muted);min-height:1.2em"></div>
     <div id="bioScores" style="display:none;margin-top:0.75rem;border-top:1px solid var(--border);padding-top:0.75rem;font-size:0.85rem"></div>`;
@@ -2037,14 +2102,14 @@ async function biToggleScores(pid, btn) {
       <div style="font-weight:600;margin-bottom:0.5rem;color:var(--muted);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em">${comps.length} komposisjon${comps.length !== 1 ? 'er' : ''}</div>
       ${comps.map(comp => `
         <div style="display:flex;justify-content:space-between;padding:0.25rem 0;border-bottom:1px solid var(--faint)">
-          <a href="#" onclick="switchTab('edit');loadEditForm(${comp.composition_id});return false;" style="color:var(--accent);text-decoration:none">${comp.title}</a>${comp.year_composed ? ` <span style="color:var(--muted)">(${comp.year_composed})</span>` : ''}
-          <span style="color:var(--muted);font-size:0.78rem;margin-left:1rem;white-space:nowrap">${(roleMap[comp.composition_id] || []).join(', ')}</span>
+          <a href="#" onclick="switchTab('edit');loadEditForm(${comp.composition_id});return false;" style="color:var(--accent);text-decoration:none">${escapeHtml(comp.title)}</a>${comp.year_composed ? ` <span style="color:var(--muted)">(${escapeHtml(comp.year_composed)})</span>` : ''}
+          <span style="color:var(--muted);font-size:0.78rem;margin-left:1rem;white-space:nowrap">${escapeHtml((roleMap[comp.composition_id] || []).join(', '))}</span>
         </div>`).join('')}
     `;
     scoresDiv.style.display = 'block';
     btn.textContent = '♪ Skjul';
   } catch(e) {
-    scoresDiv.innerHTML = `<em style="color:var(--accent)">Feil: ${e.message}</em>`;
+    scoresDiv.innerHTML = `<em style="color:var(--accent)">Feil: ${escapeHtml(e.message)}</em>`;
     scoresDiv.style.display = 'block';
     btn.textContent = '♪ Vis komposisjoner';
   }
@@ -2337,10 +2402,10 @@ function showArbeidsSection(section) {
     return `<tr id="arbeid-row-${c.composition_id}" style="border-bottom:1px solid var(--border)">
       <td style="padding:0.35rem 0.6rem">
         <a href="#" onclick="event.preventDefault();switchTab('edit');loadEditForm(${c.composition_id})"
-           style="color:var(--ink);text-decoration:none;border-bottom:1px solid var(--border)">${c.title}</a>
+           style="color:var(--ink);text-decoration:none;border-bottom:1px solid var(--border)">${escapeHtml(c.title)}</a>
       </td>
-      <td style="padding:0.35rem 0.6rem;color:var(--muted);font-size:0.85rem">${c._composer || '—'}</td>
-      <td style="padding:0.35rem 0.6rem;color:var(--muted);font-size:0.85rem">${c.year_composed || '—'}</td>
+      <td style="padding:0.35rem 0.6rem;color:var(--muted);font-size:0.85rem">${escapeHtml(c._composer || '—')}</td>
+      <td style="padding:0.35rem 0.6rem;color:var(--muted);font-size:0.85rem">${escapeHtml(c.year_composed || '—')}</td>
       ${msCell}
       ${checkCell}
     </tr>`;
@@ -2419,12 +2484,12 @@ async function loadSiste() {
         <td style="padding:0.35rem 0.5rem;font-size:0.8rem;color:var(--muted);white-space:nowrap">#${c.composition_id}</td>
         <td style="padding:0.35rem 0.5rem">
           <a href="#" onclick="event.preventDefault();switchTab('edit');loadEditForm(${c.composition_id})"
-             style="color:var(--ink);text-decoration:none;border-bottom:1px solid var(--border)">${c.title||'(uten tittel)'}</a>
+             style="color:var(--ink);text-decoration:none;border-bottom:1px solid var(--border)">${escapeHtml(c.title||'(uten tittel)')}</a>
         </td>
-        <td style="padding:0.35rem 0.5rem;color:var(--muted);font-size:0.85rem">${composerMap[c.composition_id]||'—'}</td>
-        <td style="padding:0.35rem 0.5rem;color:var(--muted);font-size:0.85rem;text-align:right">${c.year_composed||'—'}</td>
+        <td style="padding:0.35rem 0.5rem;color:var(--muted);font-size:0.85rem">${escapeHtml(composerMap[c.composition_id]||'—')}</td>
+        <td style="padding:0.35rem 0.5rem;color:var(--muted);font-size:0.85rem;text-align:right">${escapeHtml(c.year_composed||'—')}</td>
         <td style="padding:0.35rem 0.5rem;text-align:right;white-space:nowrap">
-          <button type="button" onclick="deleteSiste(${c.composition_id}, '${(c.title||'').replace(/'/g, "\\'")}')"
+          <button type="button" onclick="deleteSiste(${c.composition_id}, '${escapeJsAttr(c.title||'')}')"
             style="background:none;border:1px solid #c07070;color:#a03030;border-radius:3px;padding:0.2rem 0.6rem;font-size:0.8rem;cursor:pointer;font-family:inherit">
             Slett
           </button>
@@ -2445,7 +2510,7 @@ async function loadSiste() {
         <tbody>${rows}</tbody>
       </table>`;
   } catch(e) {
-    area.innerHTML = `<div style="color:#a03030;font-size:.85rem;padding:0.5rem 0">Feil: ${e.message}</div>`;
+    area.innerHTML = `<div style="color:#a03030;font-size:.85rem;padding:0.5rem 0">Feil: ${escapeHtml(e.message)}</div>`;
   }
 }
 
