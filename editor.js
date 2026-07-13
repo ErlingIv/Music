@@ -1131,9 +1131,15 @@ async function toggleApproval() {
 async function saveEdit() {
   const btn = document.getElementById('editSaveBtn');
 
-  // Validate source BEFORE touching the database or showing the spinner
-  const esource = document.getElementById('e_source').value;
-  if (!validateSource('e_source')) return;
+  // Validate source BEFORE touching the database or showing the spinner —
+  // and remember whether it needs to be created, rather than discarding it later.
+  const esource = document.getElementById('e_source').value.trim();
+  let sourceIsNew = false;
+  if (esource && !findSourceMatch(esource)) {
+    const proceed = confirm(`"${esource}" er ikke en kjent kilde.\n\nKlikk OK for å opprette den som en ny kilde og lagre, eller Avbryt for å velge en eksisterende kilde.`);
+    if (!proceed) return;
+    sourceIsNew = true;
+  }
 
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Lagrer…';
   showMsg('editMsg', '', '');
@@ -1174,7 +1180,8 @@ async function saveEdit() {
     // Update score
     const pubId   = await resolvePublisher('e_publisherSearch', ePubState, 'id');
     const plate   = document.getElementById('e_plateNumber').value.trim();
-    const scoreData = { plate_number: plate||null, publisher_id: pubId||null, year_published: document.getElementById('e_yearPublished').value.trim()||null, pdf_url: document.getElementById('e_pdfUrl').value.trim()||null, mp3_url: document.getElementById('e_mp3Url').value.trim()||null, source_id: getSourceId(esource)||null, has_frontpage: document.getElementById('e_hasFrontpage').checked, ai_frontpage: document.getElementById('e_aiFrontpage').checked };
+    const sourceId = esource ? (sourceIsNew ? await ensureSourceId(esource) : getSourceId(esource)) : null;
+    const scoreData = { plate_number: plate||null, publisher_id: pubId||null, year_published: document.getElementById('e_yearPublished').value.trim()||null, pdf_url: document.getElementById('e_pdfUrl').value.trim()||null, mp3_url: document.getElementById('e_mp3Url').value.trim()||null, source_id: sourceId||null, has_frontpage: document.getElementById('e_hasFrontpage').checked, ai_frontpage: document.getElementById('e_aiFrontpage').checked };
 
     if (scoreId) {
       await patch('score', `score_id=eq.${scoreId}`, scoreData);
