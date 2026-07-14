@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Biography — Norske Musikknoter</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=Source+Serif+4:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #f7f4ee;
+    --paper:   #fffef9;
+    --ink:     #1a1814;
+    --muted:   #7a7060;
+    --faint:   #e8e2d4;
+    --accent:  #8b3a1e;
+    --accent2: #2a5c45;
+    --border:  #d4cdc0;
+    --serif:   'Playfair Display', Georgia, serif;
+    --body:    'Source Serif 4', Georgia, serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--body); background: var(--bg); color: var(--ink); min-height: 100vh; }
+
+  .site-header {
+    background: var(--paper);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .back-link {
+    font-size: 0.82rem;
+    color: var(--muted);
+    text-decoration: none;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .back-link:hover { color: var(--accent); }
+  .site-name {
+    font-family: var(--serif);
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  /* Article reads best narrower than the composer page's list layout */
+  main { max-width: 680px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  .bio-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .bio-photo {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .bio-name {
+    font-family: var(--serif);
+    font-size: clamp(1.4rem, 2.6vw, 1.9rem);
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--ink);
+  }
+  .bio-dates {
+    font-size: 0.95rem;
+    color: var(--muted);
+    margin-top: 0.2rem;
+    font-weight: 300;
+  }
+  .bio-eyebrow {
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.3rem;
+  }
+
+  .bio-article {
+    font-size: 1.02rem;
+    line-height: 1.85;
+    color: var(--ink);
+  }
+  .bio-article p { margin-bottom: 1.1em; }
+  .bio-article p:first-of-type::first-letter {
+    font-family: var(--serif);
+    font-size: 2.8em;
+    font-weight: 700;
+    float: left;
+    line-height: 0.85;
+    padding: 0.05em 0.08em 0 0;
+    color: var(--accent);
+  }
+
+  .composer-link-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 2rem;
+    font-size: 0.85rem;
+    color: var(--accent);
+    text-decoration: none;
+    border: 1px solid var(--accent);
+    border-radius: 5px;
+    padding: 5px 12px;
+  }
+  .composer-link-back:hover { background: var(--accent); color: #fff; }
+
+  .loading-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .error-state { color: #a32d2d; font-size: 0.9rem; padding: 1rem 0; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a class="back-link" href="index.html">← Back</a>
+  <a class="site-name" href="index.html" id="siteNameLink">Norske Musikknoter</a>
+</header>
+
+<main>
+  <div id="content"><div class="loading-state">Loading…</div></div>
+</main>
+
+<script src="config.js"></script>
+<script>
+document.getElementById('siteNameLink').textContent = SITE_NAME;
+const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
+const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
+
+const params   = new URLSearchParams(window.location.search);
+const personId = params.get('id');
+
+function lifespan(born, died, diedUncertain) {
+  const uncertain = (diedUncertain === 'yes' || diedUncertain === true);
+  if (!born && !died) return '';
+  if (born && !died) return String(born);
+  if (!born && died)  return uncertain ? 'after ' + died : String(died);
+  return born + '–' + (uncertain ? 'after ' + died : died);
+}
+
+// Splits on blank lines into paragraphs; single line breaks within a
+// paragraph become <br> (matches how bio_text is typically transcribed).
+function renderArticle(text) {
+  if (!text) return '';
+  return text
+    .split(/\n\s*\n/)
+    .map(p => p.trim())
+    .filter(Boolean)
+    .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+    .join('');
+}
+
+async function load() {
+  const el = document.getElementById('content');
+  if (!personId) {
+    el.innerHTML = '<p class="error-state">No person ID specified.</p>';
+    return;
+  }
+
+  try {
+    const pR = await fetch(
+      `${SUPABASE_URL}/rest/v1/person?person_id=eq.${personId}&select=person_id,first_name,last_name,born,died,died_uncertain,bio_text,photo_url`,
+      { headers: H }
+    );
+    const person = (await pR.json())[0];
+    if (!person) throw new Error('Person not found');
+    document.title = `${person.first_name} ${person.last_name} — Biography — ${SITE_NAME}`;
+
+    if (!person.bio_text) {
+      el.innerHTML = `
+        <p class="error-state">No biography text is available for this person yet.</p>
+        <a class="composer-link-back" href="composer.html?id=${personId}">← Back to ${person.first_name} ${person.last_name}</a>`;
+      return;
+    }
+
+    const years = lifespan(person.born, person.died, person.died_uncertain);
+
+    el.innerHTML = `
+      <div class="bio-header">
+        ${person.photo_url ? `<img src="${person.photo_url}" alt="" class="bio-photo">` : ''}
+        <div>
+          <div class="bio-eyebrow">Biography</div>
+          <h1 class="bio-name">${person.first_name} ${person.last_name}</h1>
+          ${years ? `<p class="bio-dates">${years}</p>` : ''}
+        </div>
+      </div>
+
+      <article class="bio-article">${renderArticle(person.bio_text)}</article>
+
+      <a class="composer-link-back" href="composer.html?id=${personId}">← Back to ${person.first_name} ${person.last_name}</a>
+    `;
+  } catch (e) {
+    el.innerHTML = `<p class="error-state">Error: ${e.message}</p>`;
+  }
+}
+
+load();
+</script>
+</body>
+</html>
