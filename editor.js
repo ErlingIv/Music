@@ -1455,6 +1455,7 @@ async function loadPersonForm(personId) {
   document.getElementById('p_bioUrl').value          = p.bio_url       || '';
   document.getElementById('p_bioUrlVerified').checked = (p.bio_url_verified === true);
   document.getElementById('p_bioText').value         = p.bio_text      || '';
+  document.getElementById('p_bioSource').value        = p.bio_source    || '';
   document.getElementById('p_photoUrl').value        = p.photo_url     || '';
   updatePersonPhotoPreview();
   document.getElementById('p_flag').textContent      = countryCodeToFlag(p.nationality || '');
@@ -1586,6 +1587,7 @@ async function savePerson() {
       bio_url:              document.getElementById('p_bioUrl').value.trim() || null,
       bio_url_verified:     document.getElementById('p_bioUrlVerified').checked,
       bio_text:             document.getElementById('p_bioText').value.trim() || null,
+      bio_source:           document.getElementById('p_bioSource').value.trim() || null,
       photo_url:            document.getElementById('p_photoUrl').value.trim() || null,
     });
     showMsg('personMsg', '✓ Person oppdatert', 'success');

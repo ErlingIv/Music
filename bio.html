@@ -104,6 +104,20 @@
     color: var(--accent);
   }
 
+  .bio-source {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--faint);
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-style: italic;
+  }
+  .bio-source span {
+    font-weight: 600;
+    font-style: normal;
+    color: var(--accent2);
+  }
+
   .composer-link-back {
     display: inline-flex;
     align-items: center;
@@ -177,7 +191,7 @@ async function load() {
 
   try {
     const pR = await fetch(
-      `${SUPABASE_URL}/rest/v1/person?person_id=eq.${personId}&select=person_id,first_name,last_name,born,died,died_uncertain,bio_text,photo_url`,
+      `${SUPABASE_URL}/rest/v1/person?person_id=eq.${personId}&select=person_id,first_name,last_name,born,died,died_uncertain,bio_text,bio_source,photo_url`,
       { headers: H }
     );
     const person = (await pR.json())[0];
@@ -204,6 +218,7 @@ async function load() {
       </div>
 
       <article class="bio-article">${renderArticle(person.bio_text)}</article>
+      ${person.bio_source ? `<p class="bio-source"><span>Kilde:</span> ${person.bio_source}</p>` : ''}
 
       <a class="composer-link-back" href="composer.html?id=${personId}">← Back to ${person.first_name} ${person.last_name}</a>
     `;
