@@ -94,6 +94,23 @@
     color: var(--ink);
   }
   .bio-article p { margin-bottom: 1.1em; }
+  .bio-heading {
+    font-family: var(--serif);
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 1.6em 0 0.6em;
+    line-height: 1.25;
+  }
+  .bio-subheading {
+    font-family: var(--serif);
+    font-size: 1.08rem;
+    font-weight: 600;
+    font-style: italic;
+    color: var(--accent2);
+    margin: 1.3em 0 0.5em;
+    line-height: 1.3;
+  }
   .bio-article p:first-of-type::first-letter {
     font-family: var(--serif);
     font-size: 2.8em;
@@ -168,15 +185,20 @@ function lifespan(born, died, diedUncertain) {
   return born + '–' + (uncertain ? 'after ' + died : died);
 }
 
-// Splits on blank lines into paragraphs; single line breaks within a
-// paragraph become <br> (matches how bio_text is typically transcribed).
+// Splits on blank lines into blocks. A block starting with "## " becomes a
+// subheading, "# " becomes a heading, otherwise it's a paragraph (single
+// line breaks within it become <br>).
 function renderArticle(text) {
   if (!text) return '';
   return text
     .split(/\n\s*\n/)
     .map(p => p.trim())
     .filter(Boolean)
-    .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+    .map(block => {
+      if (block.startsWith('## ')) return `<h3 class="bio-subheading">${block.slice(3).trim()}</h3>`;
+      if (block.startsWith('# '))  return `<h2 class="bio-heading">${block.slice(2).trim()}</h2>`;
+      return `<p>${block.replace(/\n/g, '<br>')}</p>`;
+    })
     .join('');
 }
 
