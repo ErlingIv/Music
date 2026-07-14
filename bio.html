@@ -105,9 +105,7 @@
   }
 
   .bio-source {
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--faint);
+    margin-bottom: 1.5rem;
     font-size: 0.8rem;
     color: var(--muted);
     font-style: italic;
@@ -216,9 +214,9 @@ async function load() {
           ${years ? `<p class="bio-dates">${years}</p>` : ''}
         </div>
       </div>
+      ${person.bio_source ? `<p class="bio-source"><span>Kilde:</span> ${person.bio_source}</p>` : ''}
 
       <article class="bio-article">${renderArticle(person.bio_text)}</article>
-      ${person.bio_source ? `<p class="bio-source"><span>Kilde:</span> ${person.bio_source}</p>` : ''}
 
       <a class="composer-link-back" href="composer.html?id=${personId}">← Back to ${person.first_name} ${person.last_name}</a>
     `;
