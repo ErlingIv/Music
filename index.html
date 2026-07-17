@@ -770,11 +770,6 @@ function renderSection(sec) {
   const composers = allComposers[sec];
   const activeLetter = activeLetters[sec];
 
-  // Update count
-  document.getElementById(`count-no`);
-  document.getElementById(`count-${sec}`).textContent =
-    `${composers.length} composer${composers.length !== 1 ? 's' : ''}`;
-
   // Build alphabet index from available first letters
   const letters = [...new Set(composers.map(c => c.last_name[0].toUpperCase()))].sort();
   const alphaBar = document.getElementById(`alpha-${sec}`);
@@ -798,6 +793,10 @@ function renderSection(sec) {
   // Apply toggles
   if (activeFilters[sec].media)  filtered = filtered.filter(c => c.has_media);
   if (activeFilters[sec].female) filtered = filtered.filter(c => c.is_female);
+
+  // Update count (reflects active letter + toggle filters)
+  document.getElementById(`count-${sec}`).textContent =
+    `${filtered.length} composer${filtered.length !== 1 ? 's' : ''}`;
 
   // Group by first letter
   const groups = {};
