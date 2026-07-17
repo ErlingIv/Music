@@ -439,6 +439,81 @@
     margin-top: 2px;
   }
 
+  /* ── About panel ── */
+  .about-wrap { max-width: 780px; }
+  .about-intro { font-size: 0.92rem; color: var(--muted); font-style: italic; line-height: 1.6; margin-bottom: 2rem; }
+  .about-section { margin-bottom: 2.25rem; }
+  .about-section h3 {
+    font-family: var(--serif);
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--ink);
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1rem;
+  }
+  .about-section p { font-size: 0.92rem; line-height: 1.75; margin-bottom: 0.9rem; }
+  .about-section p:last-child { margin-bottom: 0; }
+
+  .legend { display: flex; flex-direction: column; }
+  .legend-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--faint);
+  }
+  .legend-row:last-child { border-bottom: none; }
+  .legend-mark { flex: 0 0 64px; display: flex; align-items: center; padding-top: 0.1rem; }
+  .legend-text { font-size: 0.88rem; line-height: 1.6; }
+
+  .badge {
+    font-size: 0.75rem;
+    padding: 3px 10px;
+    border-radius: 4px;
+    border: 1px solid;
+    letter-spacing: 0.03em;
+    display: inline-block;
+  }
+  .about-icon-badge {
+    font-size: 0.7rem;
+    padding: 2px 7px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    background: var(--bg);
+    letter-spacing: 0.04em;
+    display: inline-block;
+  }
+  .about-icon-badge.has-pdf { color: var(--accent); border-color: var(--accent); }
+  .about-icon-badge.has-mp3 { color: var(--accent2); border-color: var(--accent2); }
+  .about-icon-badge.pd { color: var(--accent2); border-color: var(--accent2); }
+  .about-tag-badge {
+    background:#eaf3ee; color: var(--accent2); border:1px solid #b8d4c0;
+    border-radius:3px; padding:1px 6px; font-size:0.7rem; display:inline-block;
+  }
+  .about-ms-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .about-ms-dot.ms-low  { background: #aaa49c; }
+  .about-ms-dot.ms-med  { background: #3a6ea8; }
+  .about-ms-dot.ms-high { background: #cc2200; }
+  .about-godkjent-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); display: inline-block; opacity: 0.6; }
+  .about-tier-swatch { width: 6px; height: 22px; display: inline-block; border-radius: 2px; }
+  .about-flag-super { font-size: 0.65em; vertical-align: super; }
+
+  .about-palette { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+  .about-swatch {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px 4px 6px;
+  }
+  .about-swatch-dot { width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.08); flex-shrink: 0; }
+
   /* ── Footer ── */
   footer {
     text-align: center;
@@ -498,6 +573,9 @@
   </div>
   <div class="tab" data-section="illustrators" onclick="switchTab('illustrators'); loadIllustrators()">
     <span class="tab-flag">🎨</span>Illustrators
+  </div>
+  <div class="tab" data-section="about" onclick="switchTab('about')">
+    <span class="tab-flag">ℹ️</span>About
   </div>
 </nav>
 
@@ -576,6 +654,161 @@
     </div>
     <div class="alpha-bar" id="alpha-illustrators"></div>
     <div id="illustrators-list"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
+  </div>
+
+  <!-- About -->
+  <div class="section-panel" id="panel-about">
+    <div class="section-header">
+      <span class="section-flag">ℹ️</span>
+      <span class="section-title">About this collection</span>
+    </div>
+
+    <div class="about-wrap">
+      <p class="about-intro">A personal archive of Norwegian and Nordic sheet music, gathered, catalogued, and made freely available to play, print, and read.</p>
+
+      <div class="about-section">
+        <h3>What's here</h3>
+        <p>This site is a growing archive of historical music scores from Norway and the wider Nordic region, spanning roughly the 1800s to the mid-1900s, alongside a smaller number of international works connected to them (through lyricists, dedications, or shared publishers). Most entries are compositions that have fallen into the public domain, each linked — where available — to a scanned PDF of the original score, an MP3 recording, and a MuseScore transcription.</p>
+        <p>Every composer and lyricist page gathers what's known about them: birth and death years, nationality, a short biography where one exists, and the works connected to them. Entries are added and corrected continually, so some biographical details (especially for lesser-known figures) remain incomplete or uncertain.</p>
+      </div>
+
+      <div class="about-section">
+        <h3>Finding your way around</h3>
+        <div class="legend">
+          <div class="legend-row">
+            <div class="legend-mark">🇳🇴</div>
+            <div class="legend-text"><strong>Norwegian</strong> — composers and lyricists whose primary nationality is Norway.</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-mark">🇸🇪 🇩🇰 🇫🇮 🇮🇸</div>
+            <div class="legend-text"><strong>Nordic</strong> — Sweden, Denmark, Finland, and Iceland.</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-mark">🌍</div>
+            <div class="legend-text"><strong>Others</strong> — composers and lyricists from outside the Nordic region.</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-mark">❓</div>
+            <div class="legend-text"><strong>Unknown</strong> — nationality hasn't been established yet.</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-mark">🎀</div>
+            <div class="legend-text"><strong>Dedications</strong> — a sortable table of works and who they were dedicated to.</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-mark">🎨</div>
+            <div class="legend-text"><strong>Illustrators</strong> — artists credited with cover art or illustrations on a score.</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-mark">🏷</div>
+            <div class="legend-text"><strong>Browse by Tag</strong> — thematic collections such as Norwegian-American music, Polar music, or folk arrangements.</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-mark">✍</div>
+            <div class="legend-text"><strong>Lyricists</strong> — a dedicated directory of everyone credited with writing lyrics.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="about-section">
+        <h3>Symbols on composer and score cards</h3>
+        <div class="legend">
+          <div class="legend-row">
+            <div class="legend-mark"><span class="badge female-badge">♀ Female composer</span></div>
+            <div class="legend-text">Marks composers and lyricists identified as women.</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-mark"><span class="about-icon-badge has-pdf">PDF</span></div>
+            <div class="legend-text">A scanned score is available to view or download.</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-mark"><span class="about-icon-badge has-mp3">MP3</span></div>
+            <div class="legend-text">An audio recording is available.</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-mark"><span class="about-icon-badge">♪</span></div>
+            <div class="legend-text">Linked to a MuseScore transcription.</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-mark"><span class="about-icon-badge pd">PD</span></div>
+            <div class="legend-text">Confirmed public domain.</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-mark"><span class="about-tag-badge">Tag name</span></div>
+            <div class="legend-text">A thematic tag attached to the piece (also browsable from the <em>Browse by Tag</em> page).</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-mark"><span class="about-godkjent-dot"></span></div>
+            <div class="legend-text">A small dot after a title marks an entry as manually reviewed and verified — a discreet internal quality mark, not meant to stand out.</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-mark">🇳🇴<span class="about-flag-super">🇩🇪</span></div>
+            <div class="legend-text">A small superscript flag shows a second, secondary nationality — for example, someone born in one country who is primarily associated with another.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="about-section">
+        <h3>The colour dots on MuseScore links</h3>
+        <p>Next to a composition's MuseScore link, a small coloured dot hints at how much background information (programme notes, history, context) has been written up for that piece on MuseScore:</p>
+        <div class="legend">
+          <div class="legend-row">
+            <div class="legend-mark"><span class="about-ms-dot ms-low"></span></div>
+            <div class="legend-text">Little or no written information yet.</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-mark"><span class="about-ms-dot ms-med"></span></div>
+            <div class="legend-text">A moderate amount of background notes.</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-mark"><span class="about-ms-dot ms-high"></span></div>
+            <div class="legend-text">Substantial background notes — worth a read.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="about-section">
+        <h3>The coloured stripe on composer cards</h3>
+        <p>On the composer grid, a thin coloured stripe down the left edge of each card gives a quick sense of how many public domain works by that person are in the archive:</p>
+        <div class="legend">
+          <div class="legend-row">
+            <div class="legend-mark"><span class="about-tier-swatch tier-1"></span></div>
+            <div class="legend-text">1 work catalogued so far.</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-mark"><span class="about-tier-swatch tier-2"></span></div>
+            <div class="legend-text">2–5 works.</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-mark"><span class="about-tier-swatch tier-3"></span></div>
+            <div class="legend-text">6–19 works.</div>
+          </div>
+          <div class="legend-row">
+            <div class="legend-mark"><span class="about-tier-swatch tier-4"></span></div>
+            <div class="legend-text">20 or more works — the collection's most represented composers.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="about-section">
+        <h3>Design &amp; colour palette</h3>
+        <p>The site's look is deliberately paper-like — warm off-white backgrounds, a serif display face for titles, and a muted, ink-on-paper colour scheme meant to feel closer to an old songbook than a database.</p>
+        <div class="about-palette">
+          <div class="about-swatch"><span class="about-swatch-dot" style="background:#f7f4ee;"></span>Page background</div>
+          <div class="about-swatch"><span class="about-swatch-dot" style="background:#fffef9;"></span>Card / paper surface</div>
+          <div class="about-swatch"><span class="about-swatch-dot" style="background:#1a1814;"></span>Main text (ink)</div>
+          <div class="about-swatch"><span class="about-swatch-dot" style="background:#7a7060;"></span>Secondary text (muted)</div>
+          <div class="about-swatch"><span class="about-swatch-dot" style="background:#8b3a1e;"></span>Accent — active tabs, PDF links, hover states</div>
+          <div class="about-swatch"><span class="about-swatch-dot" style="background:#2a5c45;"></span>Accent 2 — MP3 links, public domain mark, tags</div>
+        </div>
+        <p style="margin-top:1rem">Beyond the interface accents above, a few colours carry specific meaning: pink tones mark female composers and lyricists, blue marks nationality, and the red/gold/blue/grey stripes and dots described above encode catalogue size and how much background text exists for a piece — not aesthetic choices, but shorthand for information the full record would otherwise take a paragraph to say.</p>
+      </div>
+
+      <div class="about-section">
+        <h3>About the source material</h3>
+        <p>Scores come from a mix of sources: physical copies, the National Library of Norway (Nasjonalbiblioteket), IMSLP, university archives, and private collections, among others. Where a composition's copyright status is uncertain, it's marked accordingly rather than assumed to be free to use — only works confirmed as public domain are presented as freely downloadable here.</p>
+      </div>
+    </div>
   </div>
 </main>
 
