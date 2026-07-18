@@ -2238,6 +2238,41 @@ function updatePersonPhotoPreview() {
   }
 }
 
+// Extract the storage object path (bucket-relative filename) from a public photo URL.
+// Returns null if the URL doesn't point into our PHOTO_BUCKET (e.g. blank, or an external URL).
+function extractPhotoStoragePath(url) {
+  if (!url) return null;
+  const marker = `/storage/v1/object/public/${PHOTO_BUCKET}/`;
+  const idx = url.indexOf(marker);
+  if (idx === -1) return null;
+  const encodedPath = url.slice(idx + marker.length);
+  try {
+    return decodeURIComponent(encodedPath);
+  } catch {
+    return encodedPath;
+  }
+}
+
+async function deletePersonPhotoFromStorage(storagePath) {
+  if (!storagePath) return;
+  const deleteUrl = `${SB.replace('/rest/v1','')}/storage/v1/object/${PHOTO_BUCKET}/${encodeURIComponent(storagePath)}`;
+  try {
+    const res = await fetch(deleteUrl, {
+      method: 'DELETE',
+      headers: {
+        'apikey':        KEY,
+        'Authorization': `Bearer ${KEY}`,
+      },
+    });
+    if (!res.ok) {
+      // Non-fatal: old file just stays orphaned, but don't block the new photo from being saved
+      console.warn('Old photo delete failed:', res.status, await res.text());
+    }
+  } catch (err) {
+    console.warn('Old photo delete error:', err);
+  }
+}
+
 async function uploadPersonPhoto(input) {
   const file = input.files[0];
   if (!file) return;
@@ -2245,6 +2280,11 @@ async function uploadPersonPhoto(input) {
   const progress = document.getElementById('p_photoProgress');
   progress.textContent = 'Laster opp…';
   progress.style.display = 'inline';
+
+  // Capture the currently-set photo URL BEFORE we overwrite the field, so we can
+  // delete the old storage object once the new upload succeeds.
+  const previousUrl = document.getElementById('p_photoUrl').value.trim();
+  const previousStoragePath = extractPhotoStoragePath(previousUrl);
 
   // Sanitise filename: strip path separators/spaces, prefix with person id + timestamp to avoid collisions
   const personId = document.getElementById('p_personId').value || 'new';
@@ -2272,6 +2312,12 @@ async function uploadPersonPhoto(input) {
     const publicUrl = `${SB.replace('/rest/v1','')}/storage/v1/object/public/${PHOTO_BUCKET}/${encodeURIComponent(filename)}`;
     document.getElementById('p_photoUrl').value = publicUrl;
     updatePersonPhotoPreview();
+
+    // New photo uploaded and field updated — safe to clean up the old one now.
+    // Guard against deleting the file we just uploaded (shouldn't happen, but cheap to check).
+    if (previousStoragePath && previousStoragePath !== filename) {
+      await deletePersonPhotoFromStorage(previousStoragePath);
+    }
 
     progress.textContent = '✓ Opplastet';
     setTimeout(() => { progress.style.display = 'none'; }, 3000);
