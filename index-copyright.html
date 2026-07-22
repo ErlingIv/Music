@@ -361,6 +361,9 @@
   <div class="tab" data-section="unknown" onclick="switchTab('unknown')">
     <span class="tab-flag">❓</span>Unknown
   </div>
+  <div class="tab" data-section="illustrators" onclick="switchTab('illustrators'); loadIllustrators()">
+    <span class="tab-flag">🎨</span>Illustrators
+  </div>
 </nav>
 
 <main>
@@ -419,6 +422,17 @@
     <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;">These composers have no nationality set. Add a country code in the admin tool and they will move to the correct section.</p>
     <div class="alpha-bar" id="alpha-unknown"></div>
     <div id="composers-unknown"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
+  </div>
+
+  <!-- Illustrators -->
+  <div class="section-panel" id="panel-illustrators">
+    <div class="section-header">
+      <span class="section-flag">🎨</span>
+      <span class="section-title">Illustrators</span>
+      <span class="section-count" id="count-illustrators"></span>
+    </div>
+    <div class="alpha-bar" id="alpha-illustrators"></div>
+    <div id="illustrators-list"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
   </div>
 </main>
 
@@ -787,6 +801,152 @@ document.addEventListener('click', e => {
     document.getElementById('searchResults').style.display = 'none';
   }
 });
+
+// ── Illustrators ──────────────────────────────────────────────────────────────
+let _illustratorsLoaded = false;
+let illustratorsData = [];
+let illustratorsActiveLetter = 'ALL';
+
+async function loadIllustrators() {
+  if (_illustratorsLoaded) return;
+  _illustratorsLoaded = true;
+
+  const listEl  = document.getElementById('illustrators-list');
+  const countEl = document.getElementById('count-illustrators');
+
+  let cpRows = [], offset = 0;
+  while (true) {
+    const r = await fetch(
+      SUPABASE_URL + '/rest/v1/composition_person?role=eq.Illustrator&select=composition_id,person_id&limit=1000&offset=' + offset,
+      { headers: H }
+    );
+    const batch = await r.json();
+    cpRows = cpRows.concat(batch);
+    if (batch.length < 1000) break;
+    offset += 1000;
+  }
+
+  if (!cpRows.length) {
+    listEl.innerHTML = '<div class="loading-state">No illustrators found.</div>';
+    countEl.textContent = '0 illustrators';
+    return;
+  }
+
+  const allCompIds = [...new Set(cpRows.map(r => r.composition_id))];
+
+  // Fetch copyright (non-public-domain) compositions only
+  let copyrightIds = new Set();
+  for (let i = 0; i < allCompIds.length; i += 200) {
+    const chunk = allCompIds.slice(i, i + 200).join(',');
+    const r = await fetch(
+      SUPABASE_URL + '/rest/v1/composition?composition_id=in.(' + chunk + ')&public_domain=neq.Yes&musescore_link=not.is.null&select=composition_id',
+      { headers: H }
+    );
+    (await r.json()).forEach(c => copyrightIds.add(c.composition_id));
+  }
+
+  const cpCpRows = cpRows.filter(r => copyrightIds.has(r.composition_id));
+
+  if (!cpCpRows.length) {
+    listEl.innerHTML = '<div class="loading-state">No copyright illustrated scores found.</div>';
+    countEl.textContent = '0 illustrators';
+    return;
+  }
+
+  const countMap = {};
+  cpCpRows.forEach(row => {
+    countMap[row.person_id] = (countMap[row.person_id] || 0) + 1;
+  });
+
+  const personIds = [...new Set(cpCpRows.map(r => r.person_id))];
+  let persons = [];
+  for (let i = 0; i < personIds.length; i += 200) {
+    const chunk = personIds.slice(i, i + 200).join(',');
+    const r = await fetch(
+      SUPABASE_URL + '/rest/v1/person?person_id=in.(' + chunk + ')&select=person_id,first_name,last_name,born,died,nationality,gender',
+      { headers: H }
+    );
+    persons = persons.concat(await r.json());
+  }
+
+  persons.forEach(p => { p.work_count = countMap[p.person_id] || 0; });
+  persons.sort((a, b) => {
+    const byLast = (a.last_name || '').localeCompare(b.last_name || '', 'no');
+    if (byLast !== 0) return byLast;
+    return (a.first_name || '').localeCompare(b.first_name || '', 'no');
+  });
+
+  illustratorsData = persons;
+  renderIllustrators();
+}
+
+function setIllustratorLetter(letter) {
+  illustratorsActiveLetter = letter;
+  renderIllustrators();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function illustratorCard(p) {
+  const years  = [p.born, p.died].filter(Boolean).join('–');
+  const flag   = p.nationality !== 'NO' ? (FLAGS[p.nationality] || '') : '';
+  const female = p.gender === 'F' ? '<span class="female-badge">♀</span>' : '';
+  return `
+    <a class="composer-card" href="composer-copyright.html?id=${p.person_id}&role=Illustrator">
+      <div class="composer-name">${p.last_name || ''}, ${p.first_name || ''} ${flag}</div>
+      <div class="composer-meta">
+        ${years ? `<span>${years}</span>` : ''}
+        ${female}
+        <span class="score-count">${p.work_count} work${p.work_count !== 1 ? 's' : ''}</span>
+      </div>
+    </a>
+  `;
+}
+
+function renderIllustrators() {
+  const countEl = document.getElementById('count-illustrators');
+  const listEl  = document.getElementById('illustrators-list');
+  const alphaEl = document.getElementById('alpha-illustrators');
+
+  countEl.textContent = illustratorsData.length + ' illustrator' + (illustratorsData.length !== 1 ? 's' : '');
+
+  const letters = [...new Set(illustratorsData.map(p => (p.last_name || '?')[0].toUpperCase()))].sort();
+  const allLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ'.split('');
+
+  alphaEl.innerHTML = `
+    <div class="alpha-btn ${illustratorsActiveLetter === 'ALL' ? 'active' : ''}"
+         onclick="setIllustratorLetter('ALL')">All</div>
+    ${allLetters.map(l => `
+      <div class="alpha-btn ${!letters.includes(l) ? 'disabled' : ''} ${illustratorsActiveLetter === l ? 'active' : ''}"
+           onclick="setIllustratorLetter('${l}')">
+        ${l}
+      </div>`).join('')}
+  `;
+
+  const filtered = illustratorsActiveLetter === 'ALL'
+    ? illustratorsData
+    : illustratorsData.filter(p => (p.last_name || '?')[0].toUpperCase() === illustratorsActiveLetter);
+
+  if (!filtered.length) {
+    listEl.innerHTML = '<div class="loading-state">No illustrators found.</div>';
+    return;
+  }
+
+  const groups = {};
+  filtered.forEach(p => {
+    const letter = (p.last_name || '?')[0].toUpperCase();
+    if (!groups[letter]) groups[letter] = [];
+    groups[letter].push(p);
+  });
+
+  listEl.innerHTML = Object.entries(groups).map(([letter, list]) => `
+    <div class="letter-group">
+      <div class="letter-heading">${letter}</div>
+      <div class="composer-grid">
+        ${list.map(p => illustratorCard(p)).join('')}
+      </div>
+    </div>
+  `).join('');
+}
 
 </script>
 </body>
