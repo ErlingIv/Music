@@ -90,6 +90,7 @@
   }
   .badge-female { background: #f0e6f0; color: #7a3a7a; border-color: #d4b8d4; }
   .badge-nation { background: #eaf0f6; color: #1a4a6e; border-color: #b8cfe0; }
+  .badge-role { background: #f5ede0; color: #8b5a1e; border-color: #e0c9a0; }
 
   .bio-text {
     font-size: 0.95rem;
@@ -213,8 +214,11 @@ const FLAGS = { NO:'🇳🇴', SE:'🇸🇪', DK:'🇩🇰', FI:'🇫🇮', IS:'
                 AT:'🇦🇹', BE:'🇧🇪', HU:'🇭🇺', AU:'🇦🇺', CZ:'🇨🇿',
                 PL:'🇵🇱', VE:'🇻🇪' };
 
+const ROLE_LABELS = { Composer: 'Composer', Lyricist: 'Lyricist', Arranger: 'Arranger', Illustrator: 'Illustrator' };
+
 const params    = new URLSearchParams(window.location.search);
 const personId  = params.get('id');
+const role      = params.get('role') || 'Composer';
 
 function wordCount(text) {
   if (!text || !text.trim()) return 0;
@@ -246,9 +250,9 @@ async function load() {
     if (!person) throw new Error('Composer not found');
     document.title = `${person.first_name} ${person.last_name} — ${SITE_NAME}`;
 
-    // 2. Fetch composition_ids for this composer
+    // 2. Fetch composition_ids for this person, filtered by the requested role
     const ccR = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition_person?person_id=eq.${personId}&role=eq.Composer&select=composition_id`,
+      `${SUPABASE_URL}/rest/v1/composition_person?person_id=eq.${personId}&role=eq.${encodeURIComponent(role)}&select=composition_id`,
       { headers: H }
     );
     const cc = await ccR.json();
@@ -286,9 +290,10 @@ async function load() {
 
     // ── Render ──────────────────────────────────────────────────────────────
 
-    const years  = [person.born, person.died].filter(Boolean).join('–');
-    const flag   = FLAGS[person.nationality] || '';
-    const female = person.gender === 'F';
+    const years    = [person.born, person.died].filter(Boolean).join('–');
+    const flag     = FLAGS[person.nationality] || '';
+    const female   = person.gender === 'F';
+    const roleLbl  = ROLE_LABELS[role] || role;
 
     // bio_text: newlines → <br> for clean display
     const bioHtml = person.bio_text ? person.bio_text.replace(/\n/g, '<br>') : '';
@@ -300,6 +305,7 @@ async function load() {
             <h1 class="composer-name">${person.first_name} ${person.last_name} ${flag}</h1>
             ${years ? `<p class="composer-dates">${years}</p>` : ''}
             <div class="badges">
+              ${role !== 'Composer' ? `<span class="badge badge-role">${roleLbl}</span>` : ''}
               ${female ? '<span class="badge badge-female">♀ Female composer</span>' : ''}
               ${person.nationality ? `<span class="badge badge-nation">${person.nationality}</span>` : ''}
             </div>
