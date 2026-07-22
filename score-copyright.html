@@ -66,14 +66,14 @@
     color: var(--ink);
     margin-bottom: 4px;
   }
-  /* subtitle shows composer name + lifespan only — year is in meta-grid below */
-  .score-sub { font-size: 0.9rem; color: var(--muted); }
+  .score-sub { font-size: 0.95rem; color: var(--muted); margin-top: 4px; }
 
   .meta-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0 2rem;
+    gap: 0.25rem 2rem;
     margin-bottom: 1.5rem;
+    margin-top: 1rem;
   }
   .meta-label {
     font-size: 0.7rem;
@@ -83,8 +83,29 @@
     margin-bottom: 3px;
   }
   .meta-value { font-size: 0.95rem; color: var(--ink); }
+  .meta-year  { font-size: 0.95rem; color: var(--muted); }
+  .meta-opus  { font-size: 0.95rem; color: var(--ink); }
+  .score-title .meta-opus {
+    font-family: var(--sans, inherit);
+    font-weight: 400;
+    font-size: 0.45em;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
   .composer-link { color: var(--accent); text-decoration: none; }
   .composer-link:hover { text-decoration: underline; }
+
+  /* Discrete Godkjent (approved) mark — small muted dot, no visible label */
+  .godkjent-mark {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent2);
+    opacity: 0.5;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
 
   .section-label {
     font-size: 0.7rem;
@@ -161,44 +182,45 @@
   }
   .musescore-link:hover { background: var(--accent); color: #fff; }
 
+  /* ── Media tabs ── */
+  .media-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.25rem;
+  }
+  .media-tab {
+    font-family: var(--body);
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 8px 18px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+    margin-bottom: -1px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .media-tab:hover { color: var(--ink); }
+  .media-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+  .media-tab-panel { display: none; }
+  .media-tab-panel.active { display: block; }
+
+  .no-preview-box {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    margin-bottom: 10px;
+    background: var(--bg);
+  }
+  .no-preview-box p { font-size: 0.9rem; color: var(--muted); }
 
   .loading-state { text-align: center; padding: 3rem; color: var(--muted); font-size: 0.9rem; }
   .error-state { color: #a32d2d; font-size: 0.9rem; padding: 1rem 0; }
-
-  .pdf-container {
-    width: 100%;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    overflow: hidden;
-    margin-top: 1rem;
-    background: #525659;
-  }
-  .pdf-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    background: #383838;
-    color: #fff;
-    font-size: 0.82rem;
-    font-family: var(--body);
-  }
-  .pdf-toolbar button {
-    background: #555;
-    border: none;
-    color: #fff;
-    padding: 3px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.82rem;
-    font-family: var(--body);
-  }
-  .pdf-toolbar button:hover { background: #777; }
-  .pdf-toolbar button:disabled { opacity: 0.4; cursor: default; }
-  #pdfCanvas { display: block; margin: 0 auto; max-width: 100%; }
-  .pdf-loading { color: #ccc; text-align: center; padding: 2rem; font-size: 0.85rem; }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
 
@@ -220,6 +242,21 @@ const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
+// Global linkify — also used by translate.js
+function linkify(text) {
+  if (!text) return '';
+  // Tag links: [tag=ID]name[/tag]
+  text = text.replace(/\[tag=(\d+)\]([^\[]*)\[\/tag\]/gi,
+    '<a href="tags-copyright.html?tag=$1" style="color:var(--accent2);text-decoration:underline;font-size:0.88em;border:1px solid var(--accent2);border-radius:3px;padding:1px 7px;">🏷 $2</a>');
+  // BBCode: [url=https://...]text[/url]
+  text = text.replace(/\[url=(https?:\/\/[^\]]+)\]([^\[]*)\[\/url\]/gi,
+    '<a href="$1" target="_blank" style="color:var(--accent);text-decoration:underline">$2</a>');
+  // Plain URLs not already inside an href or BBCode
+  text = text.replace(/(?<!["=])(https?:\/\/[^\s<\[]+)/g,
+    '<a href="$1" target="_blank" style="color:var(--accent);text-decoration:underline">$1</a>');
+  return text;
+}
+
 const params = new URLSearchParams(window.location.search);
 const compId = params.get('id');
 
@@ -237,6 +274,13 @@ function bbcodeToHtml(text) {
     .replace(/\[i\](.+?)\[\/i\]/gi, '<em>$1</em>');
 }
 
+function lifespan(born, died, diedUncertain) {
+  if (!born && !died) return '';
+  if (born && !died) return born;
+  if (!born && died)  return (diedUncertain === true) ? 'after ' + died : died;
+  return born + '–' + (diedUncertain === true ? 'after ' + died : died);
+}
+
 async function load() {
   const el = document.getElementById('content');
   if (!compId) {
@@ -247,101 +291,149 @@ async function load() {
   try {
     // Fetch composition, score, and all contributors in parallel
     const [compR, scoreR, cpR] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${compId}&select=composition_id,title,year_composed,musescore_link`, { headers: H }),
-      fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=eq.${compId}&select=pdf_url,mp3_url,plate_number,publisher:publisher_id(publisher_name)`, { headers: H }),
-      fetch(`${SUPABASE_URL}/rest/v1/composition_person?composition_id=eq.${compId}&select=person_id,role,credited_as`, { headers: H }),
+      fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${compId}&select=composition_id,title,year_composed,opus_number,musescore_link,musescore_notes,approved,dedication`, { headers: H }),
+      fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=eq.${compId}&select=pdf_url,mp3_url,publisher_id,plate_number`, { headers: H }),
+      fetch(`${SUPABASE_URL}/rest/v1/composition_person?composition_id=eq.${compId}&select=person_id,role,credited_as,translates_person_id`, { headers: H }),
     ]);
 
     const comp  = (await compR.json())[0];
     const score = (await scoreR.json())[0];
     const cp    = await cpR.json();
+
+    // Fetch publisher name if present
+    let publisherName = null;
+    if (score?.publisher_id) {
+      const pubR = await fetch(
+        `${SUPABASE_URL}/rest/v1/publisher?publisher_id=eq.${score.publisher_id}&select=publisher_name`,
+        { headers: H }
+      );
+      const pub = (await pubR.json())[0];
+      if (pub) publisherName = pub.publisher_name;
+    }
+
     const cc    = cp.filter(r => r.role === 'Composer');
     const cl    = cp.filter(r => r.role === 'Lyricist');
+    const ci    = cp.filter(r => r.role === 'Illustrator');
+    const ct    = cp.filter(r => r.role === 'Translator');
     if (!comp) throw new Error('Score not found');
 
     document.title = `${comp.title} — ${SITE_NAME}`;
 
     // Fetch composer details
     const composerDisplayParts = [];
-    let composerName = '—';
-    let composerYears = '';
 
     for (const row of cc) {
       const pR = await fetch(
-        `${SUPABASE_URL}/rest/v1/person?person_id=eq.${row.person_id}&select=person_id,first_name,last_name,born,died`,
+        `${SUPABASE_URL}/rest/v1/person?person_id=eq.${row.person_id}&select=person_id,first_name,last_name,born,died,died_uncertain`,
         { headers: H }
       );
       const p = (await pR.json())[0];
       if (p) {
         const displayName = row.credited_as || `${p.first_name} ${p.last_name}`;
-        const years = [p.born, p.died].filter(Boolean);
-        const yearsStr = years.length ? ` <span style="color:var(--muted);font-size:0.88rem">(${years.join('–')})</span>` : '';
+        const years = lifespan(p.born, p.died, p.died_uncertain);
+        const yearsStr = years ? ` <span style="color:var(--muted);font-size:0.88rem">(${years})</span>` : '';
         composerDisplayParts.push(`<a class="composer-link" href="composer-copyright.html?id=${p.person_id}">${displayName}</a>${yearsStr}`);
-        if (composerName === '—') {
-          composerName = displayName;
-          composerYears = years.length ? `(${years.join('–')})` : '';
-        }
       }
     }
     const composerDisplay = composerDisplayParts.length ? composerDisplayParts.join(', ') : '—';
 
     // Fetch lyricist details
     const lyricistDisplayParts = [];
+    const translatorLinesAll = [];
     for (const row of cl) {
       const pR = await fetch(
-        `${SUPABASE_URL}/rest/v1/person?person_id=eq.${row.person_id}&select=person_id,first_name,last_name,born,died`,
+        `${SUPABASE_URL}/rest/v1/person?person_id=eq.${row.person_id}&select=person_id,first_name,last_name,born,died,died_uncertain`,
         { headers: H }
       );
       const p = (await pR.json())[0];
       if (p) {
         const displayName = row.credited_as || `${p.first_name} ${p.last_name}`;
-        const years = [p.born, p.died].filter(Boolean);
-        const yearsStr = years.length ? ` <span style="color:var(--muted);font-size:0.88rem">(${years.join('–')})</span>` : '';
-        lyricistDisplayParts.push(`<a class="composer-link" href="composer-copyright.html?id=${p.person_id}">${displayName}</a>${yearsStr}`);
+        const years = lifespan(p.born, p.died, p.died_uncertain);
+        const yearsStr = years ? ` <span style="color:var(--muted);font-size:0.88rem">(${years})</span>` : '';
+        const line = `<span class="lyricist-line"><a class="composer-link" href="composer-copyright.html?id=${p.person_id}&role=Lyricist">${displayName}</a>${yearsStr}</span>`;
+        lyricistDisplayParts.push(line);
+
+        // Any translators of this specific lyricist's text, on this composition —
+        // rendered as their own flush-left line(s) below, not nested under the name.
+        const translatorsOfThis = ct.filter(t => t.translates_person_id === p.person_id);
+        for (const tRow of translatorsOfThis) {
+          const tR = await fetch(
+            `${SUPABASE_URL}/rest/v1/person?person_id=eq.${tRow.person_id}&select=person_id,first_name,last_name,born,died,died_uncertain`,
+            { headers: H }
+          );
+          const tp = (await tR.json())[0];
+          if (tp) {
+            const tDisplayName = tRow.credited_as || `${tp.first_name} ${tp.last_name}`;
+            const tYears = lifespan(tp.born, tp.died, tp.died_uncertain);
+            const tYearsStr = tYears ? ` <span style="color:var(--muted);font-size:0.88rem">(${tYears})</span>` : '';
+            translatorLinesAll.push(`translated by <a class="composer-link" href="composer-copyright.html?id=${tp.person_id}&role=Translator">${tDisplayName}</a>${tYearsStr}`);
+          }
+        }
       }
     }
-    const lyricistDisplay = lyricistDisplayParts.length ? lyricistDisplayParts.join(', ') : null;
+    const lyricistDisplay = lyricistDisplayParts.length
+      ? `<span style="display:inline-flex;flex-direction:column;gap:0.15rem;vertical-align:top;">${lyricistDisplayParts.map((p, i) => `<span>${i > 0 ? ', ' : ''}${p}</span>`).join('')}</span>`
+      : null;
+    const translatorRows = translatorLinesAll.map(t => `<p class="meta-value" style="font-size:0.88rem;color:var(--muted);">${t}</p>`).join('');
 
-    // Render notes: newlines → <br>, escape backticks for inline JS
-    const notesHtml = comp.composition_notes ? comp.composition_notes.replace(/\n/g, '<br>') : '';
+    // Fetch illustrator details
+    const illustratorDisplayParts = [];
+    for (const row of ci) {
+      const pR = await fetch(
+        `${SUPABASE_URL}/rest/v1/person?person_id=eq.${row.person_id}&select=person_id,first_name,last_name,born,died,died_uncertain`,
+        { headers: H }
+      );
+      const p = (await pR.json())[0];
+      if (p) {
+        const displayName = row.credited_as || `${p.first_name} ${p.last_name}`;
+        const years = lifespan(p.born, p.died, p.died_uncertain);
+        const yearsStr = years ? ` <span style="color:var(--muted);font-size:0.88rem">(${years})</span>` : '';
+        illustratorDisplayParts.push(`<span style="white-space:nowrap"><a class="composer-link" href="composer-copyright.html?id=${p.person_id}&role=Illustrator">${displayName}</a>${yearsStr}</span>`);
+      }
+    }
+    const illustratorDisplay = illustratorDisplayParts.length ? illustratorDisplayParts.join(', ') : null;
 
-    const publisherName = score?.publisher?.publisher_name || null;
-    const plateNumber   = score?.plate_number || null;
+    // Render notes: linkify URLs, newlines → <br>
+    const notesHtml = comp.musescore_notes
+      ? linkify(comp.musescore_notes.replace(/\n/g, '<br>'))
+      : '';
+    // Store raw notes in a JS variable — never inline into HTML attributes
+    window._notesRaw = comp.musescore_notes || '';
 
     el.innerHTML = `
       <div class="title-row">
-        <h1 class="score-title">${comp.title}</h1>
-        <p class="score-sub">${composerName}${composerYears ? ' ' + composerYears : ''}</p>
+        <h1 class="score-title">${comp.title}${comp.opus_number ? ` <span class="meta-opus">${comp.opus_number}</span>` : ''}${comp.approved ? '<span class="godkjent-mark"></span>' : ''}</h1>
+        <p class="score-sub">${composerDisplay}</p>
       </div>
 
-      <div class="meta-grid">
-        <div>
-          <p class="meta-label">Composer</p>
-          <p class="meta-value">${composerDisplay}</p>
-        </div>
-        <div>
-          <p class="meta-label">Year composed</p>
-          <p class="meta-value">${comp.year_composed || '—'}</p>
-        </div>
-        ${lyricistDisplay ? `<div style="margin-top:0.75rem">
-          <p class="meta-label">Lyricist</p>
-          <p class="meta-value">${lyricistDisplay}</p>
+      <div style="margin-bottom:1.5rem;margin-top:1rem;">
+        ${(comp.year_composed || publisherName || score?.plate_number) ? `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:2rem;flex-wrap:wrap;">
+          <div>${comp.year_composed ? `<p class="meta-year">Composed ${comp.year_composed}</p>` : ''}</div>
+          <div style="text-align:right">${(publisherName || score?.plate_number) ? `<p style="font-size:0.85rem;color:var(--muted)">${publisherName || ''}${publisherName && score?.plate_number ? ' · ' : ''}${score?.plate_number ? 'Pl. ' + score.plate_number : ''}</p>` : ''}</div>
         </div>` : ''}
-        ${publisherName ? `<div style="margin-top:0.75rem">
-          <p class="meta-label">Publisher</p>
-          <p class="meta-value">${publisherName}</p>
-        </div>` : ''}
-        ${plateNumber ? `<div style="margin-top:0.75rem">
-          <p class="meta-label">Plate number</p>
-          <p class="meta-value">${plateNumber}</p>
-        </div>` : ''}
+        ${(() => {
+          // If there's no dedication, pair illustrator with the lyricist row to save a line.
+          const illustratorOnLyricistRow = !comp.dedication && illustratorDisplay;
+          const illustratorOnDedicationRow = comp.dedication && illustratorDisplay;
+          let html = '';
+          if (lyricistDisplay || illustratorOnLyricistRow) {
+            html += `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:2rem;flex-wrap:wrap;margin-top:0.3rem;">
+          <div>${lyricistDisplay ? `<p class="meta-value">Lyricist: ${lyricistDisplay}</p>${translatorRows}` : ''}</div>
+          <div style="text-align:right">${illustratorOnLyricistRow ? `<p class="meta-value">Illustrator: ${illustratorDisplay}</p>` : ''}</div>
+        </div>`;
+          }
+          if (comp.dedication || illustratorOnDedicationRow) {
+            html += `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:2rem;flex-wrap:wrap;margin-top:0.3rem;">
+          <div>${comp.dedication ? `<p class="meta-value" style="font-style:italic;color:var(--muted);">Dedicated to ${comp.dedication}</p>` : ''}</div>
+          <div style="text-align:right">${illustratorOnDedicationRow ? `<p class="meta-value">Illustrator: ${illustratorDisplay}</p>` : ''}</div>
+        </div>`;
+          }
+          return html;
+        })()}
       </div>
-
-      ${notesHtml ? `
-        <div class="notes-section">
-          <p class="section-label">Notes</p>
-          <div class="notes-text">${notesHtml}</div>
-        </div>` : ''}
 
       <div style="margin-bottom:1.5rem">
         <a class="btn" href="musikk_editor.html?edit=${compId}" target="_blank">
@@ -352,27 +444,51 @@ async function load() {
         </a>
       </div>
 
+      ${notesHtml ? `
+        <div class="notes-section">
+          <div class="notes-header">
+            <p class="section-label" style="margin-bottom:0">About the composition</p>
+            <button class="translate-btn" id="translateBtn"
+              onclick="translateNotes(this)">
+              Translate to Norwegian
+            </button>
+          </div>
+          <div class="notes-text" id="notesText">${notesHtml}</div>
+        </div>` : ''}
+
       ${(comp.musescore_link || score?.pdf_url || score?.mp3_url) ? `
         <div class="media-section">
+          <div class="media-tabs">
+            ${comp.musescore_link ? `<button class="media-tab active" onclick="switchMediaTab('score', this)">Score</button>` : ''}
+            ${score?.pdf_url     ? `<button class="media-tab ${!comp.musescore_link ? 'active' : ''}" onclick="switchMediaTab('pdf', this)">PDF</button>` : ''}
+            ${score?.mp3_url     ? `<button class="media-tab ${(!comp.musescore_link && !score?.pdf_url) ? 'active' : ''}" onclick="switchMediaTab('audio', this)">Audio</button>` : ''}
+          </div>
+
           ${comp.musescore_link ? `
-            <a class="musescore-link" href="${comp.musescore_link}" target="_blank">
-              <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                <path d="M5.5 2H3a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1V8.5M8 2h4m0 0v4m0-4L6 8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              View on MuseScore
-            </a>` : ''}
+            <div class="media-tab-panel active" id="tab-score">
+              <div class="no-preview-box">
+                <p>Score preview not available for copyright-protected works.</p>
+              </div>
+              <a class="musescore-link" href="${comp.musescore_link}" target="_blank">
+                <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                  <path d="M5.5 2H3a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1V8.5M8 2h4m0 0v4m0-4L6 8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                View on MuseScore
+              </a>
+            </div>` : ''}
 
           ${score?.pdf_url ? `
-            <div class="pdf-container">
-              <div class="pdf-toolbar">
-                <button id="prevPage" disabled>◀ Prev</button>
-                <span id="pageInfo" style="flex:1;text-align:center">Loading…</span>
-                <button id="nextPage" disabled>Next ▶</button>
+            <div class="media-tab-panel ${!comp.musescore_link ? 'active' : ''}" id="tab-pdf">
+              <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:8px;">
+                <div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:var(--bg);border-bottom:1px solid var(--border);">
+                  <button class="btn" style="padding:4px 12px;" onclick="prevPage()">◀ Prev</button>
+                  <span id="pageInfo" style="font-size:0.82rem;color:var(--muted);flex:1;text-align:center;">Loading…</span>
+                  <button class="btn" style="padding:4px 12px;" onclick="nextPage()">Next ▶</button>
+                </div>
+                <div style="overflow:auto;max-height:80vh;background:#525659;text-align:center;">
+                  <canvas id="pdf-canvas" style="display:block;margin:0 auto;max-width:100%;"></canvas>
+                </div>
               </div>
-              <canvas id="pdfCanvas"></canvas>
-              <p class="pdf-loading" id="pdfLoading">Loading PDF…</p>
-            </div>
-            <div style="margin-top:0.5rem">
               <a class="btn" href="${score.pdf_url}" target="_blank">
                 <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
                   <path d="M2 12h10M7 2v7M4 6l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -382,11 +498,17 @@ async function load() {
             </div>` : ''}
 
           ${score?.mp3_url ? `
-            <div style="margin-top:1rem">
-              <audio controls src="${score.mp3_url}" style="width:100%;"></audio>
+            <div class="media-tab-panel ${(!comp.musescore_link && !score?.pdf_url) ? 'active' : ''}" id="tab-audio">
+              <audio controls src="${score.mp3_url}" style="width:100%;margin-bottom:0.5rem;"></audio>
             </div>` : ''}
         </div>` : ''}
     `;
+
+    // PDF: init only when PDF tab is shown (may not be the active tab)
+    if (score?.pdf_url) {
+      window._pdfUrl = score.pdf_url;
+      if (!comp.musescore_link) setTimeout(() => initPdf(score.pdf_url), 0);
+    }
 
   } catch(e) {
     document.getElementById('content').innerHTML =
@@ -394,54 +516,66 @@ async function load() {
   }
 }
 
-load().then(() => {
-  // Initialise PDF.js viewer after content is rendered
-  const canvas = document.getElementById('pdfCanvas');
-  if (!canvas) return;
+load();
 
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-  // Get the PDF URL from the download link's href
-  const downloadLink = document.querySelector('a[href$=".pdf"], a[href*="scores-pdf"]');
-  if (!downloadLink) return;
-  const pdfUrl = downloadLink.href;
-
-  let pdfDoc = null;
-  let currentPage = 1;
-
-  function renderPage(num) {
-    pdfDoc.getPage(num).then(page => {
-      const dpr        = window.devicePixelRatio || 1;
-      const cssWidth   = canvas.parentElement.clientWidth;
-      const baseScale  = cssWidth / page.getViewport({ scale: 1 }).width;
-      const viewport   = page.getViewport({ scale: baseScale * dpr });
-
-      // Physical canvas size = CSS size × dpr (gives full Retina resolution)
-      canvas.width  = viewport.width;
-      canvas.height = viewport.height;
-      // CSS size stays at the container width so layout is unchanged
-      canvas.style.width  = cssWidth + 'px';
-      canvas.style.height = (viewport.height / dpr) + 'px';
-
-      page.render({ canvasContext: canvas.getContext('2d'), viewport });
-      document.getElementById('pageInfo').textContent = `Page ${num} of ${pdfDoc.numPages}`;
-      document.getElementById('prevPage').disabled = num <= 1;
-      document.getElementById('nextPage').disabled = num >= pdfDoc.numPages;
-      document.getElementById('pdfLoading').style.display = 'none';
-    });
+function switchMediaTab(tabId, btn) {
+  // Update tab buttons
+  document.querySelectorAll('.media-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  // Update panels
+  document.querySelectorAll('.media-tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`tab-${tabId}`).classList.add('active');
+  // Lazy-init PDF when switching to it
+  if (tabId === 'pdf' && window._pdfUrl && !pdfDoc) {
+    setTimeout(() => initPdf(window._pdfUrl), 0);
   }
+}
 
-  pdfjsLib.getDocument(pdfUrl).promise.then(doc => {
-    pdfDoc = doc;
+
+</script>
+<script src="translate.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let pdfDoc = null, pageNum = 1;
+
+function initPdf(url) {
+  pdfjsLib.getDocument(url).promise.then(pdf => {
+    pdfDoc = pdf;
     renderPage(1);
   }).catch(err => {
-    document.getElementById('pdfLoading').textContent = 'Could not load PDF: ' + err.message;
+    document.getElementById('pageInfo').textContent = 'Could not load PDF';
+    console.error(err);
   });
+}
 
-  document.getElementById('prevPage').addEventListener('click', () => { if (currentPage > 1) renderPage(--currentPage); });
-  document.getElementById('nextPage').addEventListener('click', () => { if (currentPage < pdfDoc.numPages) renderPage(++currentPage); });
-});
+// Retina-aware render — matches the sharper canvas output used elsewhere on the copyright pages
+function renderPage(num) {
+  pdfDoc.getPage(num).then(page => {
+    const canvas   = document.getElementById('pdf-canvas');
+    const ctx      = canvas.getContext('2d');
+    const dpr      = window.devicePixelRatio || 1;
+    const cssWidth = Math.min(canvas.parentElement.clientWidth, window.innerWidth - 40);
+    const baseScale = cssWidth / page.getViewport({ scale: 1 }).width;
+    const viewport  = page.getViewport({ scale: Math.min(1.5, baseScale) * dpr });
+
+    canvas.width  = viewport.width;
+    canvas.height = viewport.height;
+    canvas.style.width  = cssWidth + 'px';
+    canvas.style.height = (viewport.height / dpr) + 'px';
+
+    page.render({ canvasContext: ctx, viewport });
+    document.getElementById('pageInfo').textContent =
+      `Page ${num} of ${pdfDoc.numPages}`;
+    pageNum = num;
+  });
+}
+
+function prevPage() { if (pdfDoc && pageNum > 1) renderPage(pageNum - 1); }
+function nextPage() { if (pdfDoc && pageNum < pdfDoc.numPages) renderPage(pageNum + 1); }
 </script>
 </body>
 </html>
