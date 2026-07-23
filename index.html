@@ -582,7 +582,7 @@
   </div>
 
   <div class="header-links">
-    <a href="tags.html" class="header-link">🏷 Browse by Tag</a>
+    <a href="tags.html" class="header-link" id="tagsLink">🏷 Browse by Tag</a>
     <a href="lyricists.html" class="header-link" id="lyricistsLink">✍ Lyricists</a>
   </div>
 </header>
@@ -1187,10 +1187,12 @@ function switchSiteMode(mode) {
     document.getElementById('siteSubtitle').innerHTML = 'Sheet Music &nbsp;·&nbsp; Copyright';
     document.getElementById('headerAbout').textContent = 'Primarily Norwegian compositions, with Nordic and international works — currently under copyright';
     document.getElementById('lyricistsLink').style.display = 'none';
+    document.getElementById('tagsLink').href = 'tags.html?mode=copyright';
   } else {
     document.getElementById('siteSubtitle').innerHTML = 'Sheet Music &nbsp;·&nbsp; Public Domain';
     document.getElementById('headerAbout').textContent = 'Primarily Norwegian compositions, with Nordic and international works — all in the public domain';
     document.getElementById('lyricistsLink').style.display = '';
+    document.getElementById('tagsLink').href = 'tags.html';
   }
 
   // Reset per-section letter/filter state
@@ -1231,6 +1233,7 @@ if (siteMode === 'copyright') {
   document.getElementById('siteSubtitle').innerHTML = 'Sheet Music &nbsp;·&nbsp; Copyright';
   document.getElementById('headerAbout').textContent = 'Primarily Norwegian compositions, with Nordic and international works — currently under copyright';
   document.getElementById('lyricistsLink').style.display = 'none';
+  document.getElementById('tagsLink').href = 'tags.html?mode=copyright';
 }
 
 fetchAllComposers(siteMode === 'copyright');
