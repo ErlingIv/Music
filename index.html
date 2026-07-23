@@ -492,6 +492,30 @@
     border-top: 1px solid var(--border);
     letter-spacing: 0.04em;
   }
+
+  /* ── Responsive: phones (≤640px) ── */
+  @media (max-width: 640px) {
+    header { padding: 1.5rem 1.25rem 0; }
+    .site-title { letter-spacing: -0.01em; }
+    .header-links { flex-wrap: wrap; gap: 0.5rem; padding: 0.75rem 0 0.9rem; }
+
+    /* nav overflows horizontally on phones; centered content that overflows
+       hides its own start, so switch to flex-start and let it scroll right */
+    nav { justify-content: flex-start; }
+    .tab { padding: 0.85rem 1.25rem; font-size: 0.82rem; }
+
+    .search-bar { padding: 0 1rem; }
+    .composer-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; }
+
+    /* dedications table is wide — let it scroll instead of squeezing columns */
+    #dedications-list { overflow-x: auto; }
+    .ded-table { min-width: 560px; }
+  }
+
+  @media (max-width: 420px) {
+    .composer-grid { grid-template-columns: 1fr 1fr; }
+    .recently-card { min-width: 120px; max-width: 150px; }
+  }
 </style>
 </head>
 <body>

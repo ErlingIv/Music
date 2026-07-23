@@ -188,6 +188,14 @@
   }
   .no-preview-box p { font-size: 0.9rem; color: var(--muted); }
 
+  /* ── Responsive: phones (≤640px) ── */
+  @media (max-width: 640px) {
+    .score-card { padding: 1.25rem; }
+    .meta-grid { grid-template-columns: 1fr; gap: 0.5rem 0; }
+    .score-embed-wrapper iframe { height: 320px; }
+    .media-tabs { overflow-x: auto; }
+    .media-tab { padding: 8px 14px; font-size: 0.76rem; }
+  }
 
 </style>
 </head>

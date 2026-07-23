@@ -128,3 +128,15 @@ body {
   font-size: 0.9rem;
 }
 .error-state { color: #a32d2d; font-size: 0.9rem; padding: 1rem 0; }
+
+/* ── Responsive: phones (≤640px) ── */
+@media (max-width: 640px) {
+  main { padding: 1.5rem 1rem 3rem; }
+
+  .site-header {
+    padding: 0.85rem 1.25rem;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+  .mode-switch-wrap { margin-left: 0; }
+}
