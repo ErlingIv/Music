@@ -234,7 +234,7 @@
 <body>
 
 <header class="site-header">
-  <a class="back-link" href="index.html">← Back</a>
+  <a class="back-link" href="index.html" id="backLink">← Back</a>
   <a class="site-name" href="index.html" id="siteNameLink">Norske Musikknoter</a>
 
   <div class="mode-switch-wrap" title="Switch between public domain and copyright-protected scores">
@@ -287,7 +287,16 @@ const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
 // ── Site mode: 'pd' (public domain) or 'copyright' ─────────────────────────────
-let siteMode = 'pd';
+let siteMode = new URLSearchParams(window.location.search).get('mode') === 'copyright' ? 'copyright' : 'pd';
+document.getElementById('modeToggle').checked = (siteMode === 'copyright');
+document.getElementById('modeLabelPD').classList.toggle('active', siteMode === 'pd');
+document.getElementById('modeLabelCopyright').classList.toggle('active', siteMode === 'copyright');
+function syncIndexLinks() {
+  const href = 'index.html' + (siteMode === 'copyright' ? '?mode=copyright' : '');
+  document.getElementById('backLink').href = href;
+  document.getElementById('siteNameLink').href = href;
+}
+syncIndexLinks();
 function scoreHref(id) {
   return (siteMode === 'copyright' ? 'score-copyright.html' : 'score.html') + '?id=' + id;
 }
@@ -468,6 +477,7 @@ function switchSiteMode(mode) {
   document.getElementById('modeToggle').checked = (mode === 'copyright');
   document.getElementById('modeLabelPD').classList.toggle('active', mode === 'pd');
   document.getElementById('modeLabelCopyright').classList.toggle('active', mode === 'copyright');
+  syncIndexLinks();
 
   showTagCloud();
   loadTags();
