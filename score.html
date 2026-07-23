@@ -216,6 +216,16 @@
     border-radius: 6px;
   }
 
+  .no-preview-box {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    margin-bottom: 10px;
+    background: var(--bg);
+  }
+  .no-preview-box p { font-size: 0.9rem; color: var(--muted); }
+
   .loading-state { text-align: center; padding: 3rem; color: var(--muted); font-size: 0.9rem; }
   .error-state { color: #a32d2d; font-size: 0.9rem; padding: 1rem 0; }
 </style>
@@ -240,12 +250,17 @@ const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
+// Set once the composition is fetched: 'pd' or 'copyright'. A single score is
+// always one or the other — this isn't a visitor-chosen toggle like index.html.
+let compMode = 'pd';
+function modeParam() { return compMode === 'copyright' ? '&mode=copyright' : ''; }
+
 // Global linkify — also used by translate.js
 function linkify(text) {
   if (!text) return '';
   // Tag links: [tag=ID]name[/tag]
   text = text.replace(/\[tag=(\d+)\]([^\[]*)\[\/tag\]/gi,
-    '<a href="tags.html?tag=$1" style="color:var(--accent2);text-decoration:underline;font-size:0.88em;border:1px solid var(--accent2);border-radius:3px;padding:1px 7px;">🏷 $2</a>');
+    '<a href="tags.html?tag=$1' + modeParam() + '" style="color:var(--accent2);text-decoration:underline;font-size:0.88em;border:1px solid var(--accent2);border-radius:3px;padding:1px 7px;">🏷 $2</a>');
   // BBCode: [url=https://...]text[/url]
   text = text.replace(/\[url=(https?:\/\/[^\]]+)\]([^\[]*)\[\/url\]/gi,
     '<a href="$1" target="_blank" style="color:var(--accent);text-decoration:underline">$2</a>');
@@ -289,7 +304,7 @@ async function load() {
   try {
     // Fetch composition, score, and all contributors in parallel
     const [compR, scoreR, cpR] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${compId}&select=composition_id,title,year_composed,opus_number,musescore_link,musescore_notes,approved,dedication`, { headers: H }),
+      fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${compId}&select=composition_id,title,year_composed,opus_number,musescore_link,musescore_notes,approved,dedication,public_domain`, { headers: H }),
       fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=eq.${compId}&select=pdf_url,mp3_url,publisher_id,plate_number`, { headers: H }),
       fetch(`${SUPABASE_URL}/rest/v1/composition_person?composition_id=eq.${compId}&select=person_id,role,credited_as,translates_person_id`, { headers: H }),
     ]);
@@ -315,6 +330,12 @@ async function load() {
     const ct    = cp.filter(r => r.role === 'Translator');
     if (!comp) throw new Error('Score not found');
 
+    compMode = comp.public_domain === 'Yes' ? 'pd' : 'copyright';
+    if (!(referrer && referrer.includes('composer.html'))) {
+      document.getElementById('backLink').href = 'index.html' + (compMode === 'copyright' ? '?mode=copyright' : '');
+    }
+    document.getElementById('siteNameLink').href = 'index.html' + (compMode === 'copyright' ? '?mode=copyright' : '');
+
     document.title = `${comp.title} — ${SITE_NAME}`;
 
     // Fetch composer details
@@ -332,7 +353,7 @@ async function load() {
         const displayName = row.credited_as || `${p.first_name} ${p.last_name}`;
         const years = lifespan(p.born, p.died, p.died_uncertain);
         const yearsStr = years ? ` <span style="color:var(--muted);font-size:0.88rem">(${years})</span>` : '';
-        composerDisplayParts.push(`<a class="composer-link" href="composer.html?id=${p.person_id}">${displayName}</a>${yearsStr}`);
+        composerDisplayParts.push(`<a class="composer-link" href="composer.html?id=${p.person_id}${modeParam()}">${displayName}</a>${yearsStr}`);
         if (composerName === '—') {
           composerName = displayName;
           composerYears = years ? `(${years})` : '';
@@ -354,7 +375,7 @@ async function load() {
         const displayName = row.credited_as || `${p.first_name} ${p.last_name}`;
         const years = lifespan(p.born, p.died, p.died_uncertain);
         const yearsStr = years ? ` <span style="color:var(--muted);font-size:0.88rem">(${years})</span>` : '';
-        const line = `<span class="lyricist-line"><a class="composer-link" href="composer.html?id=${p.person_id}&role=Lyricist">${displayName}</a>${yearsStr}</span>`;
+        const line = `<span class="lyricist-line"><a class="composer-link" href="composer.html?id=${p.person_id}&role=Lyricist${modeParam()}">${displayName}</a>${yearsStr}</span>`;
         lyricistDisplayParts.push(line);
 
         // Any translators of this specific lyricist's text, on this composition —
@@ -370,7 +391,7 @@ async function load() {
             const tDisplayName = tRow.credited_as || `${tp.first_name} ${tp.last_name}`;
             const tYears = lifespan(tp.born, tp.died, tp.died_uncertain);
             const tYearsStr = tYears ? ` <span style="color:var(--muted);font-size:0.88rem">(${tYears})</span>` : '';
-            translatorLinesAll.push(`translated by <a class="composer-link" href="composer.html?id=${tp.person_id}&role=Translator">${tDisplayName}</a>${tYearsStr}`);
+            translatorLinesAll.push(`translated by <a class="composer-link" href="composer.html?id=${tp.person_id}&role=Translator${modeParam()}">${tDisplayName}</a>${tYearsStr}`);
           }
         }
       }
@@ -392,7 +413,7 @@ async function load() {
         const displayName = row.credited_as || `${p.first_name} ${p.last_name}`;
         const years = lifespan(p.born, p.died, p.died_uncertain);
         const yearsStr = years ? ` <span style="color:var(--muted);font-size:0.88rem">(${years})</span>` : '';
-        illustratorDisplayParts.push(`<span style="white-space:nowrap"><a class="composer-link" href="composer.html?id=${p.person_id}&role=Illustrator">${displayName}</a>${yearsStr}</span>`);
+        illustratorDisplayParts.push(`<span style="white-space:nowrap"><a class="composer-link" href="composer.html?id=${p.person_id}&role=Illustrator${modeParam()}">${displayName}</a>${yearsStr}</span>`);
       }
     }
     const illustratorDisplay = illustratorDisplayParts.length ? illustratorDisplayParts.join(', ') : null;
@@ -451,6 +472,15 @@ async function load() {
           <div class="notes-text" id="notesText">${notesHtml}</div>
         </div>` : ''}
 
+      <div style="margin-bottom:1.5rem">
+        <a class="btn" href="musikk_editor.html?edit=${compId}" target="_blank">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+            <path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Rediger i editor
+        </a>
+      </div>
+
       ${(comp.musescore_link || score?.pdf_url || score?.mp3_url) ? `
         <div class="media-section">
           <div class="media-tabs">
@@ -461,11 +491,15 @@ async function load() {
 
           ${comp.musescore_link ? `
             <div class="media-tab-panel active" id="tab-score">
+              ${compMode === 'pd' ? `
               <div class="score-embed-wrapper" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px;">
                 <iframe src="${comp.musescore_link}/embed"
                   allowfullscreen allow="autoplay; fullscreen">
                 </iframe>
-              </div>
+              </div>` : `
+              <div class="no-preview-box">
+                <p>Score preview not available for copyright-protected works.</p>
+              </div>`}
               <a class="musescore-link" href="${comp.musescore_link}" target="_blank">
                 <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
                   <path d="M5.5 2H3a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1V8.5M8 2h4m0 0v4m0-4L6 8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
