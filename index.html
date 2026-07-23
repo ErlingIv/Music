@@ -873,9 +873,11 @@ const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
 // ── Site mode: 'pd' (public domain) or 'copyright' ─────────────────────────────
-let siteMode = 'pd';
+// composer.html is now a single unified page (mode carried via ?mode=); score.html
+// is not yet unified, so it still uses a separate -copyright file per mode.
+let siteMode = new URLSearchParams(window.location.search).get('mode') === 'copyright' ? 'copyright' : 'pd';
 function composerHref(id, extra) {
-  return (siteMode === 'copyright' ? 'composer-copyright.html' : 'composer.html') + '?id=' + id + (extra || '');
+  return 'composer.html?id=' + id + (siteMode === 'copyright' ? '&mode=copyright' : '') + (extra || '');
 }
 function scoreHref(id) {
   return (siteMode === 'copyright' ? 'score-copyright.html' : 'score.html') + '?id=' + id;
@@ -1220,7 +1222,18 @@ function switchSiteMode(mode) {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
-fetchAllComposers();
+// If we arrived with ?mode=copyright, reflect that in the toggle UI + text
+// before the initial fetch, rather than always starting in PD mode.
+if (siteMode === 'copyright') {
+  document.getElementById('modeToggle').checked = true;
+  document.getElementById('modeLabelPD').classList.remove('active');
+  document.getElementById('modeLabelCopyright').classList.add('active');
+  document.getElementById('siteSubtitle').innerHTML = 'Sheet Music &nbsp;·&nbsp; Copyright';
+  document.getElementById('headerAbout').textContent = 'Primarily Norwegian compositions, with Nordic and international works — currently under copyright';
+  document.getElementById('lyricistsLink').style.display = 'none';
+}
+
+fetchAllComposers(siteMode === 'copyright');
 
 // ── Global search ──────────────────────────────────────────────────────────────
 let _allCompositions = null;
