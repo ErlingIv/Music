@@ -237,12 +237,16 @@
   <a class="site-name" href="index.html" id="siteNameLink">Norske Musikknoter</a>
 
   <div class="mode-switch-wrap" title="Switch between public domain and copyright-protected scores">
-    <span class="mode-switch-label active" id="modeLabelPD" onclick="switchSiteMode('pd')">Public Domain</span>
+    <span class="mode-switch-label active" id="modeLabelPD" role="button" tabindex="0"
+          onclick="switchSiteMode('pd')"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchSiteMode('pd')}">Public Domain</span>
     <label class="mode-switch">
-      <input type="checkbox" id="modeToggle" onchange="switchSiteMode(this.checked ? 'copyright' : 'pd')">
+      <input type="checkbox" id="modeToggle" aria-label="Toggle between public domain and copyright mode" onchange="switchSiteMode(this.checked ? 'copyright' : 'pd')">
       <span class="mode-switch-slider"></span>
     </label>
-    <span class="mode-switch-label" id="modeLabelCopyright" onclick="switchSiteMode('copyright')">Copyright</span>
+    <span class="mode-switch-label" id="modeLabelCopyright" role="button" tabindex="0"
+          onclick="switchSiteMode('copyright')"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchSiteMode('copyright')}">Copyright</span>
   </div>
 </header>
 
@@ -367,8 +371,10 @@ async function load() {
     const switcherHtml = showSwitcher ? `
       <div class="role-switcher">
         <a class="role-btn ${roleParam === 'Composer' ? 'active' : ''}"
+           ${roleParam === 'Composer' ? 'aria-current="page"' : ''}
            href="${selfHref('Composer')}">As composer</a>
         <a class="role-btn ${roleParam === 'Lyricist' ? 'active' : ''}"
+           ${roleParam === 'Lyricist' ? 'aria-current="page"' : ''}
            href="${selfHref('Lyricist')}">As lyricist</a>
       </div>` : '';
 
@@ -378,7 +384,7 @@ async function load() {
       <div class="composer-hero">
         <div class="hero-top">
           <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
-            ${person.photo_url ? `<img src="${person.photo_url}" alt="" class="composer-photo">` : ''}
+            ${person.photo_url ? `<img src="${person.photo_url}" alt="Photo of ${person.first_name} ${person.last_name}" class="composer-photo">` : ''}
             <div>
             <h1 class="composer-name">${person.first_name} ${person.last_name} ${flag}</h1>
             ${years ? `<p class="composer-dates">${years}</p>` : ''}
@@ -432,7 +438,7 @@ function scoreRowHtml(c, scoreMap, tagMap, creditedAsMap) {
   return `
     <a class="score-row" href="${scoreHref(c.composition_id)}" data-has-media="${hasMedia}">
       <div>
-        <div class="score-title">${c.title}${c.approved ? '<span class="godkjent-mark"></span>' : ''}</div>
+        <div class="score-title">${c.title}${c.approved ? '<span class="godkjent-mark" role="img" aria-label="Curator approved" title="Curator approved"></span>' : ''}</div>
         <div class="score-meta">
           ${c.year_composed ? `<span>${c.year_composed}</span>` : ''}
           ${s?.publisher?.publisher_name ? `<span>${s.publisher.publisher_name}</span>` : ''}
@@ -444,7 +450,7 @@ function scoreRowHtml(c, scoreMap, tagMap, creditedAsMap) {
       <div class="score-icons">
         ${s?.pdf_url ? '<span class="icon-badge has-pdf">PDF</span>' : ''}
         ${s?.mp3_url ? '<span class="icon-badge has-mp3">MP3</span>' : ''}
-        ${c.musescore_link ? '<span class="icon-badge">♪</span>' : ''}
+        ${c.musescore_link ? '<span class="icon-badge" title="Available on MuseScore" aria-label="Available on MuseScore">♪</span>' : ''}
         ${c.public_domain === 'Yes' ? '<span class="icon-badge" style="color:var(--accent2);border-color:var(--accent2)">PD</span>' : ''}
         ${msInfoBadge(c.musescore_notes)}
       </div>
@@ -500,10 +506,11 @@ function renderScoreItems(compositions, scoreMap, tagMap, creditedAsMap) {
     const rowsHtml = item.list.map(c => scoreRowHtml(c, scoreMap, tagMap, creditedAsMap)).join('');
     return `
       <div class="opus-group">
-        <button type="button" class="opus-group-header" onclick="this.parentElement.classList.toggle('open')">
+        <button type="button" class="opus-group-header" aria-expanded="false"
+                onclick="this.parentElement.classList.toggle('open'); this.setAttribute('aria-expanded', this.parentElement.classList.contains('open'))">
           <span class="opus-group-title">${item.opus}</span>
           <span class="opus-group-count">${item.list.length} works</span>
-          <span class="opus-group-chevron">▾</span>
+          <span class="opus-group-chevron" aria-hidden="true">▾</span>
         </button>
         <div class="opus-group-body">${rowsHtml}</div>
       </div>`;

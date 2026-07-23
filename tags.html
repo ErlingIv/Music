@@ -169,12 +169,16 @@
   <a class="site-name" href="index.html" id="siteNameLink">Norske Musikknoter</a>
 
   <div class="mode-switch-wrap" title="Switch between public domain and copyright-protected scores">
-    <span class="mode-switch-label active" id="modeLabelPD" onclick="switchSiteMode('pd')">Public Domain</span>
+    <span class="mode-switch-label active" id="modeLabelPD" role="button" tabindex="0"
+          onclick="switchSiteMode('pd')"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchSiteMode('pd')}">Public Domain</span>
     <label class="mode-switch">
-      <input type="checkbox" id="modeToggle" onchange="switchSiteMode(this.checked ? 'copyright' : 'pd')">
+      <input type="checkbox" id="modeToggle" aria-label="Toggle between public domain and copyright mode" onchange="switchSiteMode(this.checked ? 'copyright' : 'pd')">
       <span class="mode-switch-slider"></span>
     </label>
-    <span class="mode-switch-label" id="modeLabelCopyright" onclick="switchSiteMode('copyright')">Copyright</span>
+    <span class="mode-switch-label" id="modeLabelCopyright" role="button" tabindex="0"
+          onclick="switchSiteMode('copyright')"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchSiteMode('copyright')}">Copyright</span>
   </div>
 </header>
 
@@ -243,7 +247,7 @@ function loadHeroImage(tagName, imageUrl) {
   img.onload  = () => hero.classList.add('loaded');
   img.onerror = () => hero.classList.remove('loaded');
   img.src = imageUrl;
-  img.alt = tagName;
+  img.alt = ''; // decorative — the tag name is already announced via the visible label
 }
 
 function showTagCloud() {
@@ -292,13 +296,19 @@ async function loadTags() {
     return;
   }
 
-  cloud.innerHTML = visibleTags.map(t => `
-    <div class="tag-pill" id="tag-pill-${t.tag_id}"
-         onclick="selectTag(${t.tag_id}, '${t.tag_name.replace(/'/g, "\\'")}', '${(t.image_url||'').replace(/'/g, "\\'")}')">
+  cloud.innerHTML = visibleTags.map(t => {
+    const name = t.tag_name.replace(/'/g, "\\'");
+    const img  = (t.image_url || '').replace(/'/g, "\\'");
+    return `
+    <div class="tag-pill" id="tag-pill-${t.tag_id}" role="button" tabindex="0"
+         aria-label="${t.tag_name} — ${countMap[t.tag_id] || 0} works"
+         onclick="selectTag(${t.tag_id}, '${name}', '${img}')"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectTag(${t.tag_id}, '${name}', '${img}')}">
       ${t.tag_name}
-      <span class="tag-count">${countMap[t.tag_id] || 0}</span>
+      <span class="tag-count" aria-hidden="true">${countMap[t.tag_id] || 0}</span>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   const preTag = new URLSearchParams(window.location.search).get('tag');
   if (preTag) {
@@ -376,7 +386,7 @@ async function selectTag(tagId, tagName, imageUrl) {
             <div class="comp-icons">
               ${s?.pdf_url ? '<span class="icon-badge pdf">PDF</span>' : ''}
               ${s?.mp3_url ? '<span class="icon-badge mp3">MP3</span>' : ''}
-              ${comp.musescore_link ? '<span class="icon-badge">♪</span>' : ''}
+              ${comp.musescore_link ? '<span class="icon-badge" title="Available on MuseScore" aria-label="Available on MuseScore">♪</span>' : ''}
               ${comp.public_domain === 'Yes' ? '<span class="icon-badge" style="color:var(--accent2);border-color:var(--accent2)">PD</span>' : ''}
               ${msInfoBadge(comp.musescore_notes)}
             </div>

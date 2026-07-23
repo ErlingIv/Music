@@ -526,12 +526,16 @@
   <p class="header-about" id="headerAbout">Primarily Norwegian compositions, with Nordic and international works — all in the public domain</p>
 
   <div class="mode-switch-wrap" title="Switch between public domain and copyright-protected scores">
-    <span class="mode-switch-label active" id="modeLabelPD" onclick="switchSiteMode('pd')">Public Domain</span>
+    <span class="mode-switch-label active" id="modeLabelPD" role="button" tabindex="0"
+          onclick="switchSiteMode('pd')"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchSiteMode('pd')}">Public Domain</span>
     <label class="mode-switch">
-      <input type="checkbox" id="modeToggle" onchange="switchSiteMode(this.checked ? 'copyright' : 'pd')">
+      <input type="checkbox" id="modeToggle" aria-label="Toggle between public domain and copyright mode" onchange="switchSiteMode(this.checked ? 'copyright' : 'pd')">
       <span class="mode-switch-slider"></span>
     </label>
-    <span class="mode-switch-label" id="modeLabelCopyright" onclick="switchSiteMode('copyright')">Copyright</span>
+    <span class="mode-switch-label" id="modeLabelCopyright" role="button" tabindex="0"
+          onclick="switchSiteMode('copyright')"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchSiteMode('copyright')}">Copyright</span>
   </div>
 
   <div class="header-links">
@@ -551,86 +555,93 @@
 
 <div class="search-bar">
   <div class="search-wrap">
-    <span class="search-icon">🔍</span>
-    <input class="search-input" id="globalSearch" type="text" placeholder="Search by title or composer…" oninput="handleSearch(this.value)" autocomplete="off">
+    <span class="search-icon" aria-hidden="true">🔍</span>
+    <input class="search-input" id="globalSearch" type="text" placeholder="Search by title or composer…" aria-label="Search by title or composer" oninput="handleSearch(this.value)" autocomplete="off">
   </div>
   <div class="search-results" id="searchResults"></div>
 </div>
 
-<nav>
-  <div class="tab active" data-section="no" onclick="switchTab('no')">
-    <span class="tab-flag">🇳🇴</span>Norwegian
+<nav role="tablist" aria-label="Browse by category">
+  <div class="tab active" role="tab" id="tab-no" aria-selected="true" aria-controls="panel-no" tabindex="0"
+       data-section="no" onclick="switchTab('no')" onkeydown="tabKeydown(event,'no')">
+    <span class="tab-flag" aria-hidden="true">🇳🇴</span>Norwegian
   </div>
-  <div class="tab" data-section="nordic" onclick="switchTab('nordic')">
-    <span class="tab-flag">🏴</span>Nordic
+  <div class="tab" role="tab" id="tab-nordic" aria-selected="false" aria-controls="panel-nordic" tabindex="0"
+       data-section="nordic" onclick="switchTab('nordic')" onkeydown="tabKeydown(event,'nordic')">
+    <span class="tab-flag" aria-hidden="true">🏴</span>Nordic
   </div>
-  <div class="tab" data-section="others" onclick="switchTab('others')">
-    <span class="tab-flag">🌍</span>Others
+  <div class="tab" role="tab" id="tab-others" aria-selected="false" aria-controls="panel-others" tabindex="0"
+       data-section="others" onclick="switchTab('others')" onkeydown="tabKeydown(event,'others')">
+    <span class="tab-flag" aria-hidden="true">🌍</span>Others
   </div>
-  <div class="tab" data-section="unknown" onclick="switchTab('unknown')">
-    <span class="tab-flag">❓</span>Unknown
+  <div class="tab" role="tab" id="tab-unknown" aria-selected="false" aria-controls="panel-unknown" tabindex="0"
+       data-section="unknown" onclick="switchTab('unknown')" onkeydown="tabKeydown(event,'unknown')">
+    <span class="tab-flag" aria-hidden="true">❓</span>Unknown
   </div>
-  <div class="tab" data-section="dedications" onclick="switchTab('dedications'); loadDedications()">
-    <span class="tab-flag">🎀</span>Dedications
+  <div class="tab" role="tab" id="tab-dedications" aria-selected="false" aria-controls="panel-dedications" tabindex="0"
+       data-section="dedications" onclick="switchTab('dedications'); loadDedications()" onkeydown="tabKeydown(event,'dedications'); if(event.key==='Enter'||event.key===' ')loadDedications()">
+    <span class="tab-flag" aria-hidden="true">🎀</span>Dedications
   </div>
-  <div class="tab" data-section="illustrators" onclick="switchTab('illustrators'); loadIllustrators()">
-    <span class="tab-flag">🎨</span>Illustrators
+  <div class="tab" role="tab" id="tab-illustrators" aria-selected="false" aria-controls="panel-illustrators" tabindex="0"
+       data-section="illustrators" onclick="switchTab('illustrators'); loadIllustrators()" onkeydown="tabKeydown(event,'illustrators'); if(event.key==='Enter'||event.key===' ')loadIllustrators()">
+    <span class="tab-flag" aria-hidden="true">🎨</span>Illustrators
   </div>
-  <div class="tab" data-section="about" onclick="switchTab('about')">
-    <span class="tab-flag">ℹ️</span>About
+  <div class="tab" role="tab" id="tab-about" aria-selected="false" aria-controls="panel-about" tabindex="0"
+       data-section="about" onclick="switchTab('about')" onkeydown="tabKeydown(event,'about')">
+    <span class="tab-flag" aria-hidden="true">ℹ️</span>About
   </div>
 </nav>
 
 <main>
   <!-- Norwegian -->
-  <div class="section-panel active" id="panel-no">
+  <div class="section-panel active" id="panel-no" role="tabpanel" aria-labelledby="tab-no">
     <div class="section-header">
-      <span class="section-flag">🇳🇴</span>
+      <span class="section-flag" aria-hidden="true">🇳🇴</span>
       <span class="section-title">Norwegian Composers</span>
       <span class="section-count" id="count-no"></span>
     </div>
     <div class="filter-bar">
-      <button class="toggle-btn" id="toggle-media-no" onclick="toggleFilter('no','media')">🎵 With PDF / MP3</button>
-      <button class="toggle-btn" id="toggle-female-no" onclick="toggleFilter('no','female')">♀ Female composers</button>
+      <button class="toggle-btn" id="toggle-media-no" aria-pressed="false" onclick="toggleFilter('no','media')">🎵 With PDF / MP3</button>
+      <button class="toggle-btn" id="toggle-female-no" aria-pressed="false" onclick="toggleFilter('no','female')">♀ Female composers</button>
     </div>
     <div class="alpha-bar" id="alpha-no"></div>
     <div id="composers-no"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
   </div>
 
   <!-- Nordic -->
-  <div class="section-panel" id="panel-nordic">
+  <div class="section-panel" id="panel-nordic" role="tabpanel" aria-labelledby="tab-nordic">
     <div class="section-header">
-      <span class="section-flag">🇸🇪 🇩🇰 🇫🇮 🇮🇸</span>
+      <span class="section-flag" aria-hidden="true">🇸🇪 🇩🇰 🇫🇮 🇮🇸</span>
       <span class="section-title">Nordic Composers</span>
       <span class="section-count" id="count-nordic"></span>
     </div>
     <div class="filter-bar">
-      <button class="toggle-btn" id="toggle-media-nordic" onclick="toggleFilter('nordic','media')">🎵 With PDF / MP3</button>
-      <button class="toggle-btn" id="toggle-female-nordic" onclick="toggleFilter('nordic','female')">♀ Female composers</button>
+      <button class="toggle-btn" id="toggle-media-nordic" aria-pressed="false" onclick="toggleFilter('nordic','media')">🎵 With PDF / MP3</button>
+      <button class="toggle-btn" id="toggle-female-nordic" aria-pressed="false" onclick="toggleFilter('nordic','female')">♀ Female composers</button>
     </div>
     <div class="alpha-bar" id="alpha-nordic"></div>
     <div id="composers-nordic"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
   </div>
 
   <!-- Others -->
-  <div class="section-panel" id="panel-others">
+  <div class="section-panel" id="panel-others" role="tabpanel" aria-labelledby="tab-others">
     <div class="section-header">
-      <span class="section-flag">🌍</span>
+      <span class="section-flag" aria-hidden="true">🌍</span>
       <span class="section-title">Other Composers</span>
       <span class="section-count" id="count-others"></span>
     </div>
     <div class="filter-bar">
-      <button class="toggle-btn" id="toggle-media-others" onclick="toggleFilter('others','media')">🎵 With PDF / MP3</button>
-      <button class="toggle-btn" id="toggle-female-others" onclick="toggleFilter('others','female')">♀ Female composers</button>
+      <button class="toggle-btn" id="toggle-media-others" aria-pressed="false" onclick="toggleFilter('others','media')">🎵 With PDF / MP3</button>
+      <button class="toggle-btn" id="toggle-female-others" aria-pressed="false" onclick="toggleFilter('others','female')">♀ Female composers</button>
     </div>
     <div class="alpha-bar" id="alpha-others"></div>
     <div id="composers-others"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
   </div>
 
   <!-- Unknown nationality -->
-  <div class="section-panel" id="panel-unknown">
+  <div class="section-panel" id="panel-unknown" role="tabpanel" aria-labelledby="tab-unknown">
     <div class="section-header">
-      <span class="section-flag">❓</span>
+      <span class="section-flag" aria-hidden="true">❓</span>
       <span class="section-title">Nationality Unknown</span>
       <span class="section-count" id="count-unknown"></span>
     </div>
@@ -638,9 +649,9 @@
     <div id="composers-unknown"><div class="loading-state"><span class="loading-dots">Loading</span></div></div>
   </div>
   <!-- Dedications -->
-  <div class="section-panel" id="panel-dedications">
+  <div class="section-panel" id="panel-dedications" role="tabpanel" aria-labelledby="tab-dedications">
     <div class="section-header">
-      <span class="section-flag">🎀</span>
+      <span class="section-flag" aria-hidden="true">🎀</span>
       <span class="section-title">Dedications</span>
       <span class="section-count" id="count-dedications"></span>
     </div>
@@ -648,9 +659,9 @@
   </div>
 
   <!-- Illustrators -->
-  <div class="section-panel" id="panel-illustrators">
+  <div class="section-panel" id="panel-illustrators" role="tabpanel" aria-labelledby="tab-illustrators">
     <div class="section-header">
-      <span class="section-flag">🎨</span>
+      <span class="section-flag" aria-hidden="true">🎨</span>
       <span class="section-title">Illustrators</span>
       <span class="section-count" id="count-illustrators"></span>
     </div>
@@ -659,9 +670,9 @@
   </div>
 
   <!-- About -->
-  <div class="section-panel" id="panel-about">
+  <div class="section-panel" id="panel-about" role="tabpanel" aria-labelledby="tab-about">
     <div class="section-header">
-      <span class="section-flag">ℹ️</span>
+      <span class="section-flag" aria-hidden="true">ℹ️</span>
       <span class="section-title">About this collection</span>
     </div>
 
@@ -1010,12 +1021,20 @@ function renderSection(sec) {
 
   alphaBar.innerHTML = `
     <div class="alpha-btn ${activeLetter === 'ALL' ? 'active' : ''}"
-         onclick="filterLetter('${sec}', 'ALL')">All</div>
-    ${allLetters.map(l => `
-      <div class="alpha-btn ${!letters.includes(l) ? 'disabled' : ''} ${activeLetter === l ? 'active' : ''}"
-           onclick="filterLetter('${sec}', '${l}')">
+         role="button" tabindex="0" aria-pressed="${activeLetter === 'ALL'}" aria-label="Show all composers"
+         onclick="filterLetter('${sec}', 'ALL')" onkeydown="alphaKeydown(event, '${sec}', 'ALL')">All</div>
+    ${allLetters.map(l => {
+      const disabled = !letters.includes(l);
+      return disabled ? `
+      <div class="alpha-btn disabled" aria-disabled="true" aria-label="Letter ${l} — no composers">
         ${l}
-      </div>`).join('')}
+      </div>` : `
+      <div class="alpha-btn ${activeLetter === l ? 'active' : ''}"
+           role="button" tabindex="0" aria-pressed="${activeLetter === l}" aria-label="Filter by letter ${l}"
+           onclick="filterLetter('${sec}', '${l}')" onkeydown="alphaKeydown(event, '${sec}', '${l}')">
+        ${l}
+      </div>`;
+    }).join('')}
   `;
 
   // Filter composers
@@ -1080,6 +1099,7 @@ function toggleFilter(sec, type) {
   activeFilters[sec][type] = !activeFilters[sec][type];
   const btn = document.getElementById(`toggle-${type}-${sec}`);
   btn.classList.toggle('active', activeFilters[sec][type]);
+  btn.setAttribute('aria-pressed', String(activeFilters[sec][type]));
   renderSection(sec);
 }
 
@@ -1087,10 +1107,22 @@ function toggleFilter(sec, type) {
 
 function switchTab(sec) {
   activeSection = sec;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelector(`[data-section="${sec}"]`).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.remove('active');
+    t.setAttribute('aria-selected', 'false');
+  });
+  const activeTab = document.querySelector(`[data-section="${sec}"]`);
+  activeTab.classList.add('active');
+  activeTab.setAttribute('aria-selected', 'true');
   document.querySelectorAll('.section-panel').forEach(p => p.classList.remove('active'));
   document.getElementById(`panel-${sec}`).classList.add('active');
+}
+
+function tabKeydown(event, sec) {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    switchTab(sec);
+  }
 }
 
 // ── Letter filter ─────────────────────────────────────────────────────────────
@@ -1100,6 +1132,13 @@ function filterLetter(sec, letter) {
   renderSection(sec);
   // Scroll to top of section
   document.getElementById(`panel-${sec}`).scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function alphaKeydown(event, sec, letter) {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    filterLetter(sec, letter);
+  }
 }
 
 // ── Mode switch ───────────────────────────────────────────────────────────────
@@ -1511,6 +1550,13 @@ function setIllustratorLetter(letter) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function illustratorAlphaKeydown(event, letter) {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    setIllustratorLetter(letter);
+  }
+}
+
 function illustratorCard(p) {
   const years  = lifespan(p.born, p.died, p.died_uncertain);
   const flag   = p.nationality !== 'NO' ? renderFlags(p.nationality, p.birth_country, p.birth_country_primary) : '';
@@ -1539,12 +1585,20 @@ function renderIllustrators() {
 
   alphaEl.innerHTML = `
     <div class="alpha-btn ${illustratorsActiveLetter === 'ALL' ? 'active' : ''}"
-         onclick="setIllustratorLetter('ALL')">All</div>
-    ${allLetters.map(l => `
-      <div class="alpha-btn ${!letters.includes(l) ? 'disabled' : ''} ${illustratorsActiveLetter === l ? 'active' : ''}"
-           onclick="setIllustratorLetter('${l}')">
+         role="button" tabindex="0" aria-pressed="${illustratorsActiveLetter === 'ALL'}" aria-label="Show all illustrators"
+         onclick="setIllustratorLetter('ALL')" onkeydown="illustratorAlphaKeydown(event, 'ALL')">All</div>
+    ${allLetters.map(l => {
+      const disabled = !letters.includes(l);
+      return disabled ? `
+      <div class="alpha-btn disabled" aria-disabled="true" aria-label="Letter ${l} — no illustrators">
         ${l}
-      </div>`).join('')}
+      </div>` : `
+      <div class="alpha-btn ${illustratorsActiveLetter === l ? 'active' : ''}"
+           role="button" tabindex="0" aria-pressed="${illustratorsActiveLetter === l}" aria-label="Filter by letter ${l}"
+           onclick="setIllustratorLetter('${l}')" onkeydown="illustratorAlphaKeydown(event, '${l}')">
+        ${l}
+      </div>`;
+    }).join('')}
   `;
 
   const filtered = illustratorsActiveLetter === 'ALL'

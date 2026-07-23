@@ -395,7 +395,7 @@ async function load() {
 
     el.innerHTML = `
       <div class="title-row">
-        <h1 class="score-title">${comp.title}${comp.opus_number ? ` <span class="meta-opus">${comp.opus_number}</span>` : ''}${comp.approved ? '<span class="godkjent-mark"></span>' : ''}</h1>
+        <h1 class="score-title">${comp.title}${comp.opus_number ? ` <span class="meta-opus">${comp.opus_number}</span>` : ''}${comp.approved ? '<span class="godkjent-mark" role="img" aria-label="Curator approved" title="Curator approved"></span>' : ''}</h1>
         <p class="score-sub">${composerDisplay}</p>
       </div>
 
@@ -437,26 +437,26 @@ async function load() {
               Translate to Norwegian
             </button>
           </div>
-          <div class="notes-text" id="notesText">${notesHtml}</div>
+          <div class="notes-text" id="notesText" aria-live="polite">${notesHtml}</div>
         </div>` : ''}
 
       ${(comp.musescore_link || score?.pdf_url || score?.mp3_url) ? `
         <div class="media-section">
-          <div class="media-tabs">
-            ${comp.musescore_link ? `<button class="media-tab active" onclick="switchMediaTab('score', this)">Score</button>` : ''}
-            ${score?.pdf_url     ? `<button class="media-tab ${!comp.musescore_link ? 'active' : ''}" onclick="switchMediaTab('pdf', this)">PDF</button>` : ''}
-            ${score?.mp3_url     ? `<button class="media-tab ${(!comp.musescore_link && !score?.pdf_url) ? 'active' : ''}" onclick="switchMediaTab('audio', this)">Audio</button>` : ''}
+          <div class="media-tabs" role="tablist" aria-label="Score media">
+            ${comp.musescore_link ? `<button class="media-tab active" role="tab" id="mediatab-score" aria-selected="true" aria-controls="tab-score" onclick="switchMediaTab('score', this)">Score</button>` : ''}
+            ${score?.pdf_url     ? `<button class="media-tab ${!comp.musescore_link ? 'active' : ''}" role="tab" id="mediatab-pdf" aria-selected="${!comp.musescore_link}" aria-controls="tab-pdf" onclick="switchMediaTab('pdf', this)">PDF</button>` : ''}
+            ${score?.mp3_url     ? `<button class="media-tab ${(!comp.musescore_link && !score?.pdf_url) ? 'active' : ''}" role="tab" id="mediatab-audio" aria-selected="${!comp.musescore_link && !score?.pdf_url}" aria-controls="tab-audio" onclick="switchMediaTab('audio', this)">Audio</button>` : ''}
           </div>
 
           ${comp.musescore_link ? `
-            <div class="media-tab-panel active" id="tab-score">
+            <div class="media-tab-panel active" id="tab-score" role="tabpanel" aria-labelledby="mediatab-score">
               <div class="score-embed-wrapper" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px;">
-                <iframe src="${comp.musescore_link}/embed"
+                <iframe src="${comp.musescore_link}/embed" title="MuseScore embedded score preview"
                   allowfullscreen allow="autoplay; fullscreen">
                 </iframe>
               </div>
               <a class="musescore-link" href="${comp.musescore_link}" target="_blank">
-                <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                   <path d="M5.5 2H3a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1V8.5M8 2h4m0 0v4m0-4L6 8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
                 View on MuseScore
@@ -464,19 +464,19 @@ async function load() {
             </div>` : ''}
 
           ${score?.pdf_url ? `
-            <div class="media-tab-panel ${!comp.musescore_link ? 'active' : ''}" id="tab-pdf">
+            <div class="media-tab-panel ${!comp.musescore_link ? 'active' : ''}" id="tab-pdf" role="tabpanel" aria-labelledby="mediatab-pdf">
               <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:8px;">
                 <div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:var(--bg);border-bottom:1px solid var(--border);">
-                  <button class="btn" style="padding:4px 12px;" onclick="prevPage()">◀ Prev</button>
-                  <span id="pageInfo" style="font-size:0.82rem;color:var(--muted);flex:1;text-align:center;">Loading…</span>
-                  <button class="btn" style="padding:4px 12px;" onclick="nextPage()">Next ▶</button>
+                  <button class="btn" style="padding:4px 12px;" onclick="prevPage()" aria-label="Previous page">◀ Prev</button>
+                  <span id="pageInfo" style="font-size:0.82rem;color:var(--muted);flex:1;text-align:center;" aria-live="polite">Loading…</span>
+                  <button class="btn" style="padding:4px 12px;" onclick="nextPage()" aria-label="Next page">Next ▶</button>
                 </div>
                 <div style="overflow:auto;max-height:80vh;background:#525659;text-align:center;">
-                  <canvas id="pdf-canvas" style="display:block;margin:0 auto;max-width:100%;"></canvas>
+                  <canvas id="pdf-canvas" style="display:block;margin:0 auto;max-width:100%;" role="img" aria-label="PDF page preview"></canvas>
                 </div>
               </div>
               <a class="btn" href="${score.pdf_url}" target="_blank">
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                   <path d="M2 12h10M7 2v7M4 6l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
                 Download PDF
@@ -484,8 +484,10 @@ async function load() {
             </div>` : ''}
 
           ${score?.mp3_url ? `
-            <div class="media-tab-panel ${(!comp.musescore_link && !score?.pdf_url) ? 'active' : ''}" id="tab-audio">
-              <audio controls src="${score.mp3_url}" style="width:100%;margin-bottom:0.5rem;"></audio>
+            <div class="media-tab-panel ${(!comp.musescore_link && !score?.pdf_url) ? 'active' : ''}" id="tab-audio" role="tabpanel" aria-labelledby="mediatab-audio">
+              <audio controls src="${score.mp3_url}" style="width:100%;margin-bottom:0.5rem;">
+                Your browser does not support the audio element. <a href="${score.mp3_url}">Download the audio file</a> instead.
+              </audio>
             </div>` : ''}
         </div>` : ''}
     `;
@@ -507,8 +509,12 @@ load();
 
 function switchMediaTab(tabId, btn) {
   // Update tab buttons
-  document.querySelectorAll('.media-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.media-tab').forEach(t => {
+    t.classList.remove('active');
+    t.setAttribute('aria-selected', 'false');
+  });
   btn.classList.add('active');
+  btn.setAttribute('aria-selected', 'true');
   // Update panels
   document.querySelectorAll('.media-tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById(`tab-${tabId}`).classList.add('active');

@@ -129,6 +129,25 @@ body {
 }
 .error-state { color: #a32d2d; font-size: 0.9rem; padding: 1rem 0; }
 
+/* ── Keyboard focus ── */
+/* :focus-visible shows only for keyboard/assistive-tech navigation, not mouse clicks */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+[role="button"]:focus-visible,
+[role="tab"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* Rounder controls need a matching outline radius so it doesn't look clipped */
+.tag-pill:focus-visible,
+.mode-switch-label:focus-visible,
+.toggle-btn:focus-visible {
+  outline-offset: 3px;
+  border-radius: 20px;
+}
+
 /* ── Responsive: phones (≤640px) ── */
 @media (max-width: 640px) {
   main { padding: 1.5rem 1rem 3rem; }
