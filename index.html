@@ -873,8 +873,9 @@ const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
 // ── Site mode: 'pd' (public domain) or 'copyright' ─────────────────────────────
-// composer.html is now a single unified page (mode carried via ?mode=); score.html
-// is not yet unified, so it still uses a separate -copyright file per mode.
+// composer.html and score.html are both unified single pages now. composer.html
+// needs ?mode= carried in explicitly; score.html doesn't, since it determines
+// PD vs copyright itself from each composition's own public_domain value.
 let siteMode = new URLSearchParams(window.location.search).get('mode') === 'copyright' ? 'copyright' : 'pd';
 function composerHref(id, extra) {
   return 'composer.html?id=' + id + (siteMode === 'copyright' ? '&mode=copyright' : '') + (extra || '');
