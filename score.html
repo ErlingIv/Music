@@ -450,11 +450,15 @@ async function load() {
 
           ${comp.musescore_link ? `
             <div class="media-tab-panel active" id="tab-score" role="tabpanel" aria-labelledby="mediatab-score">
+              ${compMode === 'copyright' ? `
+              <div class="no-preview-box">
+                <p>Score preview isn't available for copyrighted works. You can still view it on MuseScore.</p>
+              </div>` : `
               <div class="score-embed-wrapper" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px;">
                 <iframe src="${comp.musescore_link}/embed" title="MuseScore embedded score preview"
                   allowfullscreen allow="autoplay; fullscreen">
                 </iframe>
-              </div>
+              </div>`}
               <a class="musescore-link" href="${comp.musescore_link}" target="_blank">
                 <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                   <path d="M5.5 2H3a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1V8.5M8 2h4m0 0v4m0-4L6 8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
