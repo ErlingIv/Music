@@ -5,80 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tags — Norske Musikknoter</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=Source+Serif+4:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
 <style>
-  :root {
-    --bg:      #f7f4ee;
-    --paper:   #fffef9;
-    --ink:     #1a1814;
-    --muted:   #7a7060;
-    --faint:   #e8e2d4;
-    --accent:  #8b3a1e;
-    --accent2: #2a5c45;
-    --border:  #d4cdc0;
-    --serif:   'Playfair Display', Georgia, serif;
-    --body:    'Source Serif 4', Georgia, serif;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: var(--body); background: var(--bg); color: var(--ink); min-height: 100vh; }
-
-  .site-header {
-    background: var(--paper);
-    border-bottom: 1px solid var(--border);
-    padding: 1rem 2rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-  .back-link {
-    font-size: 0.82rem; color: var(--muted); text-decoration: none;
-    letter-spacing: 0.05em; text-transform: uppercase;
-  }
-  .back-link:hover { color: var(--accent); }
-  .site-name {
-    font-family: var(--serif); font-size: 1rem; font-weight: 500;
-    color: var(--ink); text-decoration: none;
-  }
-
-  /* ── Mode switch (Public Domain / Copyright) ── */
-  .mode-switch-wrap {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.6rem;
-    margin-left: auto;
-  }
-  .mode-switch-label {
-    font-size: 0.76rem;
-    letter-spacing: 0.04em;
-    color: var(--muted);
-    cursor: pointer;
-    transition: color 0.15s, font-weight 0.15s;
-  }
-  .mode-switch-label.active { color: var(--accent); font-weight: 600; }
-  .mode-switch {
-    position: relative;
-    display: inline-block;
-    width: 38px;
-    height: 20px;
-  }
-  .mode-switch input { opacity: 0; width: 0; height: 0; }
-  .mode-switch-slider {
-    position: absolute; cursor: pointer;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: var(--border);
-    border-radius: 20px;
-    transition: background 0.15s;
-  }
-  .mode-switch-slider::before {
-    content: '';
-    position: absolute;
-    height: 14px; width: 14px;
-    left: 3px; bottom: 3px;
-    background: #fff;
-    border-radius: 50%;
-    transition: transform 0.15s;
-  }
-  .mode-switch input:checked + .mode-switch-slider { background: var(--accent); }
-  .mode-switch input:checked + .mode-switch-slider::before { transform: translateX(18px); }
+  /* ── Mode switch sits at far right of header ── */
+  .mode-switch-wrap { margin-left: auto; }
 
   main { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
 
@@ -216,18 +146,10 @@
   .comp-title { font-family: var(--serif); font-size: 0.95rem; font-weight: 500; color: var(--ink); }
   .comp-meta  { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
   .comp-icons { display: flex; gap: 0.35rem; flex-shrink: 0; align-items: center; }
-  .icon-badge {
-    font-size: 0.68rem; padding: 2px 7px; border-radius: 3px;
-    border: 1px solid var(--border); color: var(--muted); background: var(--bg);
-  }
   .icon-badge.pdf { color: var(--accent);  border-color: var(--accent); }
   .icon-badge.mp3 { color: var(--accent2); border-color: var(--accent2); }
-  .ms-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
-  .ms-dot.ms-low  { background: #aaa49c; }
-  .ms-dot.ms-med  { background: #3a6ea8; }
-  .ms-dot.ms-high { background: #cc2200; }
 
-  .loading-state { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.9rem; }
+  .loading-state { padding: 2rem; }
   .empty-state   { color: var(--muted); font-size: 0.9rem; padding: 1.5rem; text-align: center; }
 </style>
 </head>
@@ -280,6 +202,7 @@
 </main>
 
 <script src="config.js"></script>
+<script src="shared.js"></script>
 <script>
 document.getElementById('siteNameLink').textContent = SITE_NAME;
 const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
@@ -297,24 +220,6 @@ function syncIndexLinks() {
   document.getElementById('siteNameLink').href = href;
 }
 syncIndexLinks();
-function scoreHref(id) {
-  // score.html is unified now — it determines PD vs copyright itself from
-  // the composition's own public_domain value, so no mode param needed here.
-  return 'score.html?id=' + id;
-}
-
-function wordCount(text) {
-  if (!text || !text.trim()) return 0;
-  return text.trim().split(/\s+/).length;
-}
-
-function msInfoBadge(notes) {
-  const wc = wordCount(notes);
-  if (wc === 0)  return '<span class="ms-dot ms-low" style="visibility:hidden"></span>';
-  if (wc <= 100) return '<span class="ms-dot ms-low"  title="MuseScore info: ~' + wc + ' words"></span>';
-  if (wc <= 300) return '<span class="ms-dot ms-med"  title="MuseScore info: ~' + wc + ' words"></span>';
-                 return '<span class="ms-dot ms-high" title="MuseScore info: ~' + wc + ' words"></span>';
-}
 
 function loadHeroImage(tagName, imageUrl) {
   const hero  = document.getElementById('tagHero');

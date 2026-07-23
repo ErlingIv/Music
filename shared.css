@@ -1,0 +1,130 @@
+/* ============================================
+   Music Scores — Shared Styles
+   Used by: index.html, score.html, composer.html, tags.html
+   Page-specific <style> blocks may still override any of this —
+   this file is linked before each page's own styles.
+   ============================================ */
+
+:root {
+  --bg:        #f7f4ee;
+  --paper:     #fffef9;
+  --ink:       #1a1814;
+  --muted:     #7a7060;
+  --faint:     #e8e2d4;
+  --accent:    #8b3a1e;
+  --accent2:   #2a5c45;
+  --border:    #d4cdc0;
+  --no-color:  #c0392b;
+  --se-color:  #006aa7;
+  --dk-color:  #c60c30;
+  --fi-color:  #003580;
+  --serif:     'Playfair Display', Georgia, serif;
+  --body:      'Source Serif 4', Georgia, serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--body);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+/* ── Sub-page header (score / composer / tags) ── */
+.site-header {
+  background: var(--paper);
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.back-link {
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-decoration: none;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.back-link:hover { color: var(--accent); }
+.site-name {
+  font-family: var(--serif);
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+/* ── Mode switch (Public Domain / Copyright) ── */
+.mode-switch-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.mode-switch-label {
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s, font-weight 0.15s;
+}
+.mode-switch-label.active { color: var(--accent); font-weight: 600; }
+.mode-switch {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 20px;
+}
+.mode-switch input { opacity: 0; width: 0; height: 0; }
+.mode-switch-slider {
+  position: absolute; cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--border);
+  border-radius: 20px;
+  transition: background 0.15s;
+}
+.mode-switch-slider::before {
+  content: '';
+  position: absolute;
+  height: 14px; width: 14px;
+  left: 3px; bottom: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.15s;
+}
+.mode-switch input:checked + .mode-switch-slider { background: var(--accent); }
+.mode-switch input:checked + .mode-switch-slider::before { transform: translateX(18px); }
+
+/* ── Badges ── */
+.badge {
+  font-size: 0.75rem;
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid;
+  letter-spacing: 0.03em;
+  display: inline-block;
+}
+
+/* ── Icon badges + MuseScore info dots (composer/tags score rows) ── */
+.icon-badge {
+  font-size: 0.68rem;
+  padding: 2px 7px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  background: var(--bg);
+  letter-spacing: 0.04em;
+}
+.ms-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.ms-dot.ms-low  { background: #aaa49c; }
+.ms-dot.ms-med  { background: #3a6ea8; }
+.ms-dot.ms-high { background: #cc2200; }
+
+/* ── Loading / error states ── */
+.loading-state {
+  text-align: center;
+  padding: 3rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.error-state { color: #a32d2d; font-size: 0.9rem; padding: 1rem 0; }

@@ -5,32 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Music Collection — Historical Nordic Scores</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Source+Serif+4:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
 <style>
-  :root {
-    --bg:        #f7f4ee;
-    --paper:     #fffef9;
-    --ink:       #1a1814;
-    --muted:     #7a7060;
-    --faint:     #e8e2d4;
-    --accent:    #8b3a1e;
-    --accent2:   #2a5c45;
-    --border:    #d4cdc0;
-    --no-color:  #c0392b;
-    --se-color:  #006aa7;
-    --dk-color:  #c60c30;
-    --fi-color:  #003580;
-    --serif:     'Playfair Display', Georgia, serif;
-    --body:      'Source Serif 4', Georgia, serif;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
-
-  body {
-    font-family: var(--body);
-    background: var(--bg);
-    color: var(--ink);
-    min-height: 100vh;
-  }
 
   /* ── Header ── */
   header {
@@ -99,46 +76,12 @@
     color: #fff;
   }
 
-  /* ── Mode switch (Public Domain / Copyright) ── */
-  .mode-switch-wrap {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.6rem;
-    margin: 0.7rem 0 0.2rem;
-    position: relative;
-  }
-  .mode-switch-label {
-    font-size: 0.78rem;
-    letter-spacing: 0.04em;
-    color: var(--muted);
-    cursor: pointer;
-    transition: color 0.15s, font-weight 0.15s;
-  }
-  .mode-switch-label.active { color: var(--accent); font-weight: 600; }
-  .mode-switch {
-    position: relative;
-    display: inline-block;
-    width: 42px;
-    height: 22px;
-  }
-  .mode-switch input { opacity: 0; width: 0; height: 0; }
-  .mode-switch-slider {
-    position: absolute; cursor: pointer;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: var(--border);
-    border-radius: 22px;
-    transition: background 0.15s;
-  }
-  .mode-switch-slider::before {
-    content: '';
-    position: absolute;
-    height: 16px; width: 16px;
-    left: 3px; bottom: 3px;
-    background: #fff;
-    border-radius: 50%;
-    transition: transform 0.15s;
-  }
-  .mode-switch input:checked + .mode-switch-slider { background: var(--accent); }
+  /* ── Mode switch — homepage uses a slightly larger variant than shared.css's default ── */
+  .mode-switch-wrap { margin: 0.7rem 0 0.2rem; position: relative; }
+  .mode-switch-label { font-size: 0.78rem; }
+  .mode-switch { width: 42px; height: 22px; }
+  .mode-switch-slider { border-radius: 22px; }
+  .mode-switch-slider::before { height: 16px; width: 16px; }
   .mode-switch input:checked + .mode-switch-slider::before { transform: translateX(20px); }
 
   /* ── Nav tabs ── */
@@ -320,13 +263,7 @@
   .ded-year { color: var(--muted); font-size: 0.82rem; white-space: nowrap; }
   .ded-dedication { color: var(--ink); font-style: italic; }
 
-  .loading-state {
-    text-align: center;
-    padding: 3rem;
-    color: var(--muted);
-    font-size: 0.9rem;
-    letter-spacing: 0.05em;
-  }
+  .loading-state { letter-spacing: 0.05em; }
   .loading-dots::after {
     content: '...';
     animation: dots 1.2s steps(4, end) infinite;
@@ -507,14 +444,6 @@
   .legend-mark { flex: 0 0 64px; display: flex; align-items: center; padding-top: 0.1rem; }
   .legend-text { font-size: 0.88rem; line-height: 1.6; }
 
-  .badge {
-    font-size: 0.75rem;
-    padding: 3px 10px;
-    border-radius: 4px;
-    border: 1px solid;
-    letter-spacing: 0.03em;
-    display: inline-block;
-  }
   .about-icon-badge {
     font-size: 0.7rem;
     padding: 2px 7px;
@@ -866,6 +795,7 @@
 </footer>
 
 <script src="config.js"></script>
+<script src="shared.js"></script>
 <script>
 document.getElementById('siteTitle').textContent = SITE_NAME;
 const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
@@ -880,31 +810,7 @@ let siteMode = new URLSearchParams(window.location.search).get('mode') === 'copy
 function composerHref(id, extra) {
   return 'composer.html?id=' + id + (siteMode === 'copyright' ? '&mode=copyright' : '') + (extra || '');
 }
-function scoreHref(id) {
-  // score.html is unified now — it determines PD vs copyright itself from
-  // the composition's own public_domain value, so no mode param needed here.
-  return 'score.html?id=' + id;
-}
-
 const NORDIC = ['SE', 'DK', 'FI', 'IS'];
-function codeToFlag(code) {
-  if (!code || code.length < 2) return '';
-  return [...code.toUpperCase().slice(0,2)]
-    .map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('');
-}
-
-function renderFlags(nationality, birthCountry, birthCountryPrimary) {
-  var bcp    = (birthCountryPrimary === true);
-  var prime  = bcp && birthCountry ? birthCountry : nationality;
-  var second = bcp && birthCountry ? nationality  : birthCountry;
-  var pFlag  = codeToFlag(prime);
-  if (!pFlag) return '';
-  if (second && second !== prime) {
-    var sFlag = codeToFlag(second);
-    if (sFlag) return pFlag + '<span style="font-size:0.65em;vertical-align:super">' + sFlag + '</span>';
-  }
-  return pFlag;
-}
 
 let allComposers = { no: [], nordic: [], others: [], unknown: [] };
 let activeSection = 'no';
@@ -1123,14 +1029,6 @@ function renderSection(sec) {
       </div>
     </div>
   `).join('');
-}
-
-function lifespan(born, died, diedUncertain) {
-  const uncertain = (diedUncertain === 'yes' || diedUncertain === true);
-  if (!born && !died) return '';
-  if (born && !died) return String(born);
-  if (!born && died)  return uncertain ? 'after ' + died : String(died);
-  return born + '–' + (uncertain ? 'after ' + died : died);
 }
 
 function composerCard(c) {
