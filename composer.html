@@ -380,7 +380,9 @@ const roleParam = params.get('role') || 'Composer'; // 'Composer' or 'Lyricist'
 // Carried in from index.html via ?mode=copyright, or toggled locally on this page.
 let siteMode = params.get('mode') === 'copyright' ? 'copyright' : 'pd';
 function scoreHref(id) {
-  return (siteMode === 'copyright' ? 'score-copyright.html' : 'score.html') + '?id=' + id;
+  // score.html is unified now — it determines PD vs copyright itself from
+  // the composition's own public_domain value, so no mode param needed here.
+  return 'score.html?id=' + id;
 }
 function selfHref(role) {
   return `composer.html?id=${personId}&role=${role}${siteMode === 'copyright' ? '&mode=copyright' : ''}`;
