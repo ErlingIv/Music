@@ -332,8 +332,8 @@ async function load() {
     const tagMap   = {};
     if (cc.length) {
       const compIds = cc.map(r => r.composition_id).join(',');
-      const pdFilter  = siteMode === 'copyright' ? 'neq.Yes' : 'eq.Yes';
-      const linkParam = siteMode === 'copyright' ? '' : '&musescore_link=not.is.null';
+      const pdFilter  = modePdFilter(siteMode);
+      const linkParam = modeLinkParam(siteMode);
       const cR = await fetch(
         `${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&public_domain=${pdFilter}${linkParam}&select=composition_id,title,year_composed,musescore_link,public_domain,musescore_notes,opus_number,approved&order=title.asc`,
         { headers: H }

@@ -52,3 +52,19 @@ function msInfoBadge(notes) {
   if (wc <= 300) return '<span class="ms-dot ms-med"  title="MuseScore info: ~' + wc + ' words"></span>';
                return '<span class="ms-dot ms-high" title="MuseScore info: ~' + wc + ' words"></span>';
 }
+
+// ── Site-mode visibility filter ────────────────────────────────────────────
+// Canonical rule for "is this composition visible in the current site mode":
+//   Public Domain mode: public_domain = 'Yes' AND a MuseScore link exists
+//     (PD mode only shows works that can actually be played/viewed)
+//   Copyright mode: public_domain != 'Yes', no link required
+//     (copyright-mode entries are catalogue/reference records; most won't
+//     have a public MuseScore link since the work can't be republished)
+// Use these two together everywhere a composition list is filtered by mode,
+// so the PD/Copyright inclusion rule can't drift apart page to page.
+function modePdFilter(siteMode) {
+  return siteMode === 'copyright' ? 'neq.Yes' : 'eq.Yes';
+}
+function modeLinkParam(siteMode) {
+  return siteMode === 'copyright' ? '' : '&musescore_link=not.is.null';
+}

@@ -946,7 +946,7 @@ async function fetchAllComposers(copyrightMode = false) {
   offset = 0;
   while (true) {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition?select=composition_id&musescore_link=not.is.null&public_domain=${copyrightMode ? 'neq.Yes' : 'eq.Yes'}&limit=1000&offset=${offset}`,
+      `${SUPABASE_URL}/rest/v1/composition?select=composition_id&public_domain=${modePdFilter(copyrightMode ? 'copyright' : 'pd')}${modeLinkParam(copyrightMode ? 'copyright' : 'pd')}&limit=1000&offset=${offset}`,
       { headers: H }
     );
     const rows = await r.json();
@@ -1246,8 +1246,8 @@ async function doSearch(query) {
   const q = query.toLowerCase();
 
   // Search compositions by title
-  const pdFilter  = siteMode === 'copyright' ? 'neq.Yes' : 'eq.Yes';
-  const linkParam = siteMode === 'copyright' ? '' : '&musescore_link=not.is.null';
+  const pdFilter  = modePdFilter(siteMode);
+  const linkParam = modeLinkParam(siteMode);
   const titleR = await fetch(
     `${SUPABASE_URL}/rest/v1/composition?title=ilike.*${encodeURIComponent(query)}*&public_domain=${pdFilter}${linkParam}&select=composition_id,title,year_composed&order=title.asc&limit=8`,
     { headers: H }
@@ -1361,7 +1361,7 @@ async function loadRecentlyAdded() {
   const el = document.getElementById('recentlyScroll');
   try {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition?musescore_uploaded=not.is.null&musescore_link=not.is.null&public_domain=${siteMode === 'copyright' ? 'neq.Yes' : 'eq.Yes'}&select=composition_id,title,musescore_link,musescore_uploaded&order=musescore_uploaded.desc&limit=12`,
+      `${SUPABASE_URL}/rest/v1/composition?musescore_uploaded=not.is.null&musescore_link=not.is.null&public_domain=${modePdFilter(siteMode)}&select=composition_id,title,musescore_link,musescore_uploaded&order=musescore_uploaded.desc&limit=12`,
       { headers: H }
     );
     const comps = await r.json();
@@ -1501,9 +1501,9 @@ async function loadIllustrators() {
   let pdIds = new Set();
   for (let i = 0; i < allCompIds.length; i += 200) {
     const chunk = allCompIds.slice(i, i + 200).join(',');
-    const pdFilter = siteMode === 'copyright' ? 'neq.Yes' : 'eq.Yes';
+    const pdFilter = modePdFilter(siteMode);
     const r = await fetch(
-      SUPABASE_URL + '/rest/v1/composition?composition_id=in.(' + chunk + ')&public_domain=' + pdFilter + '&musescore_link=not.is.null&select=composition_id',
+      SUPABASE_URL + '/rest/v1/composition?composition_id=in.(' + chunk + ')&public_domain=' + pdFilter + modeLinkParam(siteMode) + '&select=composition_id',
       { headers: H }
     );
     (await r.json()).forEach(c => pdIds.add(c.composition_id));
