@@ -49,6 +49,47 @@
     text-decoration: none;
   }
 
+  /* ── Mode switch (Public Domain / Copyright) ── */
+  .mode-switch-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-left: auto;
+  }
+  .mode-switch-label {
+    font-size: 0.76rem;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color 0.15s, font-weight 0.15s;
+  }
+  .mode-switch-label.active { color: var(--accent); font-weight: 600; }
+  .mode-switch {
+    position: relative;
+    display: inline-block;
+    width: 38px;
+    height: 20px;
+  }
+  .mode-switch input { opacity: 0; width: 0; height: 0; }
+  .mode-switch-slider {
+    position: absolute; cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--border);
+    border-radius: 20px;
+    transition: background 0.15s;
+  }
+  .mode-switch-slider::before {
+    content: '';
+    position: absolute;
+    height: 14px; width: 14px;
+    left: 3px; bottom: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.15s;
+  }
+  .mode-switch input:checked + .mode-switch-slider { background: var(--accent); }
+  .mode-switch input:checked + .mode-switch-slider::before { transform: translateX(18px); }
+
   /* ── Main ── */
   main { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
 
@@ -288,8 +329,17 @@
 <body>
 
 <header class="site-header">
-  <a class="back-link" href="index.html">← Back</a>
+  <a class="back-link" href="index.html" id="backLink">← Back</a>
   <a class="site-name" href="index.html" id="siteNameLink">Norske Musikknoter</a>
+
+  <div class="mode-switch-wrap" title="Switch between public domain and copyright-protected scores">
+    <span class="mode-switch-label active" id="modeLabelPD" onclick="switchSiteMode('pd')">Public Domain</span>
+    <label class="mode-switch">
+      <input type="checkbox" id="modeToggle" onchange="switchSiteMode(this.checked ? 'copyright' : 'pd')">
+      <span class="mode-switch-slider"></span>
+    </label>
+    <span class="mode-switch-label" id="modeLabelCopyright" onclick="switchSiteMode('copyright')">Copyright</span>
+  </div>
 </header>
 
 <main>
@@ -325,6 +375,32 @@ function renderFlags(nationality, birthCountry, birthCountryPrimary) {
 const params    = new URLSearchParams(window.location.search);
 const personId  = params.get('id');
 const roleParam = params.get('role') || 'Composer'; // 'Composer' or 'Lyricist'
+
+// ── Site mode: 'pd' (public domain) or 'copyright' ─────────────────────────────
+// Carried in from index.html via ?mode=copyright, or toggled locally on this page.
+let siteMode = params.get('mode') === 'copyright' ? 'copyright' : 'pd';
+function scoreHref(id) {
+  return (siteMode === 'copyright' ? 'score-copyright.html' : 'score.html') + '?id=' + id;
+}
+function selfHref(role) {
+  return `composer.html?id=${personId}&role=${role}${siteMode === 'copyright' ? '&mode=copyright' : ''}`;
+}
+
+// Reflect initial mode in the toggle UI
+document.getElementById('modeToggle').checked = (siteMode === 'copyright');
+document.getElementById('modeLabelPD').classList.toggle('active', siteMode === 'pd');
+document.getElementById('modeLabelCopyright').classList.toggle('active', siteMode === 'copyright');
+document.getElementById('backLink').href = siteMode === 'copyright' ? 'index.html?mode=copyright' : 'index.html';
+
+function switchSiteMode(mode) {
+  if (mode === siteMode) return;
+  siteMode = mode;
+  document.getElementById('modeToggle').checked = (mode === 'copyright');
+  document.getElementById('modeLabelPD').classList.toggle('active', mode === 'pd');
+  document.getElementById('modeLabelCopyright').classList.toggle('active', mode === 'copyright');
+  document.getElementById('backLink').href = mode === 'copyright' ? 'index.html?mode=copyright' : 'index.html';
+  load();
+}
 
 function wordCount(text) {
   if (!text || !text.trim()) return 0;
@@ -390,8 +466,10 @@ async function load() {
     const tagMap   = {};
     if (cc.length) {
       const compIds = cc.map(r => r.composition_id).join(',');
+      const pdFilter  = siteMode === 'copyright' ? 'neq.Yes' : 'eq.Yes';
+      const linkParam = siteMode === 'copyright' ? '' : '&musescore_link=not.is.null';
       const cR = await fetch(
-        `${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&public_domain=eq.Yes&musescore_link=not.is.null&select=composition_id,title,year_composed,musescore_link,public_domain,musescore_notes,opus_number,approved&order=title.asc`,
+        `${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&public_domain=${pdFilter}${linkParam}&select=composition_id,title,year_composed,musescore_link,public_domain,musescore_notes,opus_number,approved&order=title.asc`,
         { headers: H }
       );
       compositions = await cR.json();
@@ -427,9 +505,9 @@ async function load() {
     const switcherHtml = showSwitcher ? `
       <div class="role-switcher">
         <a class="role-btn ${roleParam === 'Composer' ? 'active' : ''}"
-           href="composer.html?id=${personId}&role=Composer">As composer</a>
+           href="${selfHref('Composer')}">As composer</a>
         <a class="role-btn ${roleParam === 'Lyricist' ? 'active' : ''}"
-           href="composer.html?id=${personId}&role=Lyricist">As lyricist</a>
+           href="${selfHref('Lyricist')}">As lyricist</a>
       </div>` : '';
 
     const scoresHeading = roleParam === 'Lyricist' ? 'Scores as lyricist' : 'Scores';
@@ -474,7 +552,7 @@ async function load() {
       </div>
 
       ${compositions.length === 0
-        ? `<div class="loading-state">No public domain scores found${roleParam === 'Lyricist' ? ' as lyricist' : ''}.</div>`
+        ? `<div class="loading-state">No ${siteMode === 'copyright' ? 'copyright' : 'public domain'} scores found${roleParam === 'Lyricist' ? ' as lyricist' : ''}.</div>`
         : `<div class="score-list" id="scoreList">
             ${renderScoreItems(compositions, scoreMap, tagMap, creditedAsMap)}
           </div>`
@@ -490,7 +568,7 @@ function scoreRowHtml(c, scoreMap, tagMap, creditedAsMap) {
   const s = scoreMap[c.composition_id];
   const hasMedia = !!(s?.pdf_url || s?.mp3_url);
   return `
-    <a class="score-row" href="score.html?id=${c.composition_id}" data-has-media="${hasMedia}">
+    <a class="score-row" href="${scoreHref(c.composition_id)}" data-has-media="${hasMedia}">
       <div>
         <div class="score-title">${c.title}${c.approved ? '<span class="godkjent-mark"></span>' : ''}</div>
         <div class="score-meta">
