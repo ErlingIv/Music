@@ -919,20 +919,46 @@ let activeFilters = {
 // ── Fetch all composers with at least one public domain score ─────────────────
 
 async function fetchAllComposers(copyrightMode = false) {
-  // 1. Get all person_ids linked to PD (or copyright) compositions
-  let pdIds = new Set();
+  // 1. Fetch composition_id → {public_domain, musescore_link} as a plain query.
+  //    (Avoiding Supabase's embedded FK-join syntax here deliberately — it has
+  //    silently returned null on this table before, which made every composer
+  //    look like a match once `pd` came back undefined.)
+  const compInfo = {};
   let offset = 0;
   while (true) {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition_person?role=eq.Composer&select=person_id,composition:composition_id(public_domain,musescore_link)&limit=1000&offset=${offset}`,
+      `${SUPABASE_URL}/rest/v1/composition?select=composition_id,public_domain,musescore_link&limit=1000&offset=${offset}`,
+      { headers: H }
+    );
+    const rows = await r.json();
+    if (!rows.length) break;
+    rows.forEach(c => { compInfo[c.composition_id] = c; });
+    if (rows.length < 1000) break;
+    offset += 1000;
+  }
+
+  // 2. Fetch composition_person rows for composers, then classify each person
+  //    using the compInfo map above — both the pdIds set and the per-person
+  //    count come from this single pass now, instead of two separate queries.
+  let pdIds = new Set();
+  const countMap = {};
+  offset = 0;
+  while (true) {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/composition_person?role=eq.Composer&select=person_id,composition_id&limit=1000&offset=${offset}`,
       { headers: H }
     );
     const rows = await r.json();
     if (!rows.length) break;
     rows.forEach(row => {
-      const pd = row.composition?.public_domain;
-      const hasLink = !!row.composition?.musescore_link;
-      if (copyrightMode ? pd !== 'Yes' : (pd === 'Yes' && hasLink)) pdIds.add(row.person_id);
+      const info = compInfo[row.composition_id];
+      const pd = info?.public_domain;
+      const hasLink = !!info?.musescore_link;
+      const matches = copyrightMode ? (pd !== undefined && pd !== 'Yes') : (pd === 'Yes' && hasLink);
+      if (matches) {
+        pdIds.add(row.person_id);
+        countMap[row.person_id] = (countMap[row.person_id] || 0) + 1;
+      }
     });
     if (rows.length < 1000) break;
     offset += 1000;
@@ -940,28 +966,6 @@ async function fetchAllComposers(copyrightMode = false) {
 
   // Reset sections before refilling
   allComposers = { no: [], nordic: [], others: [], unknown: [] };
-
-  // 2. Get composition counts per person — count only PD compositions with a MuseScore link
-  const countMap = {};
-  offset = 0;
-  while (true) {
-    const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition_person?role=eq.Composer&select=person_id,composition:composition_id(public_domain,musescore_link)&limit=1000&offset=${offset}`,
-      { headers: H }
-    );
-    const rows = await r.json();
-    if (!rows.length) break;
-    rows.forEach(row => {
-      const pd = row.composition?.public_domain;
-      const hasLink = !!row.composition?.musescore_link;
-      const counts = copyrightMode ? (pd !== 'Yes') : (pd === 'Yes' && hasLink);
-      if (counts) {
-        countMap[row.person_id] = (countMap[row.person_id] || 0) + 1;
-      }
-    });
-    if (rows.length < 1000) break;
-    offset += 1000;
-  }
 
   // 3. Fetch persons — both with and without nationality
   const pdIdsArr = [...pdIds];
