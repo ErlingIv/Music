@@ -311,7 +311,13 @@ async function load() {
 
     const comp  = (await compR.json())[0];
     const score = (await scoreR.json())[0];
-    const cp    = await cpR.json();
+    const cpRaw = await cpR.json();
+
+    // A malformed/nonexistent id (e.g. a non-numeric value) makes Supabase
+    // return an error object instead of an array — guard against that here
+    // so it surfaces as "Score not found" rather than a cryptic JS crash.
+    if (!comp || !Array.isArray(cpRaw)) throw new Error('Score not found');
+    const cp = cpRaw;
 
     // Fetch publisher name if present
     let publisherName = null;
@@ -328,7 +334,6 @@ async function load() {
     const cl    = cp.filter(r => r.role === 'Lyricist');
     const ci    = cp.filter(r => r.role === 'Illustrator');
     const ct    = cp.filter(r => r.role === 'Translator');
-    if (!comp) throw new Error('Score not found');
 
     compMode = comp.public_domain === 'Yes' ? 'pd' : 'copyright';
     if (!(referrer && referrer.includes('composer.html'))) {
@@ -482,15 +487,11 @@ async function load() {
 
           ${comp.musescore_link ? `
             <div class="media-tab-panel active" id="tab-score">
-              ${compMode === 'pd' ? `
               <div class="score-embed-wrapper" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px;">
                 <iframe src="${comp.musescore_link}/embed"
                   allowfullscreen allow="autoplay; fullscreen">
                 </iframe>
-              </div>` : `
-              <div class="no-preview-box">
-                <p>Score preview not available for copyright-protected works.</p>
-              </div>`}
+              </div>
               <a class="musescore-link" href="${comp.musescore_link}" target="_blank">
                 <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
                   <path d="M5.5 2H3a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1V8.5M8 2h4m0 0v4m0-4L6 8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
