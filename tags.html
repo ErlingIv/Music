@@ -298,7 +298,9 @@ function syncIndexLinks() {
 }
 syncIndexLinks();
 function scoreHref(id) {
-  return (siteMode === 'copyright' ? 'score-copyright.html' : 'score.html') + '?id=' + id;
+  // score.html is unified now — it determines PD vs copyright itself from
+  // the composition's own public_domain value, so no mode param needed here.
+  return 'score.html?id=' + id;
 }
 
 function wordCount(text) {
