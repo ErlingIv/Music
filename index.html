@@ -99,7 +99,47 @@
     color: #fff;
   }
 
-
+  /* ── Mode switch (Public Domain / Copyright) ── */
+  .mode-switch-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0.7rem 0 0.2rem;
+    position: relative;
+  }
+  .mode-switch-label {
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color 0.15s, font-weight 0.15s;
+  }
+  .mode-switch-label.active { color: var(--accent); font-weight: 600; }
+  .mode-switch {
+    position: relative;
+    display: inline-block;
+    width: 42px;
+    height: 22px;
+  }
+  .mode-switch input { opacity: 0; width: 0; height: 0; }
+  .mode-switch-slider {
+    position: absolute; cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--border);
+    border-radius: 22px;
+    transition: background 0.15s;
+  }
+  .mode-switch-slider::before {
+    content: '';
+    position: absolute;
+    height: 16px; width: 16px;
+    left: 3px; bottom: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.15s;
+  }
+  .mode-switch input:checked + .mode-switch-slider { background: var(--accent); }
+  .mode-switch input:checked + .mode-switch-slider::before { transform: translateX(20px); }
 
   /* ── Nav tabs ── */
   nav {
@@ -529,12 +569,21 @@
 
 <header>
   <h1 class="site-title" id="siteTitle">Music Scores</h1>
-  <p class="site-subtitle">Sheet Music &nbsp;·&nbsp; Public Domain</p>
-  <p class="header-about">Primarily Norwegian compositions, with Nordic and international works — all in the public domain</p>
+  <p class="site-subtitle" id="siteSubtitle">Sheet Music &nbsp;·&nbsp; Public Domain</p>
+  <p class="header-about" id="headerAbout">Primarily Norwegian compositions, with Nordic and international works — all in the public domain</p>
+
+  <div class="mode-switch-wrap" title="Switch between public domain and copyright-protected scores">
+    <span class="mode-switch-label active" id="modeLabelPD" onclick="switchSiteMode('pd')">Public Domain</span>
+    <label class="mode-switch">
+      <input type="checkbox" id="modeToggle" onchange="switchSiteMode(this.checked ? 'copyright' : 'pd')">
+      <span class="mode-switch-slider"></span>
+    </label>
+    <span class="mode-switch-label" id="modeLabelCopyright" onclick="switchSiteMode('copyright')">Copyright</span>
+  </div>
 
   <div class="header-links">
     <a href="tags.html" class="header-link">🏷 Browse by Tag</a>
-    <a href="lyricists.html" class="header-link">✍ Lyricists</a>
+    <a href="lyricists.html" class="header-link" id="lyricistsLink">✍ Lyricists</a>
   </div>
 </header>
 
@@ -823,6 +872,15 @@ const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
+// ── Site mode: 'pd' (public domain) or 'copyright' ─────────────────────────────
+let siteMode = 'pd';
+function composerHref(id, extra) {
+  return (siteMode === 'copyright' ? 'composer-copyright.html' : 'composer.html') + '?id=' + id + (extra || '');
+}
+function scoreHref(id) {
+  return (siteMode === 'copyright' ? 'score-copyright.html' : 'score.html') + '?id=' + id;
+}
+
 const NORDIC = ['SE', 'DK', 'FI', 'IS'];
 function codeToFlag(code) {
   if (!code || code.length < 2) return '';
@@ -889,7 +947,10 @@ async function fetchAllComposers(copyrightMode = false) {
     const rows = await r.json();
     if (!rows.length) break;
     rows.forEach(row => {
-      if (row.composition?.public_domain === 'Yes' && row.composition?.musescore_link) {
+      const pd = row.composition?.public_domain;
+      const hasLink = !!row.composition?.musescore_link;
+      const counts = copyrightMode ? (pd !== 'Yes') : (pd === 'Yes' && hasLink);
+      if (counts) {
         countMap[row.person_id] = (countMap[row.person_id] || 0) + 1;
       }
     });
@@ -935,7 +996,7 @@ async function fetchAllComposers(copyrightMode = false) {
   offset = 0;
   while (true) {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition?select=composition_id&musescore_link=not.is.null&public_domain=eq.Yes&limit=1000&offset=${offset}`,
+      `${SUPABASE_URL}/rest/v1/composition?select=composition_id&musescore_link=not.is.null&public_domain=${copyrightMode ? 'neq.Yes' : 'eq.Yes'}&limit=1000&offset=${offset}`,
       { headers: H }
     );
     const rows = await r.json();
@@ -1071,7 +1132,7 @@ function composerCard(c) {
   const n = c.score_count;
   const tier = n >= 20 ? 'tier-4' : n >= 6 ? 'tier-3' : n >= 2 ? 'tier-2' : 'tier-1';
   return `
-    <a class="composer-card ${tier}" href="composer.html?id=${c.person_id}">
+    <a class="composer-card ${tier}" href="${composerHref(c.person_id)}">
       <div class="composer-name">${c.last_name}, ${c.first_name} ${flag}</div>
       <div class="composer-meta">
         ${years ? `<span>${years}</span>` : ''}
@@ -1108,6 +1169,53 @@ function filterLetter(sec, letter) {
   renderSection(sec);
   // Scroll to top of section
   document.getElementById(`panel-${sec}`).scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── Mode switch ───────────────────────────────────────────────────────────────
+
+function switchSiteMode(mode) {
+  if (mode === siteMode) return;
+  siteMode = mode;
+
+  document.getElementById('modeToggle').checked = (mode === 'copyright');
+  document.getElementById('modeLabelPD').classList.toggle('active', mode === 'pd');
+  document.getElementById('modeLabelCopyright').classList.toggle('active', mode === 'copyright');
+
+  if (mode === 'copyright') {
+    document.getElementById('siteSubtitle').innerHTML = 'Sheet Music &nbsp;·&nbsp; Copyright';
+    document.getElementById('headerAbout').textContent = 'Primarily Norwegian compositions, with Nordic and international works — currently under copyright';
+    document.getElementById('lyricistsLink').style.display = 'none';
+  } else {
+    document.getElementById('siteSubtitle').innerHTML = 'Sheet Music &nbsp;·&nbsp; Public Domain';
+    document.getElementById('headerAbout').textContent = 'Primarily Norwegian compositions, with Nordic and international works — all in the public domain';
+    document.getElementById('lyricistsLink').style.display = '';
+  }
+
+  // Reset per-section letter/filter state
+  activeLetters = { no: 'ALL', nordic: 'ALL', others: 'ALL', unknown: 'ALL' };
+  activeFilters = {
+    no:      { media: false, female: false },
+    nordic:  { media: false, female: false },
+    others:  { media: false, female: false },
+    unknown: { media: false, female: false },
+  };
+
+  // Clear search cache/results — the underlying composition set has changed
+  _allCompositions = null;
+  const resultsEl = document.getElementById('searchResults');
+  if (resultsEl) resultsEl.style.display = 'none';
+
+  fetchAllComposers(mode === 'copyright');
+  loadRecentlyAdded();
+
+  // Dedications/Illustrators are lazy-loaded per mode: if the visitor is
+  // currently on one of those tabs, refresh it now; otherwise just mark the
+  // cache stale so it refetches the next time that tab is opened.
+  if (activeSection === 'dedications') { loadDedications(); }
+  else if (_dedicationsLoadedMode !== null) { _dedicationsLoadedMode = null; }
+
+  if (activeSection === 'illustrators') { loadIllustrators(); }
+  else if (_illustratorsLoadedMode !== null) { _illustratorsLoadedMode = null; }
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -1154,8 +1262,10 @@ async function doSearch(query) {
   const q = query.toLowerCase();
 
   // Search compositions by title
+  const pdFilter  = siteMode === 'copyright' ? 'neq.Yes' : 'eq.Yes';
+  const linkParam = siteMode === 'copyright' ? '' : '&musescore_link=not.is.null';
   const titleR = await fetch(
-    `${SUPABASE_URL}/rest/v1/composition?title=ilike.*${encodeURIComponent(query)}*&public_domain=eq.Yes&musescore_link=not.is.null&select=composition_id,title,year_composed&order=title.asc&limit=8`,
+    `${SUPABASE_URL}/rest/v1/composition?title=ilike.*${encodeURIComponent(query)}*&public_domain=${pdFilter}${linkParam}&select=composition_id,title,year_composed&order=title.asc&limit=8`,
     { headers: H }
   );
   const titleResults = await titleR.json();
@@ -1177,7 +1287,7 @@ async function doSearch(query) {
   if (titleResults.length) {
     html += `<div style="padding:0.4rem 1rem;font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;background:var(--bg)">Compositions</div>`;
     titleResults.forEach(c => {
-      html += `<a class="search-result-item" href="score.html?id=${c.composition_id}">
+      html += `<a class="search-result-item" href="${scoreHref(c.composition_id)}">
         <span class="search-result-title">${c.title}</span>
         <span class="search-result-meta">${c.year_composed || ''}</span>
       </a>`;
@@ -1188,7 +1298,7 @@ async function doSearch(query) {
     html += `<div style="padding:0.4rem 1rem;font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;background:var(--bg)">Composers / Lyricists</div>`;
     personResults.forEach(p => {
       const name = `${p.first_name || ''} ${p.last_name || ''}`.trim();
-      html += `<a class="search-result-item" href="composer.html?id=${p.person_id}">
+      html += `<a class="search-result-item" href="${composerHref(p.person_id)}">
         <span class="search-result-title">${name}</span>
         <span class="search-result-meta">→ composer page</span>
       </a>`;
@@ -1267,7 +1377,7 @@ async function loadRecentlyAdded() {
   const el = document.getElementById('recentlyScroll');
   try {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition?musescore_uploaded=not.is.null&musescore_link=not.is.null&public_domain=eq.Yes&select=composition_id,title,musescore_link,musescore_uploaded&order=musescore_uploaded.desc&limit=12`,
+      `${SUPABASE_URL}/rest/v1/composition?musescore_uploaded=not.is.null&musescore_link=not.is.null&public_domain=${siteMode === 'copyright' ? 'neq.Yes' : 'eq.Yes'}&select=composition_id,title,musescore_link,musescore_uploaded&order=musescore_uploaded.desc&limit=12`,
       { headers: H }
     );
     const comps = await r.json();
@@ -1300,7 +1410,7 @@ async function loadRecentlyAdded() {
       const date = c.musescore_uploaded
         ? new Date(c.musescore_uploaded + 'T12:00:00').toLocaleDateString('nb-NO', { year: 'numeric', month: 'short', day: 'numeric' })
         : '';
-      return `<a class="recently-card" href="score.html?id=${c.composition_id}">
+      return `<a class="recently-card" href="${scoreHref(c.composition_id)}">
         <span class="recently-card-title">${c.title}</span>
         ${composer ? `<span class="recently-card-composer">${composer}</span>` : ''}
         <span class="recently-card-date">${date}</span>
@@ -1315,18 +1425,21 @@ loadRecentlyAdded();
 
 
 let _dedicationsLoaded = false;
+let _dedicationsLoadedMode = null;
 
 async function loadDedications() {
-  if (_dedicationsLoaded) return;
+  if (_dedicationsLoaded && _dedicationsLoadedMode === siteMode) return;
   _dedicationsLoaded = true;
+  _dedicationsLoadedMode = siteMode;
 
   const listEl  = document.getElementById('dedications-list');
   const countEl = document.getElementById('count-dedications');
+  listEl.innerHTML = '<div class="loading-state"><span class="loading-dots">Loading</span></div>';
 
   let all = [], offset = 0;
   while (true) {
     const r = await fetch(
-      SUPABASE_URL + '/rest/v1/composition?public_domain=eq.Yes&dedication=not.is.null&dedication=neq.&select=composition_id,title,year_composed,dedication&limit=1000&offset=' + offset,
+      SUPABASE_URL + '/rest/v1/composition?public_domain=' + (siteMode === 'copyright' ? 'neq.Yes' : 'eq.Yes') + '&dedication=not.is.null&dedication=neq.&select=composition_id,title,year_composed,dedication&limit=1000&offset=' + offset,
       { headers: H }
     );
     const batch = await r.json();
@@ -1350,7 +1463,7 @@ async function loadDedications() {
   makeSortable('ded-table-dedications', all,
     function(c) {
       return '<tr>' +
-        '<td class="ded-title"><a href="score.html?id=' + c.composition_id + '">' + c.title + '</a></td>' +
+        '<td class="ded-title"><a href="' + scoreHref(c.composition_id) + '">' + c.title + '</a></td>' +
         '<td class="ded-composer">' + ((composerMap[c.composition_id] || []).join(', ') || '—') + '</td>' +
         '<td class="ded-year">' + (c.year_composed || '') + '</td>' +
         '<td class="ded-dedication">' + c.dedication + '</td>' +
@@ -1367,15 +1480,18 @@ async function loadDedications() {
 
 // ── Illustrators ──────────────────────────────────────────────────────────────
 let _illustratorsLoaded = false;
+let _illustratorsLoadedMode = null;
 let illustratorsData = [];
 let illustratorsActiveLetter = 'ALL';
 
 async function loadIllustrators() {
-  if (_illustratorsLoaded) return;
+  if (_illustratorsLoaded && _illustratorsLoadedMode === siteMode) return;
   _illustratorsLoaded = true;
+  _illustratorsLoadedMode = siteMode;
 
   const listEl  = document.getElementById('illustrators-list');
   const countEl = document.getElementById('count-illustrators');
+  listEl.innerHTML = '<div class="loading-state"><span class="loading-dots">Loading</span></div>';
 
   let cpRows = [], offset = 0;
   while (true) {
@@ -1397,12 +1513,13 @@ async function loadIllustrators() {
 
   const allCompIds = [...new Set(cpRows.map(r => r.composition_id))];
 
-  // Fetch PD compositions only
+  // Fetch compositions matching the current mode
   let pdIds = new Set();
   for (let i = 0; i < allCompIds.length; i += 200) {
     const chunk = allCompIds.slice(i, i + 200).join(',');
+    const pdFilter = siteMode === 'copyright' ? 'neq.Yes' : 'eq.Yes';
     const r = await fetch(
-      SUPABASE_URL + '/rest/v1/composition?composition_id=in.(' + chunk + ')&public_domain=eq.Yes&musescore_link=not.is.null&select=composition_id',
+      SUPABASE_URL + '/rest/v1/composition?composition_id=in.(' + chunk + ')&public_domain=' + pdFilter + '&musescore_link=not.is.null&select=composition_id',
       { headers: H }
     );
     (await r.json()).forEach(c => pdIds.add(c.composition_id));
@@ -1411,7 +1528,7 @@ async function loadIllustrators() {
   const pdCpRows = cpRows.filter(r => pdIds.has(r.composition_id));
 
   if (!pdCpRows.length) {
-    listEl.innerHTML = '<div class="loading-state">No public domain illustrated scores found.</div>';
+    listEl.innerHTML = '<div class="loading-state">No illustrated scores found.</div>';
     countEl.textContent = '0 illustrators';
     return;
   }
@@ -1454,7 +1571,7 @@ function illustratorCard(p) {
   const flag   = p.nationality !== 'NO' ? renderFlags(p.nationality, p.birth_country, p.birth_country_primary) : '';
   const female = p.gender === 'F' ? '<span class="female-badge">♀</span>' : '';
   return `
-    <a class="composer-card" href="composer.html?id=${p.person_id}&role=Illustrator">
+    <a class="composer-card" href="${composerHref(p.person_id, '&role=Illustrator')}">
       <div class="composer-name">${p.last_name || ''}, ${p.first_name || ''} ${flag}</div>
       <div class="composer-meta">
         ${years ? `<span>${years}</span>` : ''}
