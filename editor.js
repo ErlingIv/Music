@@ -1604,7 +1604,7 @@ async function loadPersonCompositions(personId) {
   if (!cc.length) { container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:0.5rem 0">Ingen komposisjoner funnet.</div>'; return; }
   const ids = cc.map(r => r.composition_id).join(',');
   const roleMap = Object.fromEntries(cc.map(r => [r.composition_id, r.role]));
-  const comps = (await get(`/composition?composition_id=in.(${ids})&select=composition_id,title,year_composed,public_domain,musescore_link`))
+  const comps = (await get(`/composition?composition_id=in.(${ids})&select=composition_id,title,year_composed,public_domain,musescore_link,approved`))
     .map(c => ({ ...c, role: roleMap[c.composition_id] }))
     .sort((a,b) => (a.title||'').localeCompare(b.title||''));
   if (!comps.length) { container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:0.5rem 0">Ingen komposisjoner funnet.</div>'; return; }
@@ -1618,6 +1618,7 @@ async function loadPersonCompositions(personId) {
           <th style="text-align:center;padding:0.3rem">År</th>
           <th style="text-align:center;padding:0.3rem">PD</th>
           <th style="text-align:center;padding:0.3rem">MS</th>
+          <th style="text-align:center;padding:0.3rem" title="Godkjent">✓</th>
           <th style="text-align:center;padding:0.3rem">Rediger</th>
         </tr>
         ${comps.map(c => `<tr style="border-bottom:1px solid var(--border)">
@@ -1626,6 +1627,7 @@ async function loadPersonCompositions(personId) {
           <td style="text-align:center;color:var(--muted);padding:0.3rem">${escapeHtml(c.year_composed||'—')}</td>
           <td style="text-align:center;padding:0.3rem">${c.public_domain==='Yes'?'✓':''}</td>
           <td style="text-align:center;padding:0.3rem">${c.musescore_link?`<a href="${escapeHtml(c.musescore_link)}" target="_blank" rel="noopener noreferrer">🔗</a>`:''}</td>
+          <td style="text-align:center;padding:0.3rem" title="${c.approved?'Godkjent':'Ikke godkjent'}">${c.approved?'<span style="color:#2d6b27;font-weight:700">✓</span>':''}</td>
           <td style="text-align:center;padding:0.3rem"><button type="button" onclick="switchTab('edit');loadEditForm(${c.composition_id})" style="background:none;border:1px solid var(--border);border-radius:3px;padding:0.1rem 0.4rem;cursor:pointer;font-size:0.8rem">✏️</button></td>
         </tr>`).join('')}
       </table>
