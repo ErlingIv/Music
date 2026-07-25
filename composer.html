@@ -335,10 +335,14 @@ async function load() {
       const pdFilter  = modePdFilter(siteMode);
       const linkParam = modeLinkParam(siteMode);
       const cR = await fetch(
-        `${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&public_domain=${pdFilter}${linkParam}&select=composition_id,title,year_composed,musescore_link,public_domain,musescore_notes,opus_number,approved&order=title.asc`,
+        `${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&public_domain=${pdFilter}${linkParam}&select=composition_id,title,year_composed,musescore_link,public_domain,musescore_notes,opus_number,approved`,
         { headers: H }
       );
       compositions = await cR.json();
+      // Sort with Norwegian collation client-side: Postgres's default collation
+      // treats å/æ/ø as accented a/e/o, sorting them next to the base letter.
+      // Norwegian alphabetical order puts æ, ø, å after z.
+      compositions.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'nb'));
 
       // 5. Fetch scores (pdf_url, mp3_url) and tags for these compositions
       const allCompIds = cc.map(r => r.composition_id).join(',');

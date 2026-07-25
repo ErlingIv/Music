@@ -1225,6 +1225,7 @@ async function getAllCompositions() {
     offset += 1000;
   }
   _allCompositions = all;
+  _allCompositions.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'no'));
   return all;
 }
 
@@ -1249,17 +1250,21 @@ async function doSearch(query) {
   const pdFilter  = modePdFilter(siteMode);
   const linkParam = modeLinkParam(siteMode);
   const titleR = await fetch(
-    `${SUPABASE_URL}/rest/v1/composition?title=ilike.*${encodeURIComponent(query)}*&public_domain=${pdFilter}${linkParam}&select=composition_id,title,year_composed&order=title.asc&limit=8`,
+    `${SUPABASE_URL}/rest/v1/composition?title=ilike.*${encodeURIComponent(query)}*&public_domain=${pdFilter}${linkParam}&select=composition_id,title,year_composed&limit=50`,
     { headers: H }
   );
-  const titleResults = await titleR.json();
+  let titleResults = await titleR.json();
+  titleResults.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'no'));
+  titleResults = titleResults.slice(0, 8);
 
   // Search persons (composers/lyricists) by name
   const personR = await fetch(
-    `${SUPABASE_URL}/rest/v1/person?or=(last_name.ilike.*${encodeURIComponent(query)}*,first_name.ilike.*${encodeURIComponent(query)}*)&select=person_id,first_name,last_name&order=last_name.asc&limit=5`,
+    `${SUPABASE_URL}/rest/v1/person?or=(last_name.ilike.*${encodeURIComponent(query)}*,first_name.ilike.*${encodeURIComponent(query)}*)&select=person_id,first_name,last_name&limit=50`,
     { headers: H }
   );
-  const personResults = await personR.json();
+  let personResults = await personR.json();
+  personResults.sort((a, b) => (a.last_name || '').localeCompare(b.last_name || '', 'no'));
+  personResults = personResults.slice(0, 5);
 
   if (!titleResults.length && !personResults.length) {
     resultsEl.innerHTML = '<div class="search-empty">No results found</div>';

@@ -269,10 +269,11 @@ async function loadTags() {
   cloud.innerHTML = '<div class="loading-state" style="width:100%">Loading tags…</div>';
 
   const r = await fetch(
-    `${SUPABASE_URL}/rest/v1/tag?select=tag_id,tag_name,image_url&order=tag_name.asc`,
+    `${SUPABASE_URL}/rest/v1/tag?select=tag_id,tag_name,image_url`,
     { headers: H }
   );
   allTags = await r.json();
+  allTags.sort((a, b) => (a.tag_name || '').localeCompare(b.tag_name || '', 'no'));
   const HIDDEN_TAGS = ['Music for the Norwegian Royal Family'];
   allTags = allTags.filter(t => !HIDDEN_TAGS.includes(t.tag_name));
 
@@ -340,12 +341,13 @@ async function selectTag(tagId, tagName, imageUrl) {
   const pdFilter = modePdFilter(siteMode);
 
   const [compR, scoreR, ccR] = await Promise.all([
-    fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&public_domain=${pdFilter}${modeLinkParam(siteMode)}&select=composition_id,title,year_composed,musescore_link,public_domain,musescore_notes&order=title.asc`, { headers: H }),
+    fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${compIds})&public_domain=${pdFilter}${modeLinkParam(siteMode)}&select=composition_id,title,year_composed,musescore_link,public_domain,musescore_notes`, { headers: H }),
     fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=in.(${compIds})&select=composition_id,pdf_url,mp3_url`, { headers: H }),
     fetch(`${SUPABASE_URL}/rest/v1/composition_person?composition_id=in.(${compIds})&role=eq.Composer&select=composition_id,person_id`, { headers: H }),
   ]);
 
   const comps  = await compR.json();
+  comps.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'no'));
   const scores = await scoreR.json();
   const ccRows = await ccR.json();
 
