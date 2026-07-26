@@ -281,7 +281,7 @@ async function load() {
   try {
     // Fetch composition, score, and all contributors in parallel
     const [compR, scoreR, cpR] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${compId}&select=composition_id,title,year_composed,opus_number,musescore_link,musescore_notes,approved,dedication,public_domain`, { headers: H }),
+      fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${compId}&select=composition_id,title,year_composed,opus_number,musescore_link,musescore_notes,composition_notes,approved,dedication,public_domain`, { headers: H }),
       fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=eq.${compId}&select=pdf_url,mp3_url,publisher_id,plate_number,frontpage_url`, { headers: H }),
       fetch(`${SUPABASE_URL}/rest/v1/composition_person?composition_id=eq.${compId}&select=person_id,role,credited_as,translates_person_id`, { headers: H }),
     ]);
@@ -407,6 +407,12 @@ async function load() {
     // Store raw notes in a JS variable — never inline into HTML attributes
     window._notesRaw = comp.musescore_notes || '';
 
+    // Kommentar / composition_notes — distinct field from musescore_notes,
+    // rendered as its own section (not translatable, no translate button)
+    const compNotesHtml = comp.composition_notes
+      ? linkify(comp.composition_notes.replace(/\n/g, '<br>'))
+      : '';
+
     // Media tab availability, in display order: Cover (frontpage) is inserted
     // right after Score so the illustrated title page is the first thing seen
     // after the MuseScore embed, but it never steals the default-active tab
@@ -452,6 +458,14 @@ async function load() {
           return html;
         })()}
       </div>
+
+      ${compNotesHtml ? `
+        <div class="notes-section">
+          <div class="notes-header">
+            <p class="section-label" style="margin-bottom:0">Comments</p>
+          </div>
+          <div class="notes-text" id="compNotesText">${compNotesHtml}</div>
+        </div>` : ''}
 
       ${notesHtml ? `
         <div class="notes-section">
