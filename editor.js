@@ -562,6 +562,9 @@ function nAddContributorRow(person, role, creditedAs, translatesPersonId) { addC
 
 const ROLES = ['Composer','Lyricist','Arranger','Illustrator','Translator'];
 const ROLE_NO = { Composer:'Komponist', Lyricist:'Tekstforfatter', Arranger:'Arrangør', Illustrator:'Illustratør', Translator:'Oversetter' };
+// Fixed display order for contributor rows when loading an existing composition —
+// independent of ROLES (used for the role dropdown) and of raw DB query order.
+const ROLE_DISPLAY_ORDER = { Composer: 0, Arranger: 1, Lyricist: 2, Translator: 3, Illustrator: 4 };
 
 
 // ── Shared contributor row factory ────────────────────────────────────────────
@@ -1066,7 +1069,11 @@ async function loadEditForm(compId) {
   eContributors.length = 0;
   eRowIdxRef.value = 0;
   document.getElementById('e_contributorList').innerHTML = '';
-  for (const row of cp) {
+  // Display in a fixed, predictable order rather than raw DB/query order — sort is
+  // stable, so multiple contributors sharing a role keep their relative order.
+  const sortedCp = [...cp].sort((a, b) =>
+    (ROLE_DISPLAY_ORDER[a.role] ?? 99) - (ROLE_DISPLAY_ORDER[b.role] ?? 99));
+  for (const row of sortedCp) {
     eAddContributorRow(row.person, row.role || 'Composer', row.credited_as || '', row.translates_person_id || null);
   }
   if (!cp.length) eAddContributorRow(null, 'Composer');
