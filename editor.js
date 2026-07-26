@@ -261,16 +261,21 @@ function renderCreditedAsField(prefix, idx, pseudonyms, current) {
     }
     sel.onchange = () => { if (c) c.credited_as = sel.value; };
     wrap.appendChild(sel);
-  } else {
+  } else if (current) {
+    // No registered pseudonym for this person, but a credited_as value already exists
+    // in the data — keep it visible so nothing is silently hidden, even though there's
+    // no pseudonym list to choose from.
     const inp = document.createElement('input');
     inp.type = 'text';
-    inp.value = current || '';
+    inp.value = current;
     inp.placeholder = 'Kreditert som (valgfritt)…';
     inp.style.cssText = 'width:100%;font-size:0.82rem;padding:0.3rem 0.5rem;border:1px dashed var(--border);border-radius:4px;background:white;font-family:inherit';
     inp.title = 'Fyll inn hvis personen er kreditert under et annet navn på dette eksemplaret';
     inp.oninput = () => { if (c) c.credited_as = inp.value.trim(); };
     wrap.appendChild(inp);
   }
+  // else: person has no registered pseudonym and no existing credited_as value —
+  // there's nothing for this field to do, so render nothing.
 }
 
 // ── "Translates" picker (for role = Translator) ──────────────────────────────
@@ -574,7 +579,7 @@ function addContributorRow(prefix, contributors, rowIdxRef, person, role, credit
       <select id="${prefix}_crole_${idx}" style="width:100%;margin-bottom:0.3rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;font-family:inherit">
         ${ROLES.map(r => `<option value="${r}"${r===role?' selected':''}>${ROLE_NO[r]}</option>`).join('')}
       </select>
-      <div style="position:relative">
+      <div id="${prefix}_csearch_wrap_${idx}" style="position:relative;${person ? 'display:none' : ''}">
         <input type="text" id="${prefix}_csearch_${idx}" placeholder="Søk etter person…" autocomplete="off"
           style="width:100%;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem">
         <div id="${prefix}_cresults_${idx}" class="lookup-results"></div>
@@ -634,6 +639,7 @@ function addContributorRow(prefix, contributors, rowIdxRef, person, role, credit
           if (c) { c.person_id = personId; c.name = pname; c.credited_as = ''; }
           document.getElementById(`${prefix}_csearch_${idx}`).value = '';
           res.style.display = 'none';
+          document.getElementById(`${prefix}_csearch_wrap_${idx}`).style.display = 'none';
           document.getElementById(`${prefix}_cselected_${idx}`).textContent = pname;
           try {
             const pr = await get(`/person?person_id=eq.${personId}&select=pseudonym`);
