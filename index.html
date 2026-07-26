@@ -1154,13 +1154,13 @@ function switchSiteMode(mode) {
   if (mode === 'copyright') {
     document.getElementById('siteSubtitle').innerHTML = 'Sheet Music &nbsp;·&nbsp; Copyright';
     document.getElementById('headerAbout').textContent = 'Primarily Norwegian compositions, with Nordic and international works — currently under copyright';
-    document.getElementById('lyricistsLink').style.display = 'none';
     document.getElementById('tagsLink').href = 'tags.html?mode=copyright';
+    document.getElementById('lyricistsLink').href = 'lyricists.html?mode=copyright';
   } else {
     document.getElementById('siteSubtitle').innerHTML = 'Sheet Music &nbsp;·&nbsp; Public Domain';
     document.getElementById('headerAbout').textContent = 'Primarily Norwegian compositions, with Nordic and international works — all in the public domain';
-    document.getElementById('lyricistsLink').style.display = '';
     document.getElementById('tagsLink').href = 'tags.html';
+    document.getElementById('lyricistsLink').href = 'lyricists.html';
   }
 
   // Reset per-section letter/filter state
@@ -1200,8 +1200,8 @@ if (siteMode === 'copyright') {
   document.getElementById('modeLabelCopyright').classList.add('active');
   document.getElementById('siteSubtitle').innerHTML = 'Sheet Music &nbsp;·&nbsp; Copyright';
   document.getElementById('headerAbout').textContent = 'Primarily Norwegian compositions, with Nordic and international works — currently under copyright';
-  document.getElementById('lyricistsLink').style.display = 'none';
   document.getElementById('tagsLink').href = 'tags.html?mode=copyright';
+  document.getElementById('lyricistsLink').href = 'lyricists.html?mode=copyright';
 }
 
 fetchAllComposers(siteMode === 'copyright');
