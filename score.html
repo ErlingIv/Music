@@ -188,6 +188,20 @@
   }
   .no-preview-box p { font-size: 0.9rem; color: var(--muted); }
 
+  .frontpage-wrapper {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    text-align: center;
+    background: var(--bg);
+    margin-bottom: 10px;
+  }
+  .frontpage-wrapper img {
+    max-width: 100%;
+    display: block;
+    margin: 0 auto;
+  }
+
   /* ── Responsive: phones (≤640px) ── */
   @media (max-width: 640px) {
     .score-card { padding: 1.25rem; }
@@ -268,7 +282,7 @@ async function load() {
     // Fetch composition, score, and all contributors in parallel
     const [compR, scoreR, cpR] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${compId}&select=composition_id,title,year_composed,opus_number,musescore_link,musescore_notes,approved,dedication,public_domain`, { headers: H }),
-      fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=eq.${compId}&select=pdf_url,mp3_url,publisher_id,plate_number`, { headers: H }),
+      fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=eq.${compId}&select=pdf_url,mp3_url,publisher_id,plate_number,frontpage_url`, { headers: H }),
       fetch(`${SUPABASE_URL}/rest/v1/composition_person?composition_id=eq.${compId}&select=person_id,role,credited_as,translates_person_id`, { headers: H }),
     ]);
 
@@ -393,6 +407,17 @@ async function load() {
     // Store raw notes in a JS variable — never inline into HTML attributes
     window._notesRaw = comp.musescore_notes || '';
 
+    // Media tab availability, in display order: Cover (frontpage) is inserted
+    // right after Score so the illustrated title page is the first thing seen
+    // after the MuseScore embed, but it never steals the default-active tab
+    // away from the existing Score/PDF/Audio priority order.
+    const hasScore     = !!comp.musescore_link;
+    const hasPdf       = !!score?.pdf_url;
+    const hasAudio     = !!score?.mp3_url;
+    const hasFrontpage = !!score?.frontpage_url;
+    // First tab in priority order becomes the active one on load
+    const firstActive = hasScore ? 'score' : hasFrontpage ? 'cover' : hasPdf ? 'pdf' : hasAudio ? 'audio' : null;
+
     el.innerHTML = `
       <div class="title-row">
         <h1 class="score-title">${comp.title}${comp.opus_number ? ` <span class="meta-opus">${comp.opus_number}</span>` : ''}${comp.approved ? '<span class="godkjent-mark" role="img" aria-label="Curator approved" title="Curator approved"></span>' : ''}</h1>
@@ -403,7 +428,7 @@ async function load() {
         ${(comp.year_composed || publisherName || score?.plate_number) ? `
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:2rem;flex-wrap:wrap;">
           <div>${comp.year_composed ? `<p class="meta-year">Composed ${comp.year_composed}</p>` : ''}</div>
-          <div style="text-align:right">${(publisherName || score?.plate_number) ? `<p style="font-size:0.85rem;color:var(--muted)">${publisherName || ''}${publisherName && score?.plate_number ? ' · ' : ''}${score?.plate_number ? 'Pl. ' + score.plate_number : ''}</p>` : ''}</div>
+          <div style="text-align:right">${(publisherName || score?.plate_number) ? `<p style="font-size:0.85rem;color:var(--muted)">${publisherName || ''}${publisherName && score?.plate_number ? ' · ' : ''}${score?.plate_number ? 'Pl. ' + score.plate_number : ''}</p>` : ''}</div>
         </div>` : ''}
         ${(() => {
           // If there's no dedication, pair illustrator with the lyricist row to save a line.
@@ -440,16 +465,17 @@ async function load() {
           <div class="notes-text" id="notesText" aria-live="polite">${notesHtml}</div>
         </div>` : ''}
 
-      ${(comp.musescore_link || score?.pdf_url || score?.mp3_url) ? `
+      ${(hasScore || hasPdf || hasAudio || hasFrontpage) ? `
         <div class="media-section">
           <div class="media-tabs" role="tablist" aria-label="Score media">
-            ${comp.musescore_link ? `<button class="media-tab active" role="tab" id="mediatab-score" aria-selected="true" aria-controls="tab-score" onclick="switchMediaTab('score', this)">Score</button>` : ''}
-            ${score?.pdf_url     ? `<button class="media-tab ${!comp.musescore_link ? 'active' : ''}" role="tab" id="mediatab-pdf" aria-selected="${!comp.musescore_link}" aria-controls="tab-pdf" onclick="switchMediaTab('pdf', this)">PDF</button>` : ''}
-            ${score?.mp3_url     ? `<button class="media-tab ${(!comp.musescore_link && !score?.pdf_url) ? 'active' : ''}" role="tab" id="mediatab-audio" aria-selected="${!comp.musescore_link && !score?.pdf_url}" aria-controls="tab-audio" onclick="switchMediaTab('audio', this)">Audio</button>` : ''}
+            ${hasScore ? `<button class="media-tab ${firstActive === 'score' ? 'active' : ''}" role="tab" id="mediatab-score" aria-selected="${firstActive === 'score'}" aria-controls="tab-score" onclick="switchMediaTab('score', this)">Score</button>` : ''}
+            ${hasFrontpage ? `<button class="media-tab ${firstActive === 'cover' ? 'active' : ''}" role="tab" id="mediatab-cover" aria-selected="${firstActive === 'cover'}" aria-controls="tab-cover" onclick="switchMediaTab('cover', this)">Cover</button>` : ''}
+            ${hasPdf ? `<button class="media-tab ${firstActive === 'pdf' ? 'active' : ''}" role="tab" id="mediatab-pdf" aria-selected="${firstActive === 'pdf'}" aria-controls="tab-pdf" onclick="switchMediaTab('pdf', this)">PDF</button>` : ''}
+            ${hasAudio ? `<button class="media-tab ${firstActive === 'audio' ? 'active' : ''}" role="tab" id="mediatab-audio" aria-selected="${firstActive === 'audio'}" aria-controls="tab-audio" onclick="switchMediaTab('audio', this)">Audio</button>` : ''}
           </div>
 
-          ${comp.musescore_link ? `
-            <div class="media-tab-panel active" id="tab-score" role="tabpanel" aria-labelledby="mediatab-score">
+          ${hasScore ? `
+            <div class="media-tab-panel ${firstActive === 'score' ? 'active' : ''}" id="tab-score" role="tabpanel" aria-labelledby="mediatab-score">
               ${compMode === 'copyright' ? `
               <div class="no-preview-box">
                 <p>Score preview isn't available for copyrighted works. You can still view it on MuseScore.</p>
@@ -467,8 +493,16 @@ async function load() {
               </a>
             </div>` : ''}
 
-          ${score?.pdf_url ? `
-            <div class="media-tab-panel ${!comp.musescore_link ? 'active' : ''}" id="tab-pdf" role="tabpanel" aria-labelledby="mediatab-pdf">
+          ${hasFrontpage ? `
+            <div class="media-tab-panel ${firstActive === 'cover' ? 'active' : ''}" id="tab-cover" role="tabpanel" aria-labelledby="mediatab-cover">
+              <div class="frontpage-wrapper">
+                <img src="${score.frontpage_url}" alt="Score frontpage${illustratorDisplay ? ' — illustrated by ' + illustratorDisplay.replace(/<[^>]+>/g, '') : ''}" loading="lazy">
+              </div>
+              ${illustratorDisplay ? `<p style="font-size:0.8rem;color:var(--muted);text-align:center;margin-top:-4px;">Illustration: ${illustratorDisplay}</p>` : ''}
+            </div>` : ''}
+
+          ${hasPdf ? `
+            <div class="media-tab-panel ${firstActive === 'pdf' ? 'active' : ''}" id="tab-pdf" role="tabpanel" aria-labelledby="mediatab-pdf">
               <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:8px;">
                 <div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:var(--bg);border-bottom:1px solid var(--border);">
                   <button class="btn" style="padding:4px 12px;" onclick="prevPage()" aria-label="Previous page">◀ Prev</button>
@@ -487,8 +521,8 @@ async function load() {
               </a>
             </div>` : ''}
 
-          ${score?.mp3_url ? `
-            <div class="media-tab-panel ${(!comp.musescore_link && !score?.pdf_url) ? 'active' : ''}" id="tab-audio" role="tabpanel" aria-labelledby="mediatab-audio">
+          ${hasAudio ? `
+            <div class="media-tab-panel ${firstActive === 'audio' ? 'active' : ''}" id="tab-audio" role="tabpanel" aria-labelledby="mediatab-audio">
               <audio controls src="${score.mp3_url}" style="width:100%;margin-bottom:0.5rem;">
                 Your browser does not support the audio element. <a href="${score.mp3_url}">Download the audio file</a> instead.
               </audio>
@@ -499,7 +533,7 @@ async function load() {
     // PDF: init only when PDF tab is shown (may not be the active tab)
     if (score?.pdf_url) {
       window._pdfUrl = score.pdf_url;
-      if (!comp.musescore_link) setTimeout(() => initPdf(score.pdf_url), 0);
+      if (firstActive === 'pdf') setTimeout(() => initPdf(score.pdf_url), 0);
     }
 
   } catch(e) {
