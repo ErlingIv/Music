@@ -857,9 +857,16 @@ let activeFilters = {
   unknown: { media: false, female: false },
 };
 
+// Bumped once per fetchAllComposers() call. Lets a call detect, right before
+// it applies its results, whether a newer call has since started — and if so,
+// discard its own (now-stale) data instead of merging or racing with it.
+let fetchGeneration = 0;
+
 // ── Fetch all composers with at least one public domain score ─────────────────
 
 async function fetchAllComposers(copyrightMode = false) {
+  const myGen = ++fetchGeneration;
+
   // 1. Fetch composition_id → {public_domain, musescore_link} as a plain query.
   //    (Avoiding Supabase's embedded FK-join syntax here deliberately — it has
   //    silently returned null on this table before, which made every composer
@@ -905,8 +912,12 @@ async function fetchAllComposers(copyrightMode = false) {
     offset += 1000;
   }
 
-  // Reset sections before refilling
-  allComposers = { no: [], nordic: [], others: [], unknown: [] };
+  // Build results locally — never mutate the shared `allComposers` global
+  // until this call is confirmed to still be the most recent one (see the
+  // staleness check further down). Two calls can otherwise interleave across
+  // their many `await` points and end up merging both modes' composers into
+  // whichever object the global happened to be pointing at at each moment.
+  const localComposers = { no: [], nordic: [], others: [], unknown: [] };
 
   // 3. Fetch persons — both with and without nationality
   const pdIdsArr = [...pdIds];
@@ -983,24 +994,31 @@ async function fetchAllComposers(copyrightMode = false) {
     p.is_female   = p.gender === 'F';
     var tabNat = (p.birth_country_primary === true && p.birth_country) ? p.birth_country : (p.nationality || p.birth_country);
     if (!tabNat) {
-      allComposers.unknown.push(p);
+      localComposers.unknown.push(p);
     } else if (tabNat === 'NO') {
-      allComposers.no.push(p);
+      localComposers.no.push(p);
     } else if (NORDIC.includes(tabNat)) {
-      allComposers.nordic.push(p);
+      localComposers.nordic.push(p);
     } else {
-      allComposers.others.push(p);
+      localComposers.others.push(p);
     }
   });
 
   // Sort each section by last_name, then first_name as tiebreaker
   ['no', 'nordic', 'others', 'unknown'].forEach(sec => {
-    allComposers[sec].sort((a, b) => {
+    localComposers[sec].sort((a, b) => {
       const byLast = a.last_name.localeCompare(b.last_name, 'no');
       if (byLast !== 0) return byLast;
       return (a.first_name || '').localeCompare(b.first_name || '', 'no');
     });
   });
+
+  // A newer call to fetchAllComposers has started since this one began —
+  // this call's results are stale, so discard them instead of publishing
+  // over (or racing with) the newer call's data.
+  if (myGen !== fetchGeneration) return;
+
+  allComposers = localComposers;
 
   renderSection('no');
   renderSection('nordic');
@@ -1146,6 +1164,14 @@ function alphaKeydown(event, sec, letter) {
 function switchSiteMode(mode) {
   if (mode === siteMode) return;
   siteMode = mode;
+
+  // Keep the address bar in sync with the chosen mode. Without this, toggling
+  // mode here never changes the URL, so the browser's actual back/forward
+  // history (and bfcache) still points at plain index.html — meaning the
+  // phone's native back gesture from a subpage lands back on PD regardless
+  // of what was selected here.
+  const newUrl = mode === 'copyright' ? '?mode=copyright' : window.location.pathname;
+  history.replaceState(null, '', newUrl);
 
   document.getElementById('modeToggle').checked = (mode === 'copyright');
   document.getElementById('modeLabelPD').classList.toggle('active', mode === 'pd');
