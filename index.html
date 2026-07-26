@@ -895,7 +895,7 @@ async function fetchAllComposers(copyrightMode = false) {
       const info = compInfo[row.composition_id];
       const pd = info?.public_domain;
       const hasLink = !!info?.musescore_link;
-      const matches = copyrightMode ? (pd !== undefined && pd !== 'Yes') : (pd === 'Yes' && hasLink);
+      const matches = copyrightMode ? (pd !== undefined && pd !== null && pd !== 'Yes') : (pd === 'Yes' && hasLink);
       if (matches) {
         pdIds.add(row.person_id);
         countMap[row.person_id] = (countMap[row.person_id] || 0) + 1;
