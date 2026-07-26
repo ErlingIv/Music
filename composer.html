@@ -7,9 +7,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=Source+Serif+4:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="shared.css">
 <style>
-  /* ── Header — back-link needs an icon+text gap; mode switch sits at the far right ── */
+  /* ── Header — back-link needs an icon+text gap ── */
   .back-link { display: flex; align-items: center; gap: 0.3rem; }
-  .mode-switch-wrap { margin-left: auto; }
 
   /* ── Main ── */
   main { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
@@ -235,19 +234,6 @@
 <header class="site-header">
   <a class="back-link" href="index.html" id="backLink">← Back</a>
   <a class="site-name" href="index.html" id="siteNameLink">Norske Musikknoter</a>
-
-  <div class="mode-switch-wrap" title="Switch between public domain and copyright-protected scores">
-    <span class="mode-switch-label active" id="modeLabelPD" role="button" tabindex="0"
-          onclick="switchSiteMode('pd')"
-          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchSiteMode('pd')}">Public Domain</span>
-    <label class="mode-switch">
-      <input type="checkbox" id="modeToggle" aria-label="Toggle between public domain and copyright mode" onchange="switchSiteMode(this.checked ? 'copyright' : 'pd')">
-      <span class="mode-switch-slider"></span>
-    </label>
-    <span class="mode-switch-label" id="modeLabelCopyright" role="button" tabindex="0"
-          onclick="switchSiteMode('copyright')"
-          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchSiteMode('copyright')}">Copyright</span>
-  </div>
 </header>
 
 <main>
@@ -266,28 +252,16 @@ const params    = new URLSearchParams(window.location.search);
 const personId  = params.get('id');
 const roleParam = params.get('role') || 'Composer'; // 'Composer' or 'Lyricist'
 
-// ── Site mode: 'pd' (public domain) or 'copyright' ─────────────────────────────
-// Carried in from index.html via ?mode=copyright, or toggled locally on this page.
-let siteMode = params.get('mode') === 'copyright' ? 'copyright' : 'pd';
+// ── Site mode: 'pd' (public domain) or 'copyright' — read-only here.
+// Mode can only be changed from the top-level index.html; this page just
+// reflects whatever it was given via ?mode=copyright.
+const siteMode = params.get('mode') === 'copyright' ? 'copyright' : 'pd';
 function selfHref(role) {
   return `composer.html?id=${personId}&role=${role}${siteMode === 'copyright' ? '&mode=copyright' : ''}`;
 }
 
-// Reflect initial mode in the toggle UI
-document.getElementById('modeToggle').checked = (siteMode === 'copyright');
-document.getElementById('modeLabelPD').classList.toggle('active', siteMode === 'pd');
-document.getElementById('modeLabelCopyright').classList.toggle('active', siteMode === 'copyright');
 document.getElementById('backLink').href = siteMode === 'copyright' ? 'index.html?mode=copyright' : 'index.html';
-
-function switchSiteMode(mode) {
-  if (mode === siteMode) return;
-  siteMode = mode;
-  document.getElementById('modeToggle').checked = (mode === 'copyright');
-  document.getElementById('modeLabelPD').classList.toggle('active', mode === 'pd');
-  document.getElementById('modeLabelCopyright').classList.toggle('active', mode === 'copyright');
-  document.getElementById('backLink').href = mode === 'copyright' ? 'index.html?mode=copyright' : 'index.html';
-  load();
-}
+document.getElementById('siteNameLink').href = siteMode === 'copyright' ? 'index.html?mode=copyright' : 'index.html';
 
 async function load() {
   const el = document.getElementById('content');

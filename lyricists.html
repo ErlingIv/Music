@@ -131,7 +131,7 @@
 <body>
 
 <header class="site-header">
-  <a class="back-link" href="index.html">← Back</a>
+  <a class="back-link" href="index.html" id="backLink">← Back</a>
   <a class="site-name" href="index.html" id="siteNameLink">Norske Musikknoter</a>
 </header>
 
@@ -191,33 +191,27 @@
 </footer>
 
 <script src="config.js"></script>
+<script src="shared.js"></script>
 <script>
 document.getElementById('siteNameLink').textContent = SITE_NAME;
 const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
-function codeToFlag(code) {
-  if (!code || code.length < 2) return '';
-  return [...code.toUpperCase().slice(0,2)]
-    .map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('');
-}
-
-function renderFlags(nationality, birthCountry, birthCountryPrimary) {
-  var bcp    = (birthCountryPrimary === true);
-  var prime  = bcp && birthCountry ? birthCountry : nationality;
-  var second = bcp && birthCountry ? nationality  : birthCountry;
-  var pFlag  = codeToFlag(prime);
-  if (!pFlag) return '';
-  if (second && second !== prime) {
-    var sFlag = codeToFlag(second);
-    if (sFlag) return pFlag + '<span style="font-size:0.65em;vertical-align:super">' + sFlag + '</span>';
-  }
-  return pFlag;
-}
-
 const NORDIC    = ['SE', 'DK', 'FI', 'IS'];
 const ALL_ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ'.split('');
+
+// ── Site mode: 'pd' (public domain) or 'copyright' — read-only here.
+// Mode can only be changed from the top-level index.html; this page just
+// reflects whatever it was given via ?mode=copyright.
+const siteMode = new URLSearchParams(window.location.search).get('mode') === 'copyright' ? 'copyright' : 'pd';
+
+function syncIndexLinks() {
+  const suffix = siteMode === 'copyright' ? '?mode=copyright' : '';
+  document.getElementById('backLink').href = 'index.html' + suffix;
+  document.getElementById('siteNameLink').href = 'index.html' + suffix;
+}
+syncIndexLinks();
 
 // Per-section data and active letter state
 const sectionData   = { no: [], nordic: [], others: [], unknown: [] };
@@ -286,19 +280,12 @@ function renderSection(sec) {
     }).join('');
 }
 
-function lifespan(born, died, diedUncertain) {
-  const uncertain = (diedUncertain === 'yes' || diedUncertain === true);
-  if (!born && !died) return '';
-  if (born && !died) return String(born);
-  if (!born && died)  return uncertain ? 'after ' + died : String(died);
-  return born + '–' + (uncertain ? 'after ' + died : died);
-}
-
 function lyricistCard(p) {
   var years  = lifespan(p.born, p.died, p.died_uncertain);
   var flag   = renderFlags(p.nationality, p.birth_country, p.birth_country_primary);
   var female = p.gender === 'F' ? '<span class="female-badge">♀</span>' : '';
-  return '<a class="lyricist-card" href="composer.html?id=' + p.person_id + '&role=Lyricist">' +
+  var mode   = siteMode === 'copyright' ? '&mode=copyright' : '';
+  return '<a class="lyricist-card" href="composer.html?id=' + p.person_id + '&role=Lyricist' + mode + '">' +
     '<div class="lyricist-name">' + (p.last_name || '') + ', ' + (p.first_name || '') + ' ' + flag + '</div>' +
     '<div class="lyricist-meta">' +
       (years ? '<span>' + years + '</span>' : '') +
@@ -310,20 +297,47 @@ function lyricistCard(p) {
 
 // ── Fetch and sort ────────────────────────────────────────────────────────────
 async function fetchLyricists() {
-  // 1. Find person_ids linked to PD compositions as Lyricist
-  const countMap = {};
-  const pdPersonIds = new Set();
+  const copyrightMode = siteMode === 'copyright';
+
+  // 1. Fetch composition_id → {public_domain, musescore_link} as a plain query.
+  //    Split from composition_person deliberately rather than using an embedded
+  //    FK-join select — those have been unreliable on this project before.
+  const compInfo = {};
   let offset = 0;
   while (true) {
     const r = await fetch(
-      SUPABASE_URL + '/rest/v1/composition_person?role=eq.Lyricist&select=person_id,composition:composition_id(public_domain,musescore_link)&limit=1000&offset=' + offset,
+      SUPABASE_URL + '/rest/v1/composition?select=composition_id,public_domain,musescore_link&limit=1000&offset=' + offset,
+      { headers: H }
+    );
+    const rows = await r.json();
+    if (!rows.length) break;
+    rows.forEach(function(c) { compInfo[c.composition_id] = c; });
+    if (rows.length < 1000) break;
+    offset += 1000;
+  }
+
+  // 2. Fetch composition_person rows for Lyricist, classify each against the
+  //    current mode. A blank/unset public_domain is treated the same way the
+  //    server-side `neq.Yes` filter treats NULL (excluded), not as "not Yes".
+  const countMap = {};
+  const modePersonIds = new Set();
+  offset = 0;
+  while (true) {
+    const r = await fetch(
+      SUPABASE_URL + '/rest/v1/composition_person?role=eq.Lyricist&select=person_id,composition_id&limit=1000&offset=' + offset,
       { headers: H }
     );
     const rows = await r.json();
     if (!rows.length) break;
     rows.forEach(function(row) {
-      if (row.composition && row.composition.public_domain === 'Yes' && row.composition.musescore_link) {
-        pdPersonIds.add(row.person_id);
+      const info = compInfo[row.composition_id];
+      const pd = info ? info.public_domain : undefined;
+      const hasLink = !!(info && info.musescore_link);
+      const matches = copyrightMode
+        ? (pd !== undefined && pd !== null && pd !== 'Yes')
+        : (pd === 'Yes' && hasLink);
+      if (matches) {
+        modePersonIds.add(row.person_id);
         countMap[row.person_id] = (countMap[row.person_id] || 0) + 1;
       }
     });
@@ -331,8 +345,8 @@ async function fetchLyricists() {
     offset += 1000;
   }
 
-  // 2. Fetch person records in chunks
-  const ids = [...pdPersonIds];
+  // 3. Fetch person records in chunks
+  const ids = [...modePersonIds];
   let persons = [];
   for (let i = 0; i < ids.length; i += 200) {
     const chunk = ids.slice(i, i + 200).join(',');
@@ -343,7 +357,7 @@ async function fetchLyricists() {
     persons = persons.concat(await r.json());
   }
 
-  // 3. Attach counts and sort into sections
+  // 4. Attach counts and sort into sections
   const sorter = function(a, b) { return (a.last_name || '').localeCompare(b.last_name || '', 'no'); };
 
   persons.forEach(function(p) {
