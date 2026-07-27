@@ -12,6 +12,7 @@ Admin tool: `musikk_editor.html` (markup) + `editor.js` (all JS logic) — two-f
 - Excel source (cleaned): `E:\OneDrive\database\Innholdsfortegnelse_cleaned.xlsx`
 - Excel source (original/master): `E:\OneDrive\Noter\Innholdsfortegnelse.xlsm`
 - Scripts: `E:\OneDrive\database\`
+- **Git repo (cloned locally)**: `E:\OneDrive\database\Music` — clone of `https://github.com/erlingiv/Music`. Run Claude Code from this folder to get direct git access (commit/push) instead of manual GitHub web upload.
 
 ## Data Entry Workflow
 
