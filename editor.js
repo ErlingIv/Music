@@ -2697,31 +2697,33 @@ async function loadPublisherScores(publisherId, publisherName) {
       return;
     }
     const compIds = [...new Set(scores.map(s => s.composition_id))].join(',');
-    const comps   = compIds ? await get(`/composition?composition_id=in.(${compIds})&select=composition_id,title`) : [];
+    const comps   = compIds ? await get(`/composition?composition_id=in.(${compIds})&select=composition_id,title,approved`) : [];
     const compMap = {};
-    comps.forEach(c => { compMap[c.composition_id] = c.title; });
+    comps.forEach(c => { compMap[c.composition_id] = c; });
 
-    const rows = scores.map(s => `
-      <tr id="score-pub-row-${s.score_id}" style="border-bottom:1px solid #f0f0f0">
-        <td style="padding:0.4rem 0.5rem">${escapeHtml(compMap[s.composition_id] || `#${s.composition_id}`)}</td>
-        <td style="padding:0.4rem 0.5rem;color:var(--muted);white-space:nowrap">${escapeHtml(s.year_published || '')}</td>
-        <td style="padding:0.4rem 0.5rem;color:var(--muted);white-space:nowrap">${escapeHtml(s.plate_number || '')}</td>
-        <td style="padding:0.4rem 0.5rem;text-align:right;white-space:nowrap">
-          <span id="reassign-ctrl-${s.score_id}">
-            <button type="button" class="btn btn-secondary" style="font-size:0.78rem;padding:0.2rem 0.6rem"
-              onclick="startReassign(${s.score_id},${publisherId})">Reassign</button>
-          </span>
+    const rows = scores.map(s => {
+      const comp     = compMap[s.composition_id] || {};
+      const title    = comp.title || `#${s.composition_id}`;
+      const approved = comp.approved;
+      return `<tr style="border-bottom:1px solid #f0f0f0">
+        <td style="padding:0.35rem 0.5rem">
+          <a href="#" onclick="event.preventDefault();switchTab('edit');loadEditForm(${s.composition_id})"
+            style="color:var(--ink);text-decoration:none;border-bottom:1px solid var(--border)">${escapeHtml(title)}</a>
         </td>
-      </tr>`).join('');
+        <td style="padding:0.35rem 0.5rem;color:var(--muted);white-space:nowrap;font-size:0.85rem">${escapeHtml(s.year_published || '')}</td>
+        <td style="padding:0.35rem 0.5rem;color:var(--muted);white-space:nowrap;font-size:0.85rem">${escapeHtml(s.plate_number || '')}</td>
+        <td style="padding:0.35rem 0.5rem;text-align:center;font-size:1rem">${approved ? '<span title="Godkjent" style="color:var(--accent2)">✓</span>' : ''}</td>
+      </tr>`;
+    }).join('');
 
     area.innerHTML = `<div class="card">
       <div class="card-title">Utgitt av: ${escapeHtml(publisherName)} — ${scores.length} noter</div>
       <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
         <thead><tr style="border-bottom:2px solid #eee">
-          <th style="text-align:left;padding:0.4rem 0.5rem">Tittel</th>
-          <th style="text-align:left;padding:0.4rem 0.5rem">År</th>
-          <th style="text-align:left;padding:0.4rem 0.5rem">Platenr.</th>
-          <th style="padding:0.4rem 0.5rem"></th>
+          <th style="text-align:left;padding:0.35rem 0.5rem">Tittel</th>
+          <th style="text-align:left;padding:0.35rem 0.5rem">År</th>
+          <th style="text-align:left;padding:0.35rem 0.5rem">Platenr.</th>
+          <th style="text-align:center;padding:0.35rem 0.5rem" title="Godkjent">✓</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
