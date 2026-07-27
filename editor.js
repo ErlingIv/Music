@@ -2636,12 +2636,25 @@ async function loadPublishers() {
       get('/publisher?select=publisher_id,publisher_name&order=publisher_name'),
       fetchAllScorePublisherIds()
     ]);
-    allPublishers = publishers;
+
+    // Count scores per publisher_id
     const counts = {};
     scores.forEach(s => {
       if (s.publisher_id != null) counts[s.publisher_id] = (counts[s.publisher_id] || 0) + 1;
     });
-    allPublishers.forEach(p => { p._count = counts[p.publisher_id] || 0; });
+
+    // Group by publisher_name — multiple rows with the same name are treated as one,
+    // their IDs collected and counts summed (handles DB duplicates transparently).
+    const byName = {};
+    publishers.forEach(p => {
+      const name = (p.publisher_name || '').trim();
+      if (!byName[name]) byName[name] = { publisher_name: name, ids: [], _count: 0 };
+      byName[name].ids.push(p.publisher_id);
+      byName[name]._count += counts[p.publisher_id] || 0;
+    });
+    allPublishers = Object.values(byName).sort((a, b) =>
+      (a.publisher_name || '').localeCompare(b.publisher_name || '', 'no')
+    );
 
     const usedLetters = new Set(allPublishers.map(p => (p.publisher_name || '')[0]?.toUpperCase()).filter(Boolean));
     if (!publisherActiveLetter || !usedLetters.has(publisherActiveLetter)) {
@@ -2683,32 +2696,36 @@ function renderPubCards() {
     return;
   }
   cardGrid.innerHTML = filtered.map(p => {
-    const n    = p._count;
-    const tier = n === 0 ? '' : n >= 20 ? ' pub-t4' : n >= 6 ? ' pub-t3' : ' pub-t2';
-    return `<div class="pub-card${tier}${n === 0 ? ' stale' : ''}" id="pub-card-${p.publisher_id}"
-        onclick="loadPublisherScores(${p.publisher_id},'${escapeJsAttr(p.publisher_name || '')}')">
+    const n         = p._count;
+    const primaryId = p.ids[0];
+    const tier      = n === 0 ? '' : n >= 20 ? ' pub-t4' : n >= 6 ? ' pub-t3' : ' pub-t2';
+    return `<div class="pub-card${tier}${n === 0 ? ' stale' : ''}" id="pub-card-${primaryId}"
+        onclick="loadPublisherScores('${escapeJsAttr(p.publisher_name || '')}')">
       <div class="pub-card-name">${escapeHtml(p.publisher_name || '')}</div>
       <div class="pub-card-meta">
         <span style="color:${n === 0 ? '#a03030' : 'var(--accent2)'}">${n} noter</span>
         <button type="button" class="btn btn-secondary" style="font-size:0.72rem;padding:0.1rem 0.45rem"
-          onclick="event.stopPropagation();startRenamePublisher(${p.publisher_id},'${escapeJsAttr(p.publisher_name || '')}')">Rename</button>
+          onclick="event.stopPropagation();startRenamePublisher(${primaryId},'${escapeJsAttr(p.publisher_name || '')}')">Rename</button>
       </div>
     </div>`;
   }).join('');
 }
 
-async function loadPublisherScores(publisherId, publisherName) {
+async function loadPublisherScores(publisherName) {
+  const group = allPublishers.find(p => p.publisher_name === publisherName);
+  if (!group) return;
+  const ids  = group.ids;
   const area = document.getElementById('publisherScoreArea');
   area.innerHTML = `<div class="card"><div class="card-title">Utgitt av: ${escapeHtml(publisherName)}</div>
     <div style="color:var(--muted);font-size:.85rem">Laster…</div></div>`;
   area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   try {
-    const scores = await get(`/score?publisher_id=eq.${publisherId}&select=score_id,composition_id,year_published,plate_number&order=score_id&limit=1000`);
+    const scores = await get(`/score?publisher_id=in.(${ids.join(',')})&select=score_id,composition_id,year_published,plate_number&order=score_id&limit=1000`);
     if (!scores.length) {
       area.innerHTML = `<div class="card"><div class="card-title">Utgitt av: ${escapeHtml(publisherName)}</div>
         <p style="color:var(--muted);font-size:.85rem;margin:0 0 1rem">Ingen noter tilknyttet dette forlaget.</p>
         <button type="button" class="btn" style="background:#a03030;border-color:#a03030;color:#fff;font-size:0.85rem;padding:0.3rem 1rem"
-          onclick="deletePublisher(${publisherId},'${escapeJsAttr(publisherName)}')">Slett forlag</button>
+          onclick="deletePublisherGroup('${escapeJsAttr(ids.join(','))}','${escapeJsAttr(publisherName)}')">Slett forlag</button>
       </div>`;
       return;
     }
@@ -2767,27 +2784,30 @@ function startRenamePublisher(publisherId, currentName) {
   document.getElementById(`rename-input-${publisherId}`).focus();
 }
 
-async function saveRenamePublisher(publisherId) {
-  const input = document.getElementById(`rename-input-${publisherId}`);
+async function saveRenamePublisher(primaryId) {
+  const input = document.getElementById(`rename-input-${primaryId}`);
   if (!input) return;
   const newName = input.value.trim();
   if (!newName) { alert('Navn kan ikke være tomt.'); input.focus(); return; }
   try {
-    await patch('publisher', `publisher_id=eq.${publisherId}`, { publisher_name: newName });
-    const pub = allPublishers.find(p => p.publisher_id === publisherId);
-    if (pub) pub.publisher_name = newName;
-    const card = document.getElementById(`pub-card-${publisherId}`);
-    if (card && pub) {
-      const n    = pub._count;
-      const tier = n === 0 ? '' : n >= 20 ? ' pub-t4' : n >= 6 ? ' pub-t3' : ' pub-t2';
+    const group = allPublishers.find(p => p.ids.includes(primaryId));
+    if (group) {
+      await Promise.all(group.ids.map(id =>
+        patch('publisher', `publisher_id=eq.${id}`, { publisher_name: newName })
+      ));
+      group.publisher_name = newName;
+    }
+    const card = document.getElementById(`pub-card-${primaryId}`);
+    if (card && group) {
+      const n = group._count;
       card.innerHTML = `
         <div class="pub-card-name">${escapeHtml(newName)}</div>
         <div class="pub-card-meta">
           <span style="color:${n === 0 ? '#a03030' : 'var(--accent2)'}">${n} noter</span>
           <button type="button" class="btn btn-secondary" style="font-size:0.72rem;padding:0.1rem 0.45rem"
-            onclick="event.stopPropagation();startRenamePublisher(${publisherId},'${escapeJsAttr(newName)}')">Rename</button>
+            onclick="event.stopPropagation();startRenamePublisher(${primaryId},'${escapeJsAttr(newName)}')">Rename</button>
         </div>`;
-      card.setAttribute('onclick', `loadPublisherScores(${publisherId},'${escapeJsAttr(newName)}')`);
+      card.setAttribute('onclick', `loadPublisherScores('${escapeJsAttr(newName)}')`);
     }
     publisherLoaded = false;
   } catch(e) {
@@ -2795,20 +2815,22 @@ async function saveRenamePublisher(publisherId) {
   }
 }
 
-function cancelRenamePublisher(publisherId) {
-  const card = document.getElementById(`pub-card-${publisherId}`);
+function cancelRenamePublisher(primaryId) {
+  const card = document.getElementById(`pub-card-${primaryId}`);
   if (!card) return;
   card.innerHTML = card.dataset.originalHtml || '';
   if (card.dataset.originalOnclick) card.setAttribute('onclick', card.dataset.originalOnclick);
 }
 
-async function deletePublisher(publisherId, publisherName) {
+async function deletePublisherGroup(idsStr, publisherName) {
   if (!confirm(`Slette forlaget «${publisherName}»?\n\nDette kan ikke angres.`)) return;
+  const ids = idsStr.split(',').map(Number);
   try {
-    await del('publisher', `publisher_id=eq.${publisherId}`);
-    const card = document.getElementById(`pub-card-${publisherId}`);
+    await Promise.all(ids.map(id => del('publisher', `publisher_id=eq.${id}`)));
+    const primaryId = ids[0];
+    const card = document.getElementById(`pub-card-${primaryId}`);
     if (card) card.remove();
-    allPublishers = allPublishers.filter(p => p.publisher_id !== publisherId);
+    allPublishers = allPublishers.filter(p => p.publisher_name !== publisherName);
     document.getElementById('publisherScoreArea').innerHTML = '';
     publisherLoaded = false;
   } catch(e) {
