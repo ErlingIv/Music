@@ -1407,9 +1407,6 @@ document.getElementById('p_bioUrl').addEventListener('input', function() {
 let personSearchTimeout, personSearchController;
 document.getElementById('personSearch').addEventListener('input', () => {
   clearTimeout(personSearchTimeout);
-  // Clear form when user starts typing a new search
-  document.getElementById('personPanel').style.display = 'none';
-  document.getElementById('personCompositions').innerHTML = '';
   const q = document.getElementById('personSearch').value.trim();
   if (q.length < 2) { document.getElementById('personSearchResults').innerHTML = ''; return; }
   personSearchTimeout = setTimeout(async () => {
@@ -1425,6 +1422,10 @@ document.getElementById('personSearch').addEventListener('input', () => {
     const container = document.getElementById('personSearchResults');
     container.innerHTML = '';
     if (!rows.length) { container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">Ingen treff.</div>'; return; }
+    // Only hide the person panel when results are available — not on no-match,
+    // so a loaded person form isn't wiped out by a failed search.
+    document.getElementById('personPanel').style.display = 'none';
+    document.getElementById('personCompositions').innerHTML = '';
     rows.forEach(p => {
       const d = document.createElement('div');
       d.className = 'result-row';
