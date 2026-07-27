@@ -59,14 +59,16 @@ function escapeJsAttr(value) {
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
-let bioLoaded        = false;
+let bioLoaded          = false;
 let arbeidslisteLoaded = false;
-let sisteLoaded      = false;
+let sisteLoaded        = false;
+let publisherLoaded    = false;
 
 function switchTab(name) {
   if (name === 'biolinks' && !bioLoaded) loadBioPersons();
   if (name === 'arbeidsliste' && !arbeidslisteLoaded) loadArbeidsliste();
   if (name === 'siste' && !sisteLoaded) loadSiste();
+  if (name === 'publisher' && !publisherLoaded) loadPublishers();
   document.querySelectorAll('.tab').forEach(t => {
     t.classList.toggle('active', t.getAttribute('onclick') === `switchTab('${name}')`);
   });
@@ -2603,4 +2605,194 @@ async function deleteSiste(id, title) {
   } catch(e) {
     alert('Sletting mislyktes: ' + e.message);
   }
+}
+
+// ── PUBLISHER TAB ─────────────────────────────────────────────────────────────
+
+let allPublishers = [];
+
+async function loadPublishers() {
+  publisherLoaded = true;
+  const area = document.getElementById('publisherListArea');
+  area.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:0.5rem 0">Laster…</div>';
+  document.getElementById('publisherScoreArea').innerHTML = '';
+  try {
+    const [publishers, scores] = await Promise.all([
+      get('/publisher?select=publisher_id,publisher_name&order=publisher_name'),
+      get('/score?select=publisher_id&limit=10000')
+    ]);
+    allPublishers = publishers;
+
+    const counts = {};
+    scores.forEach(s => {
+      if (s.publisher_id != null) counts[s.publisher_id] = (counts[s.publisher_id] || 0) + 1;
+    });
+
+    if (!publishers.length) {
+      area.innerHTML = '<p style="color:var(--muted);font-size:.85rem">Ingen forlag.</p>';
+      return;
+    }
+
+    area.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+      <thead><tr style="border-bottom:2px solid #eee">
+        <th style="text-align:left;padding:0.4rem 0.5rem">Forlag</th>
+        <th style="text-align:center;padding:0.4rem 0.5rem">Noter</th>
+        <th style="padding:0.4rem 0.5rem"></th>
+      </tr></thead>
+      <tbody>
+        ${publishers.map(p => {
+          const count = counts[p.publisher_id] || 0;
+          const stale = count === 0;
+          return `<tr id="pub-row-${p.publisher_id}" style="border-bottom:1px solid #f0f0f0${stale ? ';color:var(--muted)' : ''}">
+            <td id="pub-name-cell-${p.publisher_id}" style="padding:0.4rem 0.5rem">
+              <span id="pub-name-${p.publisher_id}">${escapeHtml(p.publisher_name || '')}</span>
+              ${stale ? '<span style="font-size:0.75rem;margin-left:0.5rem;color:#a03030">(0 noter — stale)</span>' : ''}
+            </td>
+            <td style="text-align:center;padding:0.4rem 0.5rem">
+              <a href="#" onclick="event.preventDefault();loadPublisherScores(${p.publisher_id},'${escapeJsAttr(p.publisher_name || '')}')"
+                style="font-weight:600;color:${stale ? 'var(--muted)' : 'var(--accent)'}">
+                ${count}
+              </a>
+            </td>
+            <td style="padding:0.4rem 0.5rem;text-align:right">
+              <button type="button" class="btn btn-secondary" style="font-size:0.78rem;padding:0.2rem 0.6rem"
+                onclick="startRenamePublisher(${p.publisher_id},'${escapeJsAttr(p.publisher_name || '')}')">Rename</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+  } catch(e) {
+    area.innerHTML = `<div style="color:#a03030;font-size:.85rem;padding:0.5rem 0">Feil: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+async function loadPublisherScores(publisherId, publisherName) {
+  const area = document.getElementById('publisherScoreArea');
+  area.innerHTML = `<div class="card"><div class="card-title">Utgitt av: ${escapeHtml(publisherName)}</div>
+    <div style="color:var(--muted);font-size:.85rem">Laster…</div></div>`;
+  area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  try {
+    const scores = await get(`/score?publisher_id=eq.${publisherId}&select=score_id,composition_id,year_published,plate_number&order=score_id&limit=1000`);
+    if (!scores.length) {
+      area.innerHTML = `<div class="card"><div class="card-title">Utgitt av: ${escapeHtml(publisherName)}</div>
+        <p style="color:var(--muted);font-size:.85rem;margin:0">Ingen noter.</p></div>`;
+      return;
+    }
+
+    const compIds = [...new Set(scores.map(s => s.composition_id))].join(',');
+    const comps   = compIds ? await get(`/composition?composition_id=in.(${compIds})&select=composition_id,title`) : [];
+    const compMap = {};
+    comps.forEach(c => { compMap[c.composition_id] = c.title; });
+
+    const rows = scores.map(s => `
+      <tr id="score-pub-row-${s.score_id}" style="border-bottom:1px solid #f0f0f0">
+        <td style="padding:0.4rem 0.5rem">${escapeHtml(compMap[s.composition_id] || `#${s.composition_id}`)}</td>
+        <td style="padding:0.4rem 0.5rem;color:var(--muted);white-space:nowrap">${escapeHtml(s.year_published || '')}</td>
+        <td style="padding:0.4rem 0.5rem;color:var(--muted);white-space:nowrap">${escapeHtml(s.plate_number || '')}</td>
+        <td style="padding:0.4rem 0.5rem;text-align:right;white-space:nowrap">
+          <span id="reassign-ctrl-${s.score_id}">
+            <button type="button" class="btn btn-secondary" style="font-size:0.78rem;padding:0.2rem 0.6rem"
+              onclick="startReassign(${s.score_id},${publisherId})">Reassign</button>
+          </span>
+        </td>
+      </tr>`).join('');
+
+    area.innerHTML = `<div class="card">
+      <div class="card-title">Utgitt av: ${escapeHtml(publisherName)} — ${scores.length} noter</div>
+      <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+        <thead><tr style="border-bottom:2px solid #eee">
+          <th style="text-align:left;padding:0.4rem 0.5rem">Tittel</th>
+          <th style="text-align:left;padding:0.4rem 0.5rem">År</th>
+          <th style="text-align:left;padding:0.4rem 0.5rem">Platenr.</th>
+          <th style="padding:0.4rem 0.5rem"></th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  } catch(e) {
+    area.innerHTML = `<div class="card"><div style="color:#a03030;font-size:.85rem;padding:0.5rem 0">Feil: ${escapeHtml(e.message)}</div></div>`;
+  }
+}
+
+function startRenamePublisher(publisherId, currentName) {
+  const cell = document.getElementById(`pub-name-cell-${publisherId}`);
+  if (!cell) return;
+  cell.dataset.originalHtml = cell.innerHTML;
+  cell.innerHTML = `
+    <input type="text" id="rename-input-${publisherId}" value="${escapeHtml(currentName)}"
+      style="font-size:0.85rem;padding:0.2rem 0.4rem;border:1px solid var(--border);border-radius:3px;width:16rem">
+    <button type="button" class="btn" style="font-size:0.78rem;padding:0.2rem 0.6rem;margin-left:0.4rem"
+      onclick="saveRenamePublisher(${publisherId})">Lagre</button>
+    <button type="button" class="btn btn-secondary" style="font-size:0.78rem;padding:0.2rem 0.5rem;margin-left:0.2rem"
+      onclick="cancelRenamePublisher(${publisherId})">Avbryt</button>`;
+  document.getElementById(`rename-input-${publisherId}`).focus();
+}
+
+async function saveRenamePublisher(publisherId) {
+  const input = document.getElementById(`rename-input-${publisherId}`);
+  if (!input) return;
+  const newName = input.value.trim();
+  if (!newName) { alert('Navn kan ikke være tomt.'); input.focus(); return; }
+  try {
+    await patch('publisher', `publisher_id=eq.${publisherId}`, { publisher_name: newName });
+    const pub = allPublishers.find(p => p.publisher_id === publisherId);
+    if (pub) pub.publisher_name = newName;
+    const cell = input.closest('td');
+    const originalHtml = cell.dataset.originalHtml || '';
+    // Rebuild with new name, preserving stale badge if it was there
+    const staleTag = originalHtml.includes('stale') ? '<span style="font-size:0.75rem;margin-left:0.5rem;color:#a03030">(0 noter — stale)</span>' : '';
+    cell.innerHTML = `<span id="pub-name-${publisherId}">${escapeHtml(newName)}</span>${staleTag}`;
+    cell.dataset.originalHtml = cell.innerHTML;
+    publisherLoaded = false;
+  } catch(e) {
+    alert('Feil ved lagring: ' + e.message);
+  }
+}
+
+function cancelRenamePublisher(publisherId) {
+  const input = document.getElementById(`rename-input-${publisherId}`);
+  if (!input) return;
+  const cell = input.closest('td');
+  cell.innerHTML = cell.dataset.originalHtml || `<span id="pub-name-${publisherId}"></span>`;
+}
+
+function startReassign(scoreId, currentPublisherId) {
+  const ctrl = document.getElementById(`reassign-ctrl-${scoreId}`);
+  if (!ctrl) return;
+  const pubOptions = allPublishers.map(p =>
+    `<option value="${p.publisher_id}"${p.publisher_id === currentPublisherId ? ' selected' : ''}>${escapeHtml(p.publisher_name || '')}</option>`
+  ).join('');
+  ctrl.innerHTML = `
+    <select id="reassign-sel-${scoreId}" style="font-size:0.82rem;padding:0.2rem 0.3rem;border:1px solid var(--border);border-radius:3px;max-width:14rem">
+      ${pubOptions}
+    </select>
+    <button type="button" class="btn" style="font-size:0.78rem;padding:0.2rem 0.5rem;margin-left:0.3rem"
+      onclick="saveReassign(${scoreId},${currentPublisherId})">Lagre</button>
+    <button type="button" class="btn btn-secondary" style="font-size:0.78rem;padding:0.2rem 0.4rem;margin-left:0.2rem"
+      onclick="cancelReassign(${scoreId},${currentPublisherId})">✕</button>`;
+}
+
+async function saveReassign(scoreId, oldPublisherId) {
+  const sel = document.getElementById(`reassign-sel-${scoreId}`);
+  if (!sel) return;
+  const newPublisherId = parseInt(sel.value, 10);
+  try {
+    await patch('score', `score_id=eq.${scoreId}`, { publisher_id: newPublisherId });
+    const ctrl = document.getElementById(`reassign-ctrl-${scoreId}`);
+    const row  = document.getElementById(`score-pub-row-${scoreId}`);
+    if (ctrl) ctrl.innerHTML = `<button type="button" class="btn btn-secondary" style="font-size:0.78rem;padding:0.2rem 0.6rem"
+      onclick="startReassign(${scoreId},${newPublisherId})">Reassign</button>`;
+    if (row && newPublisherId !== oldPublisherId) row.style.opacity = '0.45';
+    publisherLoaded = false;
+  } catch(e) {
+    alert('Feil ved lagring: ' + e.message);
+  }
+}
+
+function cancelReassign(scoreId, publisherId) {
+  const ctrl = document.getElementById(`reassign-ctrl-${scoreId}`);
+  if (!ctrl) return;
+  ctrl.innerHTML = `<button type="button" class="btn btn-secondary" style="font-size:0.78rem;padding:0.2rem 0.6rem"
+    onclick="startReassign(${scoreId},${publisherId})">Reassign</button>`;
 }

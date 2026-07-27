@@ -379,6 +379,7 @@
     <button type="button" class="tab" onclick="switchTab('biolinks')">Bio-lenker</button>
     <button type="button" class="tab" onclick="switchTab('arbeidsliste')">Arbeidsliste</button>
     <button type="button" class="tab" onclick="switchTab('siste')">Siste</button>
+    <button type="button" class="tab" onclick="switchTab('publisher')">Forlag</button>
   </div>
 
   <!-- ═══════════════════════ NEW ENTRY TAB ═══════════════════════ -->
@@ -974,6 +975,18 @@
       </div>
     </div>
     <div id="arbeidsListArea"></div>
+  </div>
+
+  <!-- ═══════════════════════ PUBLISHER TAB ═══════════════════════ -->
+  <div id="tab-publisher" class="tab-content">
+    <div class="card">
+      <div class="card-title" style="display:flex;align-items:center;gap:1rem">
+        Forlag
+        <button type="button" class="btn btn-secondary" onclick="publisherLoaded=false;loadPublishers()" style="font-size:0.8rem;padding:0.25rem 0.8rem;margin-left:auto">↺ Last på nytt</button>
+      </div>
+      <div id="publisherListArea"><div style="color:var(--muted);font-size:.85rem;padding:0.5rem 0">Laster…</div></div>
+    </div>
+    <div id="publisherScoreArea" style="margin-top:1rem"></div>
   </div>
 
 </div>
