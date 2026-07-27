@@ -2612,6 +2612,19 @@ async function deleteSiste(id, title) {
 let allPublishers         = [];
 let publisherActiveLetter = null;
 
+async function fetchAllScorePublisherIds() {
+  const pageSize = 1000;
+  let offset = 0;
+  let all = [];
+  while (true) {
+    const page = await get(`/score?select=publisher_id&limit=${pageSize}&offset=${offset}&order=score_id`);
+    all = all.concat(page);
+    if (page.length < pageSize) break;
+    offset += pageSize;
+  }
+  return all;
+}
+
 async function loadPublishers() {
   publisherLoaded = true;
   const alphaBar = document.getElementById('pubAlphaBar');
@@ -2621,7 +2634,7 @@ async function loadPublishers() {
   try {
     const [publishers, scores] = await Promise.all([
       get('/publisher?select=publisher_id,publisher_name&order=publisher_name'),
-      get('/score?select=publisher_id&limit=10000')
+      fetchAllScorePublisherIds()
     ]);
     allPublishers = publishers;
     const counts = {};
@@ -2693,7 +2706,10 @@ async function loadPublisherScores(publisherId, publisherName) {
     const scores = await get(`/score?publisher_id=eq.${publisherId}&select=score_id,composition_id,year_published,plate_number&order=score_id&limit=1000`);
     if (!scores.length) {
       area.innerHTML = `<div class="card"><div class="card-title">Utgitt av: ${escapeHtml(publisherName)}</div>
-        <p style="color:var(--muted);font-size:.85rem;margin:0">Ingen noter.</p></div>`;
+        <p style="color:var(--muted);font-size:.85rem;margin:0 0 1rem">Ingen noter tilknyttet dette forlaget.</p>
+        <button type="button" class="btn" style="background:#a03030;border-color:#a03030;color:#fff;font-size:0.85rem;padding:0.3rem 1rem"
+          onclick="deletePublisher(${publisherId},'${escapeJsAttr(publisherName)}')">Slett forlag</button>
+      </div>`;
       return;
     }
     const compIds = [...new Set(scores.map(s => s.composition_id))].join(',');
@@ -2784,6 +2800,20 @@ function cancelRenamePublisher(publisherId) {
   if (!card) return;
   card.innerHTML = card.dataset.originalHtml || '';
   if (card.dataset.originalOnclick) card.setAttribute('onclick', card.dataset.originalOnclick);
+}
+
+async function deletePublisher(publisherId, publisherName) {
+  if (!confirm(`Slette forlaget «${publisherName}»?\n\nDette kan ikke angres.`)) return;
+  try {
+    await del('publisher', `publisher_id=eq.${publisherId}`);
+    const card = document.getElementById(`pub-card-${publisherId}`);
+    if (card) card.remove();
+    allPublishers = allPublishers.filter(p => p.publisher_id !== publisherId);
+    document.getElementById('publisherScoreArea').innerHTML = '';
+    publisherLoaded = false;
+  } catch(e) {
+    alert('Sletting mislyktes: ' + e.message);
+  }
 }
 
 function startReassign(scoreId, currentPublisherId) {
