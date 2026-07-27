@@ -375,13 +375,18 @@ async function load() {
             </div>
           </div>
           ${(person.bio_text || person.bio_url) ? `
-          <div style="flex-shrink:0">
-            <a class="bio-link" href="${person.bio_text ? `bio.html?id=${personId}${siteMode === 'copyright' ? '&mode=copyright' : ''}` : person.bio_url}" ${person.bio_text ? '' : 'target="_blank"'} style="margin-top:0">
+          <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-start;gap:0.4rem">
+            ${person.bio_url ? `
+            <a class="bio-link" href="${person.bio_url}" target="_blank" style="margin-top:0">
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                 <path d="M4.5 1.5H2a1 1 0 00-1 1v7a1 1 0 001 1h7a1 1 0 001-1V7m-3-5.5h4m0 0v4m0-4L5.5 7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
               Biography
-            </a>
+            </a>` : ''}
+            ${person.bio_text ? `
+            <a class="bio-link" href="bio.html?id=${personId}${siteMode === 'copyright' ? '&mode=copyright' : ''}" style="margin-top:0">
+              Read more
+            </a>` : ''}
           </div>` : ''}
         </div>
       </div>
