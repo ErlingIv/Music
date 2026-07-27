@@ -181,6 +181,8 @@ const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
 const params   = new URLSearchParams(window.location.search);
 const personId = params.get('id');
+const mode     = params.get('mode');
+const modeParam = mode ? `&mode=${encodeURIComponent(mode)}` : '';
 
 function lifespan(born, died, diedUncertain) {
   const uncertain = (diedUncertain === 'yes' || diedUncertain === true);
@@ -226,7 +228,7 @@ async function load() {
     if (!person.bio_text) {
       el.innerHTML = `
         <p class="error-state">No biography text is available for this person yet.</p>
-        <a class="composer-link-back" href="composer.html?id=${personId}">← Back to ${person.first_name} ${person.last_name}</a>`;
+        <a class="composer-link-back" href="composer.html?id=${personId}${modeParam}">← Back to ${person.first_name} ${person.last_name}</a>`;
       return;
     }
 
@@ -245,7 +247,7 @@ async function load() {
 
       <article class="bio-article">${renderArticle(person.bio_text)}</article>
 
-      <a class="composer-link-back" href="composer.html?id=${personId}">← Back to ${person.first_name} ${person.last_name}</a>
+      <a class="composer-link-back" href="composer.html?id=${personId}${modeParam}">← Back to ${person.first_name} ${person.last_name}</a>
     `;
   } catch (e) {
     el.innerHTML = `<p class="error-state">Error: ${e.message}</p>`;
