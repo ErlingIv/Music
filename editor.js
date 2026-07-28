@@ -63,12 +63,14 @@ let bioLoaded          = false;
 let arbeidslisteLoaded = false;
 let sisteLoaded        = false;
 let publisherLoaded    = false;
+let unknownPersonsLoaded = false;
 
 function switchTab(name) {
   if (name === 'biolinks' && !bioLoaded) loadBioPersons();
   if (name === 'arbeidsliste' && !arbeidslisteLoaded) loadArbeidsliste();
   if (name === 'siste' && !sisteLoaded) loadSiste();
   if (name === 'publisher' && !publisherLoaded) loadPublishers();
+  if (name === 'unknown' && !unknownPersonsLoaded) loadUnknownPersons();
   document.querySelectorAll('.tab').forEach(t => {
     t.classList.toggle('active', t.getAttribute('onclick') === `switchTab('${name}')`);
   });
@@ -2877,4 +2879,80 @@ function cancelReassign(scoreId, publisherId) {
   if (!ctrl) return;
   ctrl.innerHTML = `<button type="button" class="btn btn-secondary" style="font-size:0.78rem;padding:0.2rem 0.6rem"
     onclick="startReassign(${scoreId},${publisherId})">Reassign</button>`;
+}
+
+// ── UNKNOWN NATIONALITY TAB ─────────────────────────────────────────────────────
+
+let allUnknownPersons = [];
+let unkActiveLetter   = null;
+
+async function fetchAllPersonsBasic() {
+  const pageSize = 1000;
+  let offset = 0;
+  let all = [];
+  while (true) {
+    const page = await get(`/person?select=person_id,first_name,last_name,born,died,nationality,gender&order=last_name&limit=${pageSize}&offset=${offset}`);
+    all = all.concat(page);
+    if (page.length < pageSize) break;
+    offset += pageSize;
+  }
+  return all;
+}
+
+async function loadUnknownPersons() {
+  unknownPersonsLoaded = true;
+  const alphaBar = document.getElementById('unkAlphaBar');
+  alphaBar.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Laster…</div>';
+  document.getElementById('unkCardGrid').innerHTML = '';
+  try {
+    const persons = await fetchAllPersonsBasic();
+    allUnknownPersons = persons
+      .filter(p => !(p.nationality || '').trim())
+      .sort((a, b) => (a.last_name || '').localeCompare(b.last_name || '', 'no'));
+
+    const usedLetters = new Set(allUnknownPersons.map(p => (p.last_name || '')[0]?.toUpperCase()).filter(Boolean));
+    if (!unkActiveLetter || !usedLetters.has(unkActiveLetter)) {
+      unkActiveLetter = [...usedLetters].sort((a, b) => a.localeCompare(b, 'no'))[0] || null;
+    }
+    document.getElementById('unkCount').textContent = allUnknownPersons.length;
+    renderUnkAlphaBar();
+    renderUnkCards();
+  } catch(e) {
+    alphaBar.innerHTML = `<div style="color:#a03030;font-size:.85rem">Feil: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderUnkAlphaBar() {
+  const alphaBar = document.getElementById('unkAlphaBar');
+  const usedLetters = new Set(allUnknownPersons.map(p => (p.last_name || '')[0]?.toUpperCase()).filter(Boolean));
+  alphaBar.innerHTML = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ'.split('').map(l =>
+    usedLetters.has(l)
+      ? `<div class="pub-alpha-btn${unkActiveLetter === l ? ' active' : ''}" onclick="setUnkLetter('${l}')">${l}</div>`
+      : `<div class="pub-alpha-btn disabled">${l}</div>`
+  ).join('');
+}
+
+function setUnkLetter(letter) {
+  unkActiveLetter = letter;
+  document.querySelectorAll('#unkAlphaBar .pub-alpha-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.trim() === letter);
+  });
+  renderUnkCards();
+}
+
+function renderUnkCards() {
+  const cardGrid = document.getElementById('unkCardGrid');
+  const filtered = allUnknownPersons.filter(p => (p.last_name || '')[0]?.toUpperCase() === unkActiveLetter);
+  if (!filtered.length) {
+    cardGrid.innerHTML = '<p style="color:var(--muted);font-size:.85rem;padding:0.5rem 0">Ingen personer med ukjent nasjonalitet for denne bokstaven.</p>';
+    return;
+  }
+  cardGrid.innerHTML = filtered.map(p => {
+    const years   = p.born ? `${p.born}${p.died ? ' – ' + p.died : ''}` : '';
+    const femMark = p.gender === 'F' ? ' ♀' : '';
+    return `<div class="pub-card" onclick="switchTab('person');loadPersonForm(${p.person_id})">
+      <div class="pub-card-name">${escapeHtml(p.first_name || '')} ${escapeHtml(p.last_name || '')}${femMark}</div>
+      <div class="pub-card-meta"><span>${escapeHtml(years)}</span></div>
+    </div>`;
+  }).join('');
 }
