@@ -2951,7 +2951,7 @@ function renderUnkCards() {
     const years   = p.born ? `${p.born}${p.died ? ' – ' + p.died : ''}` : '';
     const femMark = p.gender === 'F' ? ' ♀' : '';
     return `<div class="pub-card" onclick="switchTab('person');loadPersonForm(${p.person_id})">
-      <div class="pub-card-name">${escapeHtml(p.first_name || '')} ${escapeHtml(p.last_name || '')}${femMark}</div>
+      <div class="pub-card-name">${escapeHtml(p.last_name || '')}${p.first_name ? ', ' + escapeHtml(p.first_name) : ''}${femMark}</div>
       <div class="pub-card-meta"><span>${escapeHtml(years)}</span></div>
     </div>`;
   }).join('');
