@@ -261,7 +261,9 @@ const compId = params.get('id');
 const referrer = document.referrer;
 if (referrer && referrer.includes('composer.html')) {
   document.getElementById('backLink').href = referrer;
-  document.getElementById('backLink').textContent = '← Composer';
+  const refQuery = referrer.split('?')[1] || '';
+  const refRole = new URLSearchParams(refQuery).get('role');
+  document.getElementById('backLink').textContent = refRole === 'Lyricist' ? '← Lyricist' : '← Composer';
 }
 
 function bbcodeToHtml(text) {
