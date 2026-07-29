@@ -1608,8 +1608,9 @@ async function savePerson() {
       bio_source:           document.getElementById('p_bioSource').value.trim() || null,
       photo_url:            document.getElementById('p_photoUrl').value.trim() || null,
     });
+    document.getElementById('p_firstName').dataset.original = first;
+    document.getElementById('p_lastName').dataset.original  = last;
     showMsg('personMsg', '✓ Person oppdatert', 'success');
-    closePerson();
   } catch(err) {
     showMsg('personMsg', 'Feil: ' + err.message, 'error');
   }
