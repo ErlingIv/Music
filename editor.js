@@ -2410,6 +2410,7 @@ async function uploadPersonPhoto(input) {
 
 let arbeidsData   = { mangler: [], under_arbeid: [], interessant: [] };
 let arbeidsSection = 'mangler';
+let arbeidsSort    = { key: null, dir: 1 };
 
 async function loadArbeidsliste() {
   if (arbeidslisteLoaded) return;
@@ -2475,12 +2476,18 @@ function showArbeidsSection(section) {
   document.getElementById('arbeidsTabUnderArbeid').style.fontWeight = section === 'under_arbeid' ? '700' : '';
   document.getElementById('arbeidsTabInteressant').style.fontWeight = section === 'interessant'  ? '700' : '';
 
-  const items = arbeidsData[section] || [];
+  let items = arbeidsData[section] || [];
   const area  = document.getElementById('arbeidsListArea');
 
   if (!items.length) {
     area.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:1rem 0">Ingen innføringer i denne kategorien.</div>';
     return;
+  }
+
+  if (arbeidsSort.key) {
+    const key = arbeidsSort.key;
+    const getVal = c => (key === 'title' ? c.title : key === 'composer' ? c._composer : c.year_composed) || '';
+    items = [...items].sort((a, b) => getVal(a).localeCompare(getVal(b), 'no', { numeric: true, sensitivity: 'base' }) * arbeidsSort.dir);
   }
 
   const msCol = (section !== 'mangler');
@@ -2513,20 +2520,31 @@ function showArbeidsSection(section) {
   const msHeader    = msCol                 ? '<th style="padding:0.35rem 0.6rem;font-weight:600;text-align:left">MuseScore</th>' : '';
   const checkHeader = section === 'mangler' ? '<th style="padding:0.35rem 0.6rem;font-weight:600;text-align:center;width:2.5rem">⚙</th>' : '';
 
+  const sortArrow = key => arbeidsSort.key === key ? (arbeidsSort.dir === 1 ? ' ▲' : ' ▼') : '';
+  const sortHeader = (key, label) =>
+    `<th style="padding:0.35rem 0.6rem;font-weight:600;text-align:left;cursor:pointer;user-select:none"
+        onclick="sortArbeidsBy('${key}')">${label}${sortArrow(key)}</th>`;
+
   area.innerHTML = `
     <div style="font-size:0.82rem;color:var(--muted);margin-bottom:0.75rem">${items.length} innføringer</div>
     <table style="width:100%;border-collapse:collapse;font-size:0.88rem">
       <thead>
         <tr style="border-bottom:2px solid var(--border);background:var(--surface)">
-          <th style="padding:0.35rem 0.6rem;font-weight:600;text-align:left">Tittel</th>
-          <th style="padding:0.35rem 0.6rem;font-weight:600;text-align:left">Komponist</th>
-          <th style="padding:0.35rem 0.6rem;font-weight:600;text-align:left">År</th>
+          ${sortHeader('title', 'Tittel')}
+          ${sortHeader('composer', 'Komponist')}
+          ${sortHeader('year', 'År')}
           ${msHeader}
           ${checkHeader}
         </tr>
       </thead>
       <tbody>${rows}</tbody>
     </table>`;
+}
+
+function sortArbeidsBy(key) {
+  arbeidsSort.dir = (arbeidsSort.key === key) ? -arbeidsSort.dir : 1;
+  arbeidsSort.key = key;
+  showArbeidsSection(arbeidsSection);
 }
 
 async function toggleUnderArbeid(checkbox, compositionId) {
