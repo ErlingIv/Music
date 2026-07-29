@@ -1522,6 +1522,12 @@ async function savePerson() {
   const origLast  = document.getElementById('p_lastName').dataset.original  || '';
   if (!last) { alert('Etternavn er påkrevd.'); return; }
 
+  const btn = document.getElementById('personSaveBtn');
+  if (btn.disabled) return; // already mid-submit — ignore extra clicks entirely
+  btn.disabled = true; // disabled synchronously, before any await, so a rapid second click can't slip in
+  btn.innerHTML = '<span class="spinner"></span>Lagrer…';
+  const resetBtn = () => { btn.disabled = false; btn.textContent = 'Lagre endringer'; };
+
   // Check if name has changed
   const nameChanged = first !== origFirst || last !== origLast;
 
@@ -1579,6 +1585,8 @@ async function savePerson() {
         } catch(err) {
           showMsg('personMsg', 'Feil under sammenslåing: ' + err.message, 'error');
         }
+        resetBtn();
+        document.getElementById('personMsg').scrollIntoView({behavior:'smooth',block:'center'});
         return;
       }
     }
@@ -1614,6 +1622,8 @@ async function savePerson() {
   } catch(err) {
     showMsg('personMsg', 'Feil: ' + err.message, 'error');
   }
+  resetBtn();
+  document.getElementById('personMsg').scrollIntoView({behavior:'smooth',block:'center'});
 }
 
 async function loadPersonCompositions(personId) {
