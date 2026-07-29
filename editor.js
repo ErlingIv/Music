@@ -2202,6 +2202,20 @@ function makeClearable(id) {
 const PDF_BUCKET = 'scores-pdf';
 const MP3_BUCKET = 'scores-mp3';
 
+// Supabase Storage keys must be ASCII — transliterate Nordic letters and strip
+// path separators/spaces/anything else non-ASCII so filenames like
+// "Asbjørn_Guldahl.jpeg" don't come back as a 400 InvalidKey.
+function sanitizeStorageFilename(name) {
+  const translit = { 'æ':'ae','Æ':'AE', 'ø':'o','Ø':'O', 'å':'aa','Å':'AA' };
+  const diacritics = new RegExp('[̀-ͯ]', 'g');
+  return name
+    .replace(/[æØøÆåÅ]/g, c => translit[c])
+    .normalize('NFD').replace(diacritics, '') // strip remaining accents (é → e)
+    .replace(/[/\\]/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/[^\x00-\x7F]/g, '_'); // anything still non-ASCII
+}
+
 async function uploadScoreFile(input, type, urlFieldId, linkId, progressId) {
   const file = input.files[0];
   if (!file) return;
@@ -2212,8 +2226,7 @@ async function uploadScoreFile(input, type, urlFieldId, linkId, progressId) {
 
   const bucket  = type === 'pdf' ? PDF_BUCKET : MP3_BUCKET;
   const mime    = type === 'pdf' ? 'application/pdf' : 'audio/mpeg';
-  // Sanitise filename: strip path separators and spaces
-  const filename = file.name.replace(/[/\\]/g, '_').replace(/\s+/g, '_');
+  const filename = sanitizeStorageFilename(file.name);
   const uploadUrl = `${SB.replace('/rest/v1','')}/storage/v1/object/${bucket}/${encodeURIComponent(filename)}`;
 
   try {
@@ -2324,9 +2337,9 @@ async function uploadPersonPhoto(input) {
   const previousUrl = document.getElementById('p_photoUrl').value.trim();
   const previousStoragePath = extractPhotoStoragePath(previousUrl);
 
-  // Sanitise filename: strip path separators/spaces, prefix with person id + timestamp to avoid collisions
+  // Sanitise filename, prefix with person id + timestamp to avoid collisions
   const personId = document.getElementById('p_personId').value || 'new';
-  const cleanName = file.name.replace(/[/\\]/g, '_').replace(/\s+/g, '_');
+  const cleanName = sanitizeStorageFilename(file.name);
   const filename = `${personId}_${Date.now()}_${cleanName}`;
   const uploadUrl = `${SB.replace('/rest/v1','')}/storage/v1/object/${PHOTO_BUCKET}/${encodeURIComponent(filename)}`;
 
