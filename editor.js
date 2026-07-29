@@ -1268,6 +1268,7 @@ async function saveEdit() {
     showMsg('editMsg', 'Feil: ' + err.message, 'error');
   }
   btn.disabled = false; btn.textContent = 'Lagre endringer';
+  document.getElementById('editMsg').scrollIntoView({behavior:'smooth',block:'center'});
 }
 
 async function deleteComposition() {
