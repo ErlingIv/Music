@@ -1372,6 +1372,9 @@ document.getElementById('p_birth_country').addEventListener('input', function() 
   this.value = this.value.toUpperCase();
   const v = this.value.trim();
   document.getElementById('p_birth_flag').textContent = v ? countryCodeToFlag(v) : '';
+});
+document.getElementById('p_birth_country').addEventListener('blur', function() {
+  const v = this.value.trim();
   const natField = document.getElementById('p_nationality');
   if (v && !natField.value.trim()) {
     natField.value = v;
@@ -1386,6 +1389,9 @@ document.getElementById('np_birth_country').addEventListener('input', function()
   this.value = this.value.toUpperCase();
   const v = this.value.trim();
   document.getElementById('np_birth_flag').textContent = v ? countryCodeToFlag(v) : '';
+});
+document.getElementById('np_birth_country').addEventListener('blur', function() {
+  const v = this.value.trim();
   const natField = document.getElementById('np_nationality');
   if (v && !natField.value.trim()) {
     natField.value = v;
