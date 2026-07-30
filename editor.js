@@ -1275,7 +1275,19 @@ async function saveEdit() {
     if (scoreId) {
       await patch('score', `score_id=eq.${scoreId}`, scoreData);
     } else {
-      await post('score', { composition_id: parseInt(compId), ...scoreData });
+      // e_scoreId was empty when the form loaded, implying no score row exists yet —
+      // but re-verify right before writing rather than trusting a value set whenever
+      // the page first loaded (which can go stale for reasons unrelated to this save).
+      // Trusting it blindly here is exactly how duplicate score rows have been
+      // created before: PATCH the most complete existing row if one turns up,
+      // instead of inserting a second one.
+      const existing = await get(`/score?composition_id=eq.${compId}&select=*`);
+      const dupe = pickPrimaryScore(existing);
+      if (dupe) {
+        await patch('score', `score_id=eq.${dupe.score_id}`, scoreData);
+      } else {
+        await post('score', { composition_id: parseInt(compId), ...scoreData });
+      }
     }
 
     showMsg('editMsg', `✓ Endringer lagret`, 'success');
