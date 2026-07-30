@@ -1090,7 +1090,12 @@ async function loadEditForm(compId) {
   // Now that every row exists, refresh Translator rows so their lyricist candidate lists are complete
   eContributors.forEach(c => updateTranslatesField('e', c.idx));
 
-  const score = scores[0];
+  // When a composition has more than one score row (a data-entry duplicate —
+  // see renderExtraScoreRows below), the one loaded into the form here should
+  // be the most complete row, not just the newest score_id. Picking by newest
+  // alone can surface a near-blank stub as "primary" while the row with real
+  // data sits in the deletable list.
+  const score = pickPrimaryScore(scores);
   document.getElementById('e_scoreId').value = score ? score.score_id : '';
   document.getElementById('e_plateNumber').value = score?.plate_number || '';
   document.getElementById('e_yearPublished').value = score?.year_published || '';
@@ -1129,9 +1134,9 @@ async function loadEditForm(compId) {
   pdfLink.href = pdfUrl || '#'; pdfLink.style.display = pdfUrl ? 'inline-block' : 'none';
   mp3Link.href = mp3Url || '#'; mp3Link.style.display = mp3Url ? 'inline-block' : 'none';
 
-  // Extra score rows beyond the one shown above — this form only ever edits
-  // scores[0], so surface any others rather than leaving them invisible.
-  await renderExtraScoreRows(compId, scores.slice(1));
+  // Extra score rows beyond the one shown above — surface any others rather
+  // than leaving them invisible.
+  await renderExtraScoreRows(compId, scores, score?.score_id);
 
   // Sync has-value class so clear buttons appear on already-filled fields
   ['e_title','e_year','e_opus','e_msLink','e_notes','e_dedication',
@@ -1281,38 +1286,62 @@ async function saveEdit() {
   document.getElementById('editMsg').scrollIntoView({behavior:'smooth',block:'center'});
 }
 
-// Renders any score rows for this composition beyond the newest one (which the
-// form above always edits). These are otherwise invisible — loadEditForm() only
-// ever loads scores[0] — so this surfaces them with enough detail to judge which
-// to keep, plus a delete button per row.
-async function renderExtraScoreRows(compId, extras) {
+// How many of the fields that actually matter for a score edition are filled
+// in — used to pick which row is "primary" (loaded into the form) when a
+// composition has duplicate score rows, instead of just taking the newest.
+const SCORE_COMPLETENESS_FIELDS = [
+  'publisher_id', 'plate_number', 'year_published', 'source_id',
+  'pdf_url', 'mp3_url', 'has_frontpage', 'frontpage_url', 'ai_frontpage',
+];
+function scoreCompleteness(s) {
+  return SCORE_COMPLETENESS_FIELDS.reduce((n, f) => n + (s[f] ? 1 : 0), 0);
+}
+function pickPrimaryScore(scores) {
+  if (!scores.length) return null;
+  return [...scores].sort((a, b) =>
+    scoreCompleteness(b) - scoreCompleteness(a) || b.score_id - a.score_id
+  )[0];
+}
+
+// Renders every score row for this composition in one consistent, comparable
+// list — the one loaded into the form above (primaryScoreId) is labeled and
+// has no delete button; the rest ("duplicates") each get one. Without this,
+// extra rows beyond the primary are completely invisible in the tool.
+async function renderExtraScoreRows(compId, allScores, primaryScoreId) {
   const card = document.getElementById('e_extraScoresCard');
   const list = document.getElementById('e_extraScoresList');
-  if (!extras.length) {
+  if (allScores.length <= 1) {
     card.style.display = 'none';
     list.innerHTML = '';
     return;
   }
-  document.getElementById('e_extraScoresPrimaryId').textContent = document.getElementById('e_scoreId').value;
+  document.getElementById('e_extraScoresPrimaryId').textContent = primaryScoreId;
 
-  const pubIds = [...new Set(extras.map(s => s.publisher_id).filter(Boolean))];
+  const pubIds = [...new Set(allScores.map(s => s.publisher_id).filter(Boolean))];
   let pubMap = {};
   if (pubIds.length) {
     const pubs = await get(`/publisher?publisher_id=in.(${pubIds.join(',')})&select=publisher_id,publisher_name`);
     pubMap = Object.fromEntries(pubs.map(p => [p.publisher_id, p.publisher_name]));
   }
 
-  list.innerHTML = extras.map(s => {
+  // Show the row currently loaded in the form first, then the rest sorted
+  // newest-first, so the list order is stable and predictable.
+  const ordered = [...allScores].sort((a, b) =>
+    (b.score_id === primaryScoreId) - (a.score_id === primaryScoreId) || b.score_id - a.score_id
+  );
+
+  list.innerHTML = ordered.map(s => {
+    const isPrimary = s.score_id === primaryScoreId;
     const pubName = s.publisher_id ? (pubMap[s.publisher_id] || `#${s.publisher_id}`) : '—';
     const srcEntry = s.source_id ? [...sourceMap.entries()].find(([, id]) => id === s.source_id) : null;
     return `
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;padding:0.6rem;background:var(--warm);border-radius:5px;margin-bottom:0.5rem;font-size:0.85rem">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;padding:0.6rem;background:${isPrimary ? 'var(--paper)' : 'var(--warm)'};border:${isPrimary ? '1px solid var(--accent)' : 'none'};border-radius:5px;margin-bottom:0.5rem;font-size:0.85rem">
         <div>
-          <div><strong>score_id ${s.score_id}</strong></div>
+          <div><strong>score_id ${s.score_id}</strong>${isPrimary ? ' <span style="color:var(--accent);font-weight:600">— vises i skjemaet over</span>' : ''}</div>
           <div>Forlag: ${escapeHtml(pubName)} &nbsp;·&nbsp; Platenr: ${escapeHtml(s.plate_number || '—')} &nbsp;·&nbsp; År: ${escapeHtml(s.year_published || '—')}</div>
-          <div>Kilde: ${escapeHtml(srcEntry ? srcEntry[0] : '—')} &nbsp;·&nbsp; Forside: ${s.has_frontpage ? 'Ja' : 'Nei'}${s.frontpage_url ? ' (lastet opp)' : ''} &nbsp;·&nbsp; PDF: ${s.pdf_url ? 'Ja' : 'Nei'} &nbsp;·&nbsp; MP3: ${s.mp3_url ? 'Ja' : 'Nei'}</div>
+          <div>Kilde: ${escapeHtml(srcEntry ? srcEntry[0] : '—')} &nbsp;·&nbsp; Forside: ${s.has_frontpage ? 'Ja' : 'Nei'}${s.frontpage_url ? ' (lastet opp)' : ''} &nbsp;·&nbsp; AI-forside: ${s.ai_frontpage ? 'Ja' : 'Nei'} &nbsp;·&nbsp; PDF: ${s.pdf_url ? 'Ja' : 'Nei'} &nbsp;·&nbsp; MP3: ${s.mp3_url ? 'Ja' : 'Nei'}</div>
         </div>
-        <button type="button" class="btn btn-danger" style="font-size:0.8rem;flex-shrink:0" onclick="deleteExtraScoreRow(${s.score_id}, ${compId})">Slett rad</button>
+        ${isPrimary ? '' : `<button type="button" class="btn btn-danger" style="font-size:0.8rem;flex-shrink:0" onclick="deleteExtraScoreRow(${s.score_id}, ${compId})">Slett rad</button>`}
       </div>`;
   }).join('');
   card.style.display = 'block';
@@ -1324,7 +1353,8 @@ async function deleteExtraScoreRow(scoreId, compId) {
     await del('score', `score_id=eq.${scoreId}`);
     showMsg('editMsg', `✓ Rad score_id ${scoreId} slettet.`, 'success');
     const scores = await get(`/score?composition_id=eq.${compId}&select=*&order=score_id.desc`);
-    await renderExtraScoreRows(compId, scores.slice(1));
+    const primary = pickPrimaryScore(scores);
+    await renderExtraScoreRows(compId, scores, primary?.score_id);
   } catch (err) {
     showMsg('editMsg', 'Feil: ' + err.message, 'error');
   }
