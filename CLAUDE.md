@@ -38,6 +38,20 @@ See `add_olga_meditation.py` as reference example.
 |`reconcile_xlsm.py`     |Sync corrected names from cleaned xlsx → xlsm|After editing cleaned xlsx|
 |`add_olga_meditation.py`|Reference: add individual records to Supabase|One-off imports           |
 
+### Frontpage extraction scripts
+
+All live in `E:\OneDrive\database\`, stage extracted images into `E:\OneDrive\database\frontpages_staging\`, and write a semicolon-delimited report CSV that `frontpage_crop_tool.html` (same folder) reads for the manual crop/upload step. All skip OneDrive cloud-only `.mscz` files rather than force-downloading them (see script docstrings for the `FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS` check).
+
+|Script                                         |Scope / target set                                                                             |Scan root                              |
+|------------------------------------------------|------------------------------------------------------------------------------------------------|----------------------------------------|
+|`frontpage.py`                                   |Composer-name substring filter (e.g. "thommessen"), Excel report                                |`E:\OneDrive\Noter\eldre populærmusikk` |
+|`extract_copyright_illustrated_frontpages.py`    |Copyright compositions (`public_domain != 'Yes'`) with an `Illustrator` credited                |`E:\OneDrive\Noter` (whole tree)        |
+|`extract_populaermusikk_frontpages.py`           |ALL scores with `score.has_frontpage = true` and a `musescore_link` — no illustrator/PD filter. Flags (doesn't filter on) whether an illustrator is already recorded, via `illustrator_recorded`/`illustrator_names` report columns | `E:\OneDrive\Noter\Eldre populærmusikk` |
+
+`score.has_frontpage` (boolean) marks a score as *expected* to have a frontpage image in the source material — distinct from `score.frontpage_url`, which is set only once an image has actually been extracted/cropped/uploaded. All three scripts default to skipping scores that already have `frontpage_url` set (`SKIP_IF_HAS_FRONTPAGE = True`).
+
+`frontpage_crop_tool.html` has a header checkbox "Only rows with illustrator recorded" that filters the loaded report down to rows whose `illustrator_names` column is non-empty (persists via `localStorage`); works with any of the three report layouts above, auto-detected from the CSV header row.
+
 ## Supabase
 
 - **Project ID**: `tfqnzszyjsdgdeksizel`
@@ -195,7 +209,7 @@ r = requests.post(f"{SUPABASE_URL}/rest/v1/composition", headers=HEADERS, json={
 r = requests.patch(f"{SUPABASE_URL}/rest/v1/composition?composition_id=eq.123", headers=HEADERS, json={...})
 ```
 
-**Note:** Supabase REST API is not reachable from some sandboxed environments (e.g. Claude's server-side tool environment) — use the Supabase SQL editor for direct SQL, and Python scripts for anything requiring the REST API, run locally.
+**Note:** Supabase REST API reachability from Claude Code sessions is inconsistent across environments — test before assuming either way. In this project's local Windows CLI session, `curl` reaches both the Supabase REST API and musescore.com directly (verified July 2026). Python's `requests` library fails there with `SSL: CERTIFICATE_VERIFY_FAILED` (the sandbox's TLS path isn't trusted by Python's bundled `certifi` CA store, even though Windows' own trust store — used by `curl` via schannel — accepts it); `requests.get(..., verify=False)` works around it but disables cert verification, so prefer `curl` for ad-hoc lookups from within a session. Some other sandboxed Claude environments (e.g. server-side/cloud) may still have no network path to Supabase at all. For real script runs (not ad-hoc queries), still prefer running Python scripts locally and using the Supabase SQL editor for direct SQL.
 
 ## Excel Spreadsheet Structure
 
@@ -280,10 +294,10 @@ score_info = data.get('text')
 
 ### Active pages
 
-- `index.html` — composer grid, tabbed by nationality (Norwegian/Nordic/Others/Unknown), recently-added strip, "Browse by Tag" link, Illustrators tab
-- `composer.html` — composer profile, scores list with opus grouping, photo thumbnail, dual-nationality flag support, pseudonym display, role-switcher (composer/lyricist view). "Biography" button: links to `bio.html?id=X` if `person.bio_text` is filled in (takes priority — in-base bio wins over external link), otherwise links to `person.bio_url` externally if that's set, otherwise no button shown. Full `bio_text` is no longer dumped inline into the hero card (added June 2026) — it can be a full transcribed newspaper article, so it lives on `bio.html` instead.
+- `index.html` — composer grid, tabbed by nationality (Norwegian/Nordic/Others/Unknown), recently-added strip, "Browse by Tag" link, Illustrators tab. Composer/illustrator cards carry their originating tab via a `&sec=` URL param into `composerHref()`; on load, `?sec=nordic|others|unknown|dedications|illustrators` restores that tab (added so `composer.html`'s back-link doesn't always land back on the default Norwegian tab)
+- `composer.html` — composer profile, scores list with opus grouping, photo thumbnail, dual-nationality flag support, pseudonym display, role-switcher (composer/lyricist view). Reads `?sec=` from the URL and forwards it into both the "← Back" link and the role-switcher (`selfHref()`), so returning to `index.html` restores the tab the visitor came from. "Biography" button: links to `bio.html?id=X` if `person.bio_text` is filled in (takes priority — in-base bio wins over external link), otherwise links to `person.bio_url` externally if that's set, otherwise no button shown. Full `bio_text` is no longer dumped inline into the hero card (added June 2026) — it can be a full transcribed newspaper article, so it lives on `bio.html` instead.
 - `score.html` — score detail, PDF.js viewer, audio player, MuseScore embed, translation via MyMemory API (`translate.js`), `translation_corrections` table for overrides, BBCode/tag link rendering via `linkify()`
-- `tags.html` — tag cloud with hero images, composition lists
+- `tags.html` — tag cloud with hero images, composition lists. Composition rows render as bordered cards (matching composer.html's `.score-row` style, `0.5rem` gap between rows) and show the same discrete "Godkjent" (approved) dot next to the title when `composition.approved` is true
 - `lyricists.html` — lyricist cards, nationality tabs, A–Z filter
 - `musikk-grid.html` — Excel-style public domain grid (`public_domain = 'Yes'`)
 - `musikk-grid-copyright.html` — copyright variant
@@ -302,7 +316,8 @@ Data source: `composition_person` table.
 - Tabs: Ny innføring (new entry), Rediger (edit/search), Siste (last 10 entries), Arbeidsliste (work list), Bio-lenker, Person management
 - Login overlay prompts for service-role key, stored in `localStorage`, assigned to `window.__SUPABASE_KEY__`
 - Supports: contributors with `credited_as`, `under_arbeid` flag with amber badge/filter, `has_frontpage`/`ai_frontpage` checkboxes, `year_published`, `musescore_uploaded` auto-date checkbox, photo upload, translator support, dedication/illustrator fields
-- Person tab: `p_bioText` textarea (min-height 16rem, sized for full transcribed articles, not just short notes) saves to `person.bio_text`; `p_bioSource` text input saves to `person.bio_source` (citation, shown on `bio.html`)
+- Person tab: `p_bioText` textarea (min-height 16rem, sized for full transcribed articles, not just short notes) saves to `person.bio_text`; `p_bioSource` text input saves to `person.bio_source` (citation, shown on `bio.html`). "+ Ny person" button (`startNewPerson()`) clears the loaded person panel and hands back a blank "add new person" form, without going via "Avbryt". `deletePerson()` checks `composition_person` for the person first and blocks the delete (before `confirm()` even runs) if any compositions are still attached
+- Contributor rows (composer/lyricist/arranger/illustrator/translator, in both "Ny innføring" and "Rediger"): the displayed person name is clickable and jumps straight to that person's record on the Person tab (`switchTab('person'); loadPersonForm(person_id)`)
 
 ### Key architecture rules (editor.js)
 
