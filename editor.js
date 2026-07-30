@@ -1681,6 +1681,15 @@ function closePerson() {
   document.getElementById('newPersonCard').style.display = 'block';
 }
 
+// Clears the loaded person's details and hands the page back to a blank
+// "add new person" form, without requiring the user to go via "Avbryt".
+function startNewPerson() {
+  closePerson();
+  resetNewPersonForm();
+  document.getElementById('newPersonCard').scrollIntoView({behavior:'smooth',block:'start'});
+  document.getElementById('np_firstName').focus();
+}
+
 async function deletePerson() {
   const personId = document.getElementById('p_personId').value;
   const first    = document.getElementById('p_firstName').value.trim();
