@@ -1129,6 +1129,10 @@ async function loadEditForm(compId) {
   pdfLink.href = pdfUrl || '#'; pdfLink.style.display = pdfUrl ? 'inline-block' : 'none';
   mp3Link.href = mp3Url || '#'; mp3Link.style.display = mp3Url ? 'inline-block' : 'none';
 
+  // Extra score rows beyond the one shown above — this form only ever edits
+  // scores[0], so surface any others rather than leaving them invisible.
+  await renderExtraScoreRows(compId, scores.slice(1));
+
   // Sync has-value class so clear buttons appear on already-filled fields
   ['e_title','e_year','e_opus','e_msLink','e_notes','e_dedication',
    'e_msNotes','e_displayCountry','e_publisherSearch','e_plateNumber','e_source',
@@ -1275,6 +1279,55 @@ async function saveEdit() {
   }
   btn.disabled = false; btn.textContent = 'Lagre endringer';
   document.getElementById('editMsg').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+// Renders any score rows for this composition beyond the newest one (which the
+// form above always edits). These are otherwise invisible — loadEditForm() only
+// ever loads scores[0] — so this surfaces them with enough detail to judge which
+// to keep, plus a delete button per row.
+async function renderExtraScoreRows(compId, extras) {
+  const card = document.getElementById('e_extraScoresCard');
+  const list = document.getElementById('e_extraScoresList');
+  if (!extras.length) {
+    card.style.display = 'none';
+    list.innerHTML = '';
+    return;
+  }
+  document.getElementById('e_extraScoresPrimaryId').textContent = document.getElementById('e_scoreId').value;
+
+  const pubIds = [...new Set(extras.map(s => s.publisher_id).filter(Boolean))];
+  let pubMap = {};
+  if (pubIds.length) {
+    const pubs = await get(`/publisher?publisher_id=in.(${pubIds.join(',')})&select=publisher_id,publisher_name`);
+    pubMap = Object.fromEntries(pubs.map(p => [p.publisher_id, p.publisher_name]));
+  }
+
+  list.innerHTML = extras.map(s => {
+    const pubName = s.publisher_id ? (pubMap[s.publisher_id] || `#${s.publisher_id}`) : '—';
+    const srcEntry = s.source_id ? [...sourceMap.entries()].find(([, id]) => id === s.source_id) : null;
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;padding:0.6rem;background:var(--warm);border-radius:5px;margin-bottom:0.5rem;font-size:0.85rem">
+        <div>
+          <div><strong>score_id ${s.score_id}</strong></div>
+          <div>Forlag: ${escapeHtml(pubName)} &nbsp;·&nbsp; Platenr: ${escapeHtml(s.plate_number || '—')} &nbsp;·&nbsp; År: ${escapeHtml(s.year_published || '—')}</div>
+          <div>Kilde: ${escapeHtml(srcEntry ? srcEntry[0] : '—')} &nbsp;·&nbsp; Forside: ${s.has_frontpage ? 'Ja' : 'Nei'}${s.frontpage_url ? ' (lastet opp)' : ''} &nbsp;·&nbsp; PDF: ${s.pdf_url ? 'Ja' : 'Nei'} &nbsp;·&nbsp; MP3: ${s.mp3_url ? 'Ja' : 'Nei'}</div>
+        </div>
+        <button type="button" class="btn btn-danger" style="font-size:0.8rem;flex-shrink:0" onclick="deleteExtraScoreRow(${s.score_id}, ${compId})">Slett rad</button>
+      </div>`;
+  }).join('');
+  card.style.display = 'block';
+}
+
+async function deleteExtraScoreRow(scoreId, compId) {
+  if (!confirm(`Slette score_id ${scoreId}? Dette kan ikke angres.`)) return;
+  try {
+    await del('score', `score_id=eq.${scoreId}`);
+    showMsg('editMsg', `✓ Rad score_id ${scoreId} slettet.`, 'success');
+    const scores = await get(`/score?composition_id=eq.${compId}&select=*&order=score_id.desc`);
+    await renderExtraScoreRows(compId, scores.slice(1));
+  } catch (err) {
+    showMsg('editMsg', 'Feil: ' + err.message, 'error');
+  }
 }
 
 async function deleteComposition() {
