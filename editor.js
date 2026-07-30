@@ -1686,8 +1686,14 @@ async function deletePerson() {
   const first    = document.getElementById('p_firstName').value.trim();
   const last     = document.getElementById('p_lastName').value.trim();
   const name     = [first, last].filter(Boolean).join(' ');
-  if (!confirm(`Slette "${name}"? Dette kan ikke angres.`)) return;
   try {
+    const linked = await get(`/composition_person?person_id=eq.${personId}&select=composition_id&limit=1`);
+    if (linked.length) {
+      showMsg('personMsg', `Feil: "${name}" har komposisjoner knyttet til seg og kan ikke slettes før disse koblingene er fjernet eller flyttet til en annen person.`, 'error');
+      document.getElementById('personMsg').scrollIntoView({behavior:'smooth',block:'center'});
+      return;
+    }
+    if (!confirm(`Slette "${name}"? Dette kan ikke angres.`)) return;
     await del('person', `person_id=eq.${personId}`);
     showMsg('personMsg', `✓ "${name}" er slettet.`, 'success');
     closePerson();
