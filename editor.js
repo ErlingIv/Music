@@ -591,7 +591,7 @@ function addContributorRow(prefix, contributors, rowIdxRef, person, role, credit
           style="width:100%;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:4px;font-size:0.85rem">
         <div id="${prefix}_cresults_${idx}" class="lookup-results"></div>
       </div>
-      <div id="${prefix}_cselected_${idx}" style="font-size:0.82rem;color:var(--accent);margin-top:0.2rem;font-weight:500">${escapeHtml(name||'')}</div>
+      <div id="${prefix}_cselected_${idx}" style="font-size:0.82rem;color:var(--accent);margin-top:0.2rem;font-weight:500;cursor:pointer;text-decoration:underline dotted" title="Gå til personen i Person-fanen">${escapeHtml(name||'')}</div>
       <div id="${prefix}_ccredited_wrap_${idx}" style="margin-top:0.3rem"></div>
       <div id="${prefix}_ctranslates_wrap_${idx}" style="display:none;margin-top:0.3rem"></div>
     </div>
@@ -601,6 +601,12 @@ function addContributorRow(prefix, contributors, rowIdxRef, person, role, credit
   if (person) {
     renderCreditedAsField(prefix, idx, person.pseudonym||'', creditedAs||'');
   }
+
+  // Clicking the selected-person name jumps to that person's record in the Person tab.
+  document.getElementById(`${prefix}_cselected_${idx}`).addEventListener('click', () => {
+    const c = contributors.find(x => x.idx === idx);
+    if (c?.person_id) { switchTab('person'); loadPersonForm(c.person_id); }
+  });
 
   // Role select: show/hide the "translates" picker
   document.getElementById(`${prefix}_crole_${idx}`).addEventListener('change', () => updateTranslatesField(prefix, idx));
