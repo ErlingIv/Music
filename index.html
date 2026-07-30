@@ -842,8 +842,8 @@ const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 // needs ?mode= carried in explicitly; score.html doesn't, since it determines
 // PD vs copyright itself from each composition's own public_domain value.
 let siteMode = new URLSearchParams(window.location.search).get('mode') === 'copyright' ? 'copyright' : 'pd';
-function composerHref(id, extra) {
-  return 'composer.html?id=' + id + (siteMode === 'copyright' ? '&mode=copyright' : '') + (extra || '');
+function composerHref(id, extra, sec) {
+  return 'composer.html?id=' + id + (siteMode === 'copyright' ? '&mode=copyright' : '') + (extra || '') + (sec ? '&sec=' + sec : '');
 }
 const NORDIC = ['SE', 'DK', 'FI', 'IS'];
 
@@ -1086,13 +1086,13 @@ function renderSection(sec) {
     <div class="letter-group" id="letter-${sec}-${letter}">
       <div class="letter-heading">${letter}</div>
       <div class="composer-grid">
-        ${list.map(c => composerCard(c)).join('')}
+        ${list.map(c => composerCard(c, sec)).join('')}
       </div>
     </div>
   `).join('');
 }
 
-function composerCard(c) {
+function composerCard(c, sec) {
   const years  = lifespan(c.born, c.died, c.died_uncertain);
   const flag   = c.nationality !== 'NO' ? renderFlags(c.nationality, c.birth_country, c.birth_country_primary) : '';
   const female = c.is_female ? '<span class="female-badge">♀</span>' : '';
@@ -1100,7 +1100,7 @@ function composerCard(c) {
   const n = c.score_count;
   const tier = n >= 20 ? 'tier-4' : n >= 6 ? 'tier-3' : n >= 2 ? 'tier-2' : 'tier-1';
   return `
-    <a class="composer-card ${tier}" href="${composerHref(c.person_id)}">
+    <a class="composer-card ${tier}" href="${composerHref(c.person_id, '', sec)}">
       <div class="composer-name">${c.last_name}, ${c.first_name} ${flag}</div>
       <div class="composer-meta">
         ${years ? `<span>${years}</span>` : ''}
@@ -1231,6 +1231,17 @@ if (siteMode === 'copyright') {
 }
 
 fetchAllComposers(siteMode === 'copyright');
+
+// Restore the tab the visitor came from (e.g. Nordic/Others/Unknown) when
+// arriving back from composer.html's "← Back" link, instead of always
+// landing on the default Norwegian tab.
+const initialSec = new URLSearchParams(window.location.search).get('sec');
+const RESTORABLE_SECTIONS = ['nordic', 'others', 'unknown', 'dedications', 'illustrators'];
+if (initialSec && RESTORABLE_SECTIONS.includes(initialSec)) {
+  switchTab(initialSec);
+  if (initialSec === 'dedications') loadDedications();
+  if (initialSec === 'illustrators') loadIllustrators();
+}
 
 // ── Global search ──────────────────────────────────────────────────────────────
 let _allCompositions = null;
@@ -1593,7 +1604,7 @@ function illustratorCard(p) {
   const flag   = p.nationality !== 'NO' ? renderFlags(p.nationality, p.birth_country, p.birth_country_primary) : '';
   const female = p.gender === 'F' ? '<span class="female-badge">♀</span>' : '';
   return `
-    <a class="composer-card" href="${composerHref(p.person_id, '&role=Illustrator')}">
+    <a class="composer-card" href="${composerHref(p.person_id, '&role=Illustrator', 'illustrators')}">
       <div class="composer-name">${p.last_name || ''}, ${p.first_name || ''} ${flag}</div>
       <div class="composer-meta">
         ${years ? `<span>${years}</span>` : ''}

@@ -251,16 +251,20 @@ const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 const params    = new URLSearchParams(window.location.search);
 const personId  = params.get('id');
 const roleParam = params.get('role') || 'Composer'; // 'Composer' or 'Lyricist'
+const secParam  = params.get('sec'); // which index.html tab we were linked from, for the back link
 
 // ── Site mode: 'pd' (public domain) or 'copyright' — read-only here.
 // Mode can only be changed from the top-level index.html; this page just
 // reflects whatever it was given via ?mode=copyright.
 const siteMode = params.get('mode') === 'copyright' ? 'copyright' : 'pd';
 function selfHref(role) {
-  return `composer.html?id=${personId}&role=${role}${siteMode === 'copyright' ? '&mode=copyright' : ''}`;
+  return `composer.html?id=${personId}&role=${role}${siteMode === 'copyright' ? '&mode=copyright' : ''}${secParam ? '&sec=' + secParam : ''}`;
 }
 
-document.getElementById('backLink').href = siteMode === 'copyright' ? 'index.html?mode=copyright' : 'index.html';
+const backParams = new URLSearchParams();
+if (siteMode === 'copyright') backParams.set('mode', 'copyright');
+if (secParam) backParams.set('sec', secParam);
+document.getElementById('backLink').href = 'index.html' + (backParams.toString() ? '?' + backParams.toString() : '');
 document.getElementById('siteNameLink').href = siteMode === 'copyright' ? 'index.html?mode=copyright' : 'index.html';
 
 async function load() {
