@@ -218,7 +218,7 @@ r = requests.patch(f"{SUPABASE_URL}/rest/v1/composition?composition_id=eq.123", 
 |Sheet                   |Rows|Imported|Public Domain                       |
 |------------------------|----|--------|------------------------------------|
 |Eldre klassisk          |1263|YES     |Yes (2 exceptions: Heradstveit = No)|
-|Eldre populærmusikk     |876 |No      |No (copyright)                      |
+|Eldre populærmusikk     |876 |No      |Mostly No (copyright) — a few genuinely-PD pieces get found and moved to `Eldre klassisk` when spotted|
 |Posca                   |21  |No      |Yes                                 |
 |Utenlandsk populærmusikk|91  |No      |No                                  |
 |Per Lasson              |16  |No      |Yes                                 |
@@ -335,6 +335,7 @@ Data source: `composition_person` table.
 - `not.eq.true` filters exclude NULL in PostgreSQL — use `or=(field.eq.false,field.is.null)` for null-safe false checks.
 - Converting `function` declarations to `const` removes hoisting — calls before declaration silently kill all script execution.
 - Supabase Storage bucket filenames are case-sensitive; re-uploading creates versioned copies rather than overwriting — manually delete before re-upload of the same filename.
+- Local `.mscz` folder placement under `E:\OneDrive\Noter` (e.g. `Eldre klassisk` vs `Eldre populærmusikk`) is meant to track `composition.public_domain`, but isn't authoritative — always confirmed against Supabase (July 2026: 6 compositions found flagged `public_domain=Yes` while still filed under `Eldre populærmusikk`; moved to `Eldre klassisk` once found). Folder-scoped scripts like `extract_populaermusikk_frontpages.py` only see whatever is currently filed in their `SCAN_ROOT` at run time.
 
 ## Known Issues / TODO
 
