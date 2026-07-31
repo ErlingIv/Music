@@ -1139,6 +1139,8 @@ async function loadEditForm(compId) {
   const mp3Link = document.getElementById('e_mp3Link');
   pdfLink.href = pdfUrl || '#'; pdfLink.style.display = pdfUrl ? 'inline-block' : 'none';
   mp3Link.href = mp3Url || '#'; mp3Link.style.display = mp3Url ? 'inline-block' : 'none';
+  document.getElementById('e_frontpageUrl').value = score?.frontpage_url || '';
+  updateFrontpagePreview();
 
   // Extra score rows beyond the one shown above — surface any others rather
   // than leaving them invisible.
@@ -2881,6 +2883,114 @@ async function uploadScoreFile(input, type, urlFieldId, linkId, progressId) {
   input.value = '';
 }
 
+// ── Frontpage image upload (Rediger tab) ────────────────────────────────────
+// A plain <input type="file"> upload, deliberately not a crop tool — for
+// staged images that don't need cropping, this is the one entry point that
+// works on iPad/iOS Safari, since it needs no folder access (unlike
+// frontpage_crop_tool.html) and no canvas cropping. Persists immediately on
+// upload/remove (not deferred to "Lagre endringer"), so an upload can never
+// be left orphaned in Storage with nothing pointing at it if the form is
+// closed without saving.
+
+const FRONTPAGE_BUCKET = 'score-frontpages';
+
+function updateFrontpagePreview() {
+  const url  = document.getElementById('e_frontpageUrl').value.trim();
+  const img  = document.getElementById('e_frontpagePreview');
+  const link = document.getElementById('e_frontpageLink');
+  const removeBtn = document.getElementById('e_frontpageRemoveBtn');
+  if (url) {
+    img.src = url;
+    img.style.display = 'inline-block';
+    link.href = url;
+    link.style.display = 'inline-block';
+    removeBtn.style.display = 'inline-block';
+  } else {
+    img.style.display = 'none';
+    link.style.display = 'none';
+    removeBtn.style.display = 'none';
+  }
+}
+
+async function uploadFrontpageImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const scoreId = document.getElementById('e_scoreId').value;
+  if (!scoreId) {
+    alert('Denne komposisjonen har ingen lagret score-rad ennå — lagre komposisjonen først.');
+    input.value = '';
+    return;
+  }
+
+  const progress = document.getElementById('e_frontpageProgress');
+  progress.textContent = 'Laster opp…';
+  progress.style.display = 'inline';
+
+  try {
+    // Keep the file's own extension (staged Pictures/ images can be .jpg or
+    // .png) rather than forcing .jpg like the crop tool does — that tool
+    // always re-encodes to JPEG via canvas, this one uploads the raw file.
+    const extMatch = file.name.match(/\.[^.]+$/);
+    const filename = `${scoreId}${extMatch ? extMatch[0].toLowerCase() : '.jpg'}`;
+    const previousStoragePath = extractStoragePath(document.getElementById('e_frontpageUrl').value.trim(), FRONTPAGE_BUCKET);
+    const uploadUrl = `${SB.replace('/rest/v1','')}/storage/v1/object/${FRONTPAGE_BUCKET}/${encodeURIComponent(filename)}`;
+
+    const res = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        'apikey':        KEY,
+        'Authorization': `Bearer ${KEY}`,
+        'Content-Type':  file.type || 'image/jpeg',
+        'x-upsert':      'true',
+      },
+      body: file,
+    });
+    if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+
+    const publicUrl = `${SB.replace('/rest/v1','')}/storage/v1/object/public/${FRONTPAGE_BUCKET}/${encodeURIComponent(filename)}`;
+    // Uploading a frontpage is itself proof the score has one, regardless of
+    // what has_frontpage was set to before.
+    await patch('score', `score_id=eq.${scoreId}`, { frontpage_url: publicUrl, has_frontpage: true });
+
+    document.getElementById('e_frontpageUrl').value = publicUrl;
+    document.getElementById('e_hasFrontpage').checked = true;
+    updateFrontpagePreview();
+
+    if (previousStoragePath && previousStoragePath !== filename) {
+      await deleteStorageObject(FRONTPAGE_BUCKET, previousStoragePath);
+    }
+
+    progress.textContent = '✓ Opplastet';
+    setTimeout(() => { progress.style.display = 'none'; }, 3000);
+  } catch (err) {
+    progress.textContent = '✗ Feil: ' + err.message;
+    console.error('Frontpage upload error:', err);
+  }
+
+  input.value = '';
+}
+
+async function removeFrontpageImage() {
+  const scoreId = document.getElementById('e_scoreId').value;
+  const currentUrl = document.getElementById('e_frontpageUrl').value.trim();
+  if (!currentUrl) return;
+  if (!confirm('Fjerne dette forsidebildet? Filen slettes fra lagring, og dette kan ikke angres.')) return;
+  const btn = document.getElementById('e_frontpageRemoveBtn');
+  btn.disabled = true;
+  try {
+    if (scoreId) {
+      await patch('score', `score_id=eq.${scoreId}`, { frontpage_url: null });
+    }
+    await deleteStorageObject(FRONTPAGE_BUCKET, extractStoragePath(currentUrl, FRONTPAGE_BUCKET));
+    document.getElementById('e_frontpageUrl').value = '';
+    updateFrontpagePreview();
+  } catch (err) {
+    alert('Feil: ' + err.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 // ── Person photo upload ────────────────────────────────────────────────────
 
 const PHOTO_BUCKET = 'person-photos';
@@ -2905,9 +3015,12 @@ function updatePersonPhotoPreview() {
 
 // Extract the storage object path (bucket-relative filename) from a public photo URL.
 // Returns null if the URL doesn't point into our PHOTO_BUCKET (e.g. blank, or an external URL).
-function extractPhotoStoragePath(url) {
+// Extracts the storage object path (bucket-relative filename) from a public
+// URL. Returns null if the URL doesn't point into that bucket (e.g. blank,
+// or an external URL).
+function extractStoragePath(url, bucket) {
   if (!url) return null;
-  const marker = `/storage/v1/object/public/${PHOTO_BUCKET}/`;
+  const marker = `/storage/v1/object/public/${bucket}/`;
   const idx = url.indexOf(marker);
   if (idx === -1) return null;
   const encodedPath = url.slice(idx + marker.length);
@@ -2916,6 +3029,10 @@ function extractPhotoStoragePath(url) {
   } catch {
     return encodedPath;
   }
+}
+
+function extractPhotoStoragePath(url) {
+  return extractStoragePath(url, PHOTO_BUCKET);
 }
 
 async function removePersonPhoto() {
@@ -2940,9 +3057,9 @@ async function removePersonPhoto() {
   }
 }
 
-async function deletePersonPhotoFromStorage(storagePath) {
+async function deleteStorageObject(bucket, storagePath) {
   if (!storagePath) return;
-  const deleteUrl = `${SB.replace('/rest/v1','')}/storage/v1/object/${PHOTO_BUCKET}/${encodeURIComponent(storagePath)}`;
+  const deleteUrl = `${SB.replace('/rest/v1','')}/storage/v1/object/${bucket}/${encodeURIComponent(storagePath)}`;
   try {
     const res = await fetch(deleteUrl, {
       method: 'DELETE',
@@ -2952,12 +3069,16 @@ async function deletePersonPhotoFromStorage(storagePath) {
       },
     });
     if (!res.ok) {
-      // Non-fatal: old file just stays orphaned, but don't block the new photo from being saved
-      console.warn('Old photo delete failed:', res.status, await res.text());
+      // Non-fatal: old file just stays orphaned, but don't block the new one from being saved
+      console.warn('Old file delete failed:', res.status, await res.text());
     }
   } catch (err) {
-    console.warn('Old photo delete error:', err);
+    console.warn('Old file delete error:', err);
   }
+}
+
+async function deletePersonPhotoFromStorage(storagePath) {
+  return deleteStorageObject(PHOTO_BUCKET, storagePath);
 }
 
 async function uploadPersonPhoto(input) {

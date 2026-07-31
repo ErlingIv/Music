@@ -733,7 +733,25 @@
 
       <div class="card">
         <div class="card-title">Forside</div>
-        <div style="display:flex;gap:1.5rem;align-items:center">
+        <div class="field">
+          <label>Forsidebilde</label>
+          <div style="display:flex;gap:0.75rem;align-items:center">
+            <img id="e_frontpagePreview" src="" alt="" style="display:none;width:56px;height:56px;border-radius:4px;object-fit:cover;border:1px solid var(--border)">
+            <div class="file-upload-wrap" style="flex:1">
+              <input type="text" id="e_frontpageUrl" placeholder="https://… (eller last opp bilde nedenfor)" oninput="updateFrontpagePreview()">
+              <a id="e_frontpageLink" href="#" target="_blank" class="btn-upload" style="display:none">Åpne</a>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.4rem">
+            <label class="btn-upload" style="cursor:pointer">
+              Velg bilde…
+              <input type="file" id="e_frontpageFile" accept=".jpg,.jpeg,.png,.webp,image/*" style="display:none" onchange="uploadFrontpageImage(this)">
+            </label>
+            <button type="button" id="e_frontpageRemoveBtn" class="btn btn-danger" style="font-size:0.8rem;padding:0.25rem 0.6rem;display:none" onclick="removeFrontpageImage()">🗑 Fjern</button>
+            <span id="e_frontpageProgress" class="upload-progress"></span>
+          </div>
+        </div>
+        <div style="display:flex;gap:1.5rem;align-items:center;margin-top:0.75rem">
           <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer">
             <input type="checkbox" id="e_hasFrontpage" style="width:auto;margin:0;accent-color:var(--accent)">
             Har forside
