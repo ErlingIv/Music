@@ -1103,6 +1103,7 @@ async function loadEditForm(compId) {
   // data sits in the deletable list.
   const score = pickPrimaryScore(scores);
   document.getElementById('e_scoreId').value = score ? score.score_id : '';
+  document.getElementById('e_scoreIdLabel').textContent = score ? `score_id ${score.score_id}` : '';
   document.getElementById('e_plateNumber').value = score?.plate_number || '';
   document.getElementById('e_yearPublished').value = score?.year_published || '';
   document.getElementById('e_uploadedToday').checked = false;
