@@ -124,7 +124,7 @@ function makeLookup(searchId, resultsId, tagsId, list, modalTarget) {
       controller = new AbortController();
       let rows;
       try {
-        rows = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name,nationality,born,died,pseudonym&limit=12&order=last_name`, controller.signal);
+        rows = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name,nationality,born,died,pseudonym&limit=100&order=last_name,first_name`, controller.signal);
       } catch (err) {
         if (err.name === 'AbortError') return;
         throw err;
@@ -633,7 +633,11 @@ function addContributorRow(prefix, contributors, rowIdxRef, person, role, credit
       searchController = new AbortController();
       let rows;
       try {
-        rows = await get(`/person?last_name=ilike.${encodeURIComponent(val)}*&select=person_id,first_name,last_name,born,died&order=last_name.asc&limit=10`, searchController.signal);
+        // last_name alone can now match dozens of rows (e.g. everyone sharing
+        // "Illustrator" while their marks get sorted out) — a low limit here
+        // silently drops matches with no way to scroll to them, since they're
+        // never fetched at all.
+        rows = await get(`/person?last_name=ilike.${encodeURIComponent(val)}*&select=person_id,first_name,last_name,born,died&order=last_name.asc,first_name.asc&limit=100`, searchController.signal);
       } catch (err) {
         if (err.name === 'AbortError') return;
         throw err;
@@ -1526,7 +1530,7 @@ document.getElementById('personSearch').addEventListener('input', () => {
     personSearchController = new AbortController();
     let rows;
     try {
-      rows = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name,born,died,nationality,gender&limit=20&order=last_name`, personSearchController.signal);
+      rows = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name,born,died,nationality,gender&limit=100&order=last_name,first_name`, personSearchController.signal);
     } catch (err) {
       if (err.name === 'AbortError') return;
       throw err;
