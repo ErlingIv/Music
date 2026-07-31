@@ -1786,6 +1786,122 @@ async function loadPersonCompositions(personId) {
 // needing local file access (works from any browser, including iOS Safari,
 // since it only ever touches an already-public frontpage_url via <canvas>).
 let icpState = null; // { compositionPersonId, cropBox: {x,y,w,h} }
+let icpCropBoxHandle = null; // { el, reset } for the "+ Ny person" crop box, so icpSetMode can show/hide it
+
+// Crops `imgEl` to the pixel region described by `box` (CSS pixels, as
+// tracked by the crop-box UI) and returns a JPEG Blob.
+async function cropImageToBlob(imgEl, box) {
+  const scale = imgEl.naturalWidth / imgEl.clientWidth;
+  const sx = box.x * scale, sy = box.y * scale, sw = box.w * scale, sh = box.h * scale;
+  const canvas = document.createElement('canvas');
+  canvas.width = sw; canvas.height = sh;
+  canvas.getContext('2d').drawImage(imgEl, sx, sy, sw, sh, 0, 0, sw, sh);
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+  if (!blob) throw new Error('Kunne ikke lage bildeutsnitt (er bildet fra en annen kilde enn Supabase Storage?).');
+  return blob;
+}
+
+// Uploads `blob` as `personId`'s photo and PATCHes person.photo_url to match.
+async function uploadAndSetPersonPhoto(personId, blob) {
+  const filename = `${personId}_${Date.now()}_illustrator.jpg`;
+  const uploadUrl = `${SB.replace('/rest/v1', '')}/storage/v1/object/${PHOTO_BUCKET}/${encodeURIComponent(filename)}`;
+  const res = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'image/jpeg', 'x-upsert': 'true' },
+    body: blob,
+  });
+  if (!res.ok) throw new Error(`Opplasting feilet (${res.status}): ${await res.text()}`);
+  const publicUrl = `${SB.replace('/rest/v1', '')}/storage/v1/object/public/${PHOTO_BUCKET}/${encodeURIComponent(filename)}`;
+  await patch('person', `person_id=eq.${personId}`, { photo_url: publicUrl });
+  return publicUrl;
+}
+
+// Builds a draggable/resizable crop-box overlay on `imgEl` inside `wrapEl`.
+// Box state lives in the caller (getBox/setBox) so independent crop UIs (new-
+// person creation, existing-illustrator photo capture) share one
+// implementation of the pointer-drag handling instead of each reinventing it.
+// Uses Pointer Events (not mouse events) so this also works with touch input —
+// mouse events never fire on iOS Safari, which otherwise silently breaks
+// dragging there.
+function buildCropBox(wrapEl, imgEl, getBox, setBox) {
+  const cropBox = document.createElement('div');
+  // touch-action:none stops the browser's own scroll/zoom gestures from
+  // hijacking drags on touch devices.
+  cropBox.style.cssText = 'position:absolute;border:2px dashed #fff;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;box-sizing:border-box;touch-action:none';
+  ['nw', 'ne', 'sw', 'se'].forEach(dir => {
+    const h = document.createElement('div');
+    h.className = 'icp-handle';
+    h.dataset.dir = dir;
+    const pos = dir === 'nw' ? 'top:-11px;left:-11px;cursor:nwse-resize'
+      : dir === 'ne' ? 'top:-11px;right:-11px;cursor:nesw-resize'
+      : dir === 'sw' ? 'bottom:-11px;left:-11px;cursor:nesw-resize'
+      : 'bottom:-11px;right:-11px;cursor:nwse-resize';
+    // Handles are drawn well bigger than the crop-box border so they're
+    // actually hittable with a fingertip, not just a mouse cursor.
+    h.style.cssText = `position:absolute;width:22px;height:22px;background:#fff;border:1px solid #333;border-radius:50%;touch-action:none;${pos}`;
+    cropBox.appendChild(h);
+  });
+  wrapEl.appendChild(cropBox);
+
+  function applyStyle() {
+    const b = getBox();
+    if (!b) return;
+    cropBox.style.left = b.x + 'px'; cropBox.style.top = b.y + 'px';
+    cropBox.style.width = b.w + 'px'; cropBox.style.height = b.h + 'px';
+  }
+  function reset() {
+    // Default to a small centered box — usually cropping just a mark/
+    // monogram, not the whole page.
+    const w = imgEl.clientWidth, h = imgEl.clientHeight;
+    const bw = Math.round(w * 0.3), bh = Math.round(h * 0.3);
+    setBox({ x: Math.round((w - bw) / 2), y: Math.round((h - bh) / 2), w: bw, h: bh });
+    applyStyle();
+  }
+
+  let dragMode = null, activePointerId = null, startPointer = null, startBox = null;
+  function onDown(e, mode) {
+    dragMode = mode;
+    activePointerId = e.pointerId;
+    startPointer = { x: e.clientX, y: e.clientY };
+    startBox = { ...getBox() };
+    e.target.setPointerCapture?.(e.pointerId); // keep receiving events even if the finger drifts off the handle
+    e.preventDefault(); e.stopPropagation();
+  }
+  cropBox.addEventListener('pointerdown', e => {
+    if (e.target.classList.contains('icp-handle')) onDown(e, e.target.dataset.dir);
+    else onDown(e, 'move');
+  });
+  document.addEventListener('pointermove', e => {
+    if (!dragMode || e.pointerId !== activePointerId) return;
+    const maxW = imgEl.clientWidth, maxH = imgEl.clientHeight;
+    const dx = e.clientX - startPointer.x, dy = e.clientY - startPointer.y;
+    if (dragMode === 'move') {
+      const x = Math.max(0, Math.min(startBox.x + dx, maxW - startBox.w));
+      const y = Math.max(0, Math.min(startBox.y + dy, maxH - startBox.h));
+      setBox({ ...startBox, x, y });
+    } else {
+      let { x, y, w, h } = startBox;
+      if (dragMode === 'nw') { x = startBox.x + dx; y = startBox.y + dy; w = startBox.w - dx; h = startBox.h - dy; }
+      if (dragMode === 'ne') { y = startBox.y + dy; w = startBox.w + dx; h = startBox.h - dy; }
+      if (dragMode === 'sw') { x = startBox.x + dx; w = startBox.w - dx; h = startBox.h + dy; }
+      if (dragMode === 'se') { w = startBox.w + dx; h = startBox.h + dy; }
+      x = Math.max(0, Math.min(x, maxW - 10)); y = Math.max(0, Math.min(y, maxH - 10));
+      w = Math.max(10, Math.min(w, maxW - x)); h = Math.max(10, Math.min(h, maxH - y));
+      setBox({ x, y, w, h });
+    }
+    applyStyle();
+  });
+  document.addEventListener('pointerup', e => {
+    if (e.pointerId === activePointerId) { dragMode = null; activePointerId = null; }
+  });
+  document.addEventListener('pointercancel', e => {
+    if (e.pointerId === activePointerId) { dragMode = null; activePointerId = null; }
+  });
+
+  imgEl.addEventListener('load', reset);
+  if (imgEl.complete) reset();
+  return { el: cropBox, reset };
+}
 
 function openIllustratorPhotoCropper(compositionPersonId, frontpageUrl) {
   icpState = { compositionPersonId, cropBox: null };
@@ -1851,31 +1967,9 @@ function openIllustratorPhotoCropper(compositionPersonId, frontpageUrl) {
   img.src = frontpageUrl;
   img.style.cssText = 'display:block;max-width:100%;max-height:100%;object-fit:contain';
   wrap.appendChild(img);
-  const cropBox = document.createElement('div');
-  cropBox.id = 'icpCropBox';
-  // touch-action:none stops the browser's own scroll/zoom gestures from
-  // hijacking drags on touch devices — required for pointer events below to
-  // behave as a clean drag instead of the page also panning underneath it.
-  cropBox.style.cssText = 'position:absolute;border:2px dashed #fff;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;box-sizing:border-box;touch-action:none';
-  ['nw', 'ne', 'sw', 'se'].forEach(dir => {
-    const h = document.createElement('div');
-    h.className = 'icp-handle';
-    h.dataset.dir = dir;
-    const pos = dir === 'nw' ? 'top:-11px;left:-11px;cursor:nwse-resize'
-      : dir === 'ne' ? 'top:-11px;right:-11px;cursor:nesw-resize'
-      : dir === 'sw' ? 'bottom:-11px;left:-11px;cursor:nesw-resize'
-      : 'bottom:-11px;right:-11px;cursor:nwse-resize';
-    // Handles are drawn bigger than the old 14px so they're actually
-    // hittable with a fingertip, not just a mouse cursor.
-    h.style.cssText = `position:absolute;width:22px;height:22px;background:#fff;border:1px solid #333;border-radius:50%;touch-action:none;${pos}`;
-    cropBox.appendChild(h);
-  });
-  wrap.appendChild(cropBox);
   area.appendChild(wrap);
 
-  img.addEventListener('load', icpResetCropBox);
-  if (img.complete) icpResetCropBox();
-  icpWireCropEvents(cropBox);
+  icpCropBoxHandle = buildCropBox(wrap, img, () => icpState.cropBox, box => { icpState.cropBox = box; });
 }
 
 function icpSetMode(mode) {
@@ -1884,8 +1978,7 @@ function icpSetMode(mode) {
   document.getElementById('icpExistingPanel').style.display = isNew ? 'none' : 'block';
   document.getElementById('icpModeNewBtn').className = 'btn ' + (isNew ? 'btn-primary' : 'btn-secondary');
   document.getElementById('icpModeExistingBtn').className = 'btn ' + (isNew ? 'btn-secondary' : 'btn-primary');
-  const cropBox = document.getElementById('icpCropBox');
-  if (cropBox) cropBox.style.display = isNew ? 'block' : 'none';
+  if (icpCropBoxHandle) icpCropBoxHandle.el.style.display = isNew ? 'block' : 'none';
   const msgEl = document.getElementById('icpMsg');
   msgEl.textContent = '';
   msgEl.className = 'msg';
@@ -1950,73 +2043,6 @@ async function attachIllustratorToExistingPerson(personId, personName) {
   }
 }
 
-function icpResetCropBox() {
-  const img = document.getElementById('icpCropImg');
-  const cropBox = document.getElementById('icpCropBox');
-  if (!img || !cropBox || !icpState) return;
-  // Default to a small centered box — usually cropping just a mark/monogram,
-  // not the whole page.
-  const w = img.clientWidth, h = img.clientHeight;
-  const bw = Math.round(w * 0.3), bh = Math.round(h * 0.3);
-  icpState.cropBox = { x: Math.round((w - bw) / 2), y: Math.round((h - bh) / 2), w: bw, h: bh };
-  icpApplyCropBoxStyle();
-}
-
-function icpApplyCropBoxStyle() {
-  const cropBox = document.getElementById('icpCropBox');
-  if (!cropBox || !icpState?.cropBox) return;
-  const c = icpState.cropBox;
-  cropBox.style.left = c.x + 'px'; cropBox.style.top = c.y + 'px';
-  cropBox.style.width = c.w + 'px'; cropBox.style.height = c.h + 'px';
-}
-
-// Uses Pointer Events (not mouse events) so dragging/resizing works with touch
-// input too — mousedown/mousemove/mouseup never fire on iOS Safari or other
-// touchscreens, which silently broke crop-box dragging there entirely.
-function icpWireCropEvents(cropBox) {
-  let dragMode = null, activePointerId = null, startPointer = null, startBox = null;
-  function onDown(e, mode) {
-    dragMode = mode;
-    activePointerId = e.pointerId;
-    startPointer = { x: e.clientX, y: e.clientY };
-    startBox = { ...icpState.cropBox };
-    e.target.setPointerCapture?.(e.pointerId); // keep receiving events even if the finger drifts off the handle
-    e.preventDefault(); e.stopPropagation();
-  }
-  cropBox.addEventListener('pointerdown', e => {
-    if (e.target.classList.contains('icp-handle')) onDown(e, e.target.dataset.dir);
-    else onDown(e, 'move');
-  });
-  document.addEventListener('pointermove', e => {
-    if (!dragMode || e.pointerId !== activePointerId || !icpState) return;
-    const img = document.getElementById('icpCropImg');
-    if (!img) return;
-    const maxW = img.clientWidth, maxH = img.clientHeight;
-    const dx = e.clientX - startPointer.x, dy = e.clientY - startPointer.y;
-    if (dragMode === 'move') {
-      const x = Math.max(0, Math.min(startBox.x + dx, maxW - startBox.w));
-      const y = Math.max(0, Math.min(startBox.y + dy, maxH - startBox.h));
-      icpState.cropBox = { ...startBox, x, y };
-    } else {
-      let { x, y, w, h } = startBox;
-      if (dragMode === 'nw') { x = startBox.x + dx; y = startBox.y + dy; w = startBox.w - dx; h = startBox.h - dy; }
-      if (dragMode === 'ne') { y = startBox.y + dy; w = startBox.w + dx; h = startBox.h - dy; }
-      if (dragMode === 'sw') { x = startBox.x + dx; w = startBox.w - dx; h = startBox.h + dy; }
-      if (dragMode === 'se') { w = startBox.w + dx; h = startBox.h + dy; }
-      x = Math.max(0, Math.min(x, maxW - 10)); y = Math.max(0, Math.min(y, maxH - 10));
-      w = Math.max(10, Math.min(w, maxW - x)); h = Math.max(10, Math.min(h, maxH - y));
-      icpState.cropBox = { x, y, w, h };
-    }
-    icpApplyCropBoxStyle();
-  });
-  document.addEventListener('pointerup', e => {
-    if (e.pointerId === activePointerId) { dragMode = null; activePointerId = null; }
-  });
-  document.addEventListener('pointercancel', e => {
-    if (e.pointerId === activePointerId) { dragMode = null; activePointerId = null; }
-  });
-}
-
 async function saveIllustratorCropPerson() {
   const msgEl = document.getElementById('icpMsg');
   const firstName = document.getElementById('icp_firstName').value.trim();
@@ -2037,14 +2063,7 @@ async function saveIllustratorCropPerson() {
   msgEl.textContent = 'Lagrer…';
   msgEl.className = 'msg';
   try {
-    const scale = img.naturalWidth / img.clientWidth;
-    const c = icpState.cropBox;
-    const sx = c.x * scale, sy = c.y * scale, sw = c.w * scale, sh = c.h * scale;
-    const canvas = document.createElement('canvas');
-    canvas.width = sw; canvas.height = sh;
-    canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
-    const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
-    if (!blob) throw new Error('Kunne ikke lage bildeutsnitt (er bildet fra en annen kilde enn Supabase Storage?).');
+    const blob = await cropImageToBlob(img, icpState.cropBox);
 
     // 1. Create the person row first, so we have a person_id for the filename.
     const person = await post('person', { first_name: firstName, last_name: lastName });
@@ -2052,16 +2071,7 @@ async function saveIllustratorCropPerson() {
     if (!personId) throw new Error('Kunne ikke opprette person.');
 
     // 2. Upload the crop as that person's photo.
-    const filename = `${personId}_${Date.now()}_illustrator.jpg`;
-    const uploadUrl = `${SB.replace('/rest/v1', '')}/storage/v1/object/${PHOTO_BUCKET}/${encodeURIComponent(filename)}`;
-    const res = await fetch(uploadUrl, {
-      method: 'POST',
-      headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'image/jpeg', 'x-upsert': 'true' },
-      body: blob,
-    });
-    if (!res.ok) throw new Error(`Opplasting feilet (${res.status}): ${await res.text()}`);
-    const publicUrl = `${SB.replace('/rest/v1', '')}/storage/v1/object/public/${PHOTO_BUCKET}/${encodeURIComponent(filename)}`;
-    await patch('person', `person_id=eq.${personId}`, { photo_url: publicUrl });
+    await uploadAndSetPersonPhoto(personId, blob);
 
     // 3. Reassign this specific illustrator credit to the new person.
     await patch('composition_person', `id=eq.${icpState.compositionPersonId}`, { person_id: personId, credited_as: null });
@@ -3537,28 +3547,42 @@ async function selectIllustratorForMatching(personId, name, photoUrl) {
   }
 }
 
+// null when the selected illustrator already has a photo (plain compare);
+// otherwise { box: {x,y,w,h}|null } and the candidate image becomes an
+// interactive crop, since confirming the match is also the best moment to
+// capture their photo — this candidate image *is* their mark, now identified.
+let illCompareCropState = null;
+
 function openIllustratorCompareModal(compositionPersonId, title, candidateUrl) {
+  const needsPhoto = !illSelectedPerson?.photoUrl;
+  illCompareCropState = needsPhoto ? { box: null } : null;
+
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2100;display:flex;align-items:center;justify-content:center';
   const box = document.createElement('div');
-  box.style.cssText = 'background:var(--paper,#fff);border-radius:8px;padding:1.5rem;max-width:600px;width:92%;max-height:90vh;overflow-y:auto';
+  box.style.cssText = needsPhoto
+    ? 'background:var(--paper,#fff);border-radius:8px;padding:1.5rem;max-width:96vw;width:96vw;max-height:96vh;height:96vh;overflow-y:auto;display:flex;flex-direction:column'
+    : 'background:var(--paper,#fff);border-radius:8px;padding:1.5rem;max-width:600px;width:92%;max-height:90vh;overflow-y:auto';
   box.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
       <h3 style="margin:0;font-size:1rem">Er dette samme illustratør?</h3>
       <button type="button" onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:1.2rem;cursor:pointer">✕</button>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
-      <div style="text-align:center">
+    ${needsPhoto ? `<p style="font-size:0.82rem;color:var(--muted);margin:0 0 0.75rem">${escapeHtml(illSelectedPerson?.name || '')} har ikke bilde ennå — merk et utsnitt under. Bekrefter du treffet, brukes det som personens bilde.</p>` : ''}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;${needsPhoto ? 'flex:1;min-height:0' : ''}">
+      <div style="text-align:center;${needsPhoto ? 'display:flex;flex-direction:column;min-height:0' : ''}">
         <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.3rem">Valgt illustratør</div>
         ${illSelectedPerson?.photoUrl
           ? `<img src="${escapeHtml(illSelectedPerson.photoUrl)}" style="width:100%;border-radius:6px;border:1px solid var(--border)">`
-          : '<div style="color:var(--muted);font-size:0.8rem;padding:2rem 0">Ingen bilde</div>'}
+          : '<div style="color:var(--muted);font-size:0.8rem;padding:2rem 0">Ingen bilde ennå</div>'}
         <div style="font-size:0.85rem;margin-top:0.3rem">${escapeHtml(illSelectedPerson?.name || '')}</div>
       </div>
-      <div style="text-align:center">
-        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.3rem">Kandidat</div>
-        <img src="${escapeHtml(candidateUrl)}" style="width:100%;border-radius:6px;border:1px solid var(--border)">
+      <div style="text-align:center;${needsPhoto ? 'display:flex;flex-direction:column;min-height:0' : ''}">
+        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.3rem">Kandidat${needsPhoto ? ' — merk utsnitt for bilde' : ''}</div>
+        ${needsPhoto
+          ? `<div id="illCompareCropArea" style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden"></div>`
+          : `<img src="${escapeHtml(candidateUrl)}" style="width:100%;border-radius:6px;border:1px solid var(--border)">`}
         <div style="font-size:0.85rem;margin-top:0.3rem">${escapeHtml(title)}</div>
       </div>
     </div>
@@ -3570,6 +3594,20 @@ function openIllustratorCompareModal(compositionPersonId, title, candidateUrl) {
   modal.appendChild(box);
   modal.onclick = e => { if (e.target === modal) modal.remove(); };
   document.body.appendChild(modal);
+
+  if (needsPhoto) {
+    const area = document.getElementById('illCompareCropArea');
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;display:inline-block;max-width:100%;max-height:100%;user-select:none';
+    const img = document.createElement('img');
+    img.id = 'illCompareCandidateImg';
+    img.crossOrigin = 'anonymous';
+    img.src = candidateUrl;
+    img.style.cssText = 'display:block;max-width:100%;max-height:100%;object-fit:contain';
+    wrap.appendChild(img);
+    area.appendChild(wrap);
+    buildCropBox(wrap, img, () => illCompareCropState.box, b => { illCompareCropState.box = b; });
+  }
 }
 
 async function confirmIllustratorMatch(compositionPersonId) {
@@ -3577,6 +3615,12 @@ async function confirmIllustratorMatch(compositionPersonId) {
   msgEl.textContent = 'Lagrer…';
   msgEl.className = 'msg';
   try {
+    if (illCompareCropState?.box) {
+      const img = document.getElementById('illCompareCandidateImg');
+      const blob = await cropImageToBlob(img, illCompareCropState.box);
+      const publicUrl = await uploadAndSetPersonPhoto(illSelectedPerson.id, blob);
+      illSelectedPerson.photoUrl = publicUrl; // so later candidates in this session show the photo, not another crop prompt
+    }
     await patch('composition_person', `id=eq.${compositionPersonId}`, { person_id: illSelectedPerson.id, credited_as: null });
     document.querySelector('.modal-overlay')?.remove();
     // Re-run the candidate list for the currently selected illustrator so
