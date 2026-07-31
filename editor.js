@@ -2042,7 +2042,12 @@ function icpWireExistingSearch() {
       controller = new AbortController();
       let rows;
       try {
-        rows = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name,photo_url&order=last_name&limit=15`, controller.signal);
+        // last_name alone can now match dozens of rows (e.g. everyone sharing
+        // "Illustrator" while their marks get sorted out) — a low limit here
+        // silently drops matches with no way to scroll to them, since they're
+        // never fetched at all. order also needs first_name as a tie-breaker,
+        // or ties sort arbitrarily.
+        rows = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name,photo_url&order=last_name,first_name&limit=100`, controller.signal);
       } catch (err) {
         if (err.name === 'AbortError') return;
         throw err;
