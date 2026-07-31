@@ -2083,7 +2083,7 @@ function openIllustratorPhotoCropper(compositionPersonId, frontpageUrl, credited
     </div>
 
     <div id="icpMsg" class="msg"></div>
-    <div class="actions">
+    <div class="actions" style="position:sticky;bottom:0;background:var(--paper,#fff);padding-top:0.75rem;margin-top:0.75rem">
       <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Avbryt</button>
     </div>`;
   modal.appendChild(box);
@@ -3796,7 +3796,7 @@ function openIllustratorCompareModal(compositionPersonId, title, candidateUrl) {
       </div>
     </div>
     <div id="illCompareMsg" class="msg"></div>
-    <div class="actions">
+    <div class="actions" style="position:sticky;bottom:0;background:var(--paper,#fff);padding-top:0.75rem;margin-top:0.75rem">
       <button type="button" class="btn btn-primary" onclick="confirmIllustratorMatch(${compositionPersonId})">Ja, tilknytt</button>
       <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Nei</button>
     </div>`;
