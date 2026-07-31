@@ -64,6 +64,7 @@ let arbeidslisteLoaded = false;
 let sisteLoaded        = false;
 let publisherLoaded    = false;
 let unknownPersonsLoaded = false;
+let illustratorsLoaded = false;
 
 function switchTab(name) {
   if (name === 'biolinks' && !bioLoaded) loadBioPersons();
@@ -71,6 +72,7 @@ function switchTab(name) {
   if (name === 'siste' && !sisteLoaded) loadSiste();
   if (name === 'publisher' && !publisherLoaded) loadPublishers();
   if (name === 'unknown' && !unknownPersonsLoaded) loadUnknownPersons();
+  if (name === 'illustrators' && !illustratorsLoaded) loadIllustratorsTab();
   document.querySelectorAll('.tab').forEach(t => {
     t.classList.toggle('active', t.getAttribute('onclick') === `switchTab('${name}')`);
   });
@@ -1792,13 +1794,15 @@ function openIllustratorPhotoCropper(compositionPersonId, frontpageUrl) {
   modal.className = 'modal-overlay';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center';
   const box = document.createElement('div');
-  box.style.cssText = 'background:var(--paper,#fff);border-radius:8px;padding:1.5rem;max-width:560px;width:92%;max-height:90vh;overflow-y:auto';
+  // Near-fullscreen: precise crop selection (especially by finger, on a phone)
+  // needs the image as large as possible, not squeezed into a small dialog.
+  box.style.cssText = 'background:var(--paper,#fff);border-radius:8px;padding:1rem;max-width:96vw;width:96vw;max-height:96vh;height:96vh;overflow-y:auto;display:flex;flex-direction:column';
   box.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
       <h3 style="margin:0;font-size:1rem">Merk illustratør</h3>
       <button type="button" onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:1.2rem;cursor:pointer">✕</button>
     </div>
-    <div id="icpCropperArea" style="margin-bottom:1rem;text-align:center"></div>
+    <div id="icpCropperArea" style="margin-bottom:1rem;text-align:center;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden"></div>
     <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem">
       <button type="button" id="icpModeNewBtn" class="btn btn-primary" style="font-size:0.85rem" onclick="icpSetMode('new')">+ Ny person</button>
       <button type="button" id="icpModeExistingBtn" class="btn btn-secondary" style="font-size:0.85rem" onclick="icpSetMode('existing')">Match mot eksisterende</button>
@@ -1840,25 +1844,30 @@ function openIllustratorPhotoCropper(compositionPersonId, frontpageUrl) {
 
   const area = document.getElementById('icpCropperArea');
   const wrap = document.createElement('div');
-  wrap.style.cssText = 'position:relative;display:inline-block;max-width:100%;user-select:none';
+  wrap.style.cssText = 'position:relative;display:inline-block;max-width:100%;max-height:100%;user-select:none';
   const img = document.createElement('img');
   img.id = 'icpCropImg';
   img.crossOrigin = 'anonymous';
   img.src = frontpageUrl;
-  img.style.cssText = 'display:block;max-width:100%;max-height:55vh';
+  img.style.cssText = 'display:block;max-width:100%;max-height:100%;object-fit:contain';
   wrap.appendChild(img);
   const cropBox = document.createElement('div');
   cropBox.id = 'icpCropBox';
-  cropBox.style.cssText = 'position:absolute;border:2px dashed #fff;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;box-sizing:border-box';
+  // touch-action:none stops the browser's own scroll/zoom gestures from
+  // hijacking drags on touch devices — required for pointer events below to
+  // behave as a clean drag instead of the page also panning underneath it.
+  cropBox.style.cssText = 'position:absolute;border:2px dashed #fff;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;box-sizing:border-box;touch-action:none';
   ['nw', 'ne', 'sw', 'se'].forEach(dir => {
     const h = document.createElement('div');
     h.className = 'icp-handle';
     h.dataset.dir = dir;
-    const pos = dir === 'nw' ? 'top:-7px;left:-7px;cursor:nwse-resize'
-      : dir === 'ne' ? 'top:-7px;right:-7px;cursor:nesw-resize'
-      : dir === 'sw' ? 'bottom:-7px;left:-7px;cursor:nesw-resize'
-      : 'bottom:-7px;right:-7px;cursor:nwse-resize';
-    h.style.cssText = `position:absolute;width:14px;height:14px;background:#fff;border:1px solid #333;border-radius:50%;${pos}`;
+    const pos = dir === 'nw' ? 'top:-11px;left:-11px;cursor:nwse-resize'
+      : dir === 'ne' ? 'top:-11px;right:-11px;cursor:nesw-resize'
+      : dir === 'sw' ? 'bottom:-11px;left:-11px;cursor:nesw-resize'
+      : 'bottom:-11px;right:-11px;cursor:nwse-resize';
+    // Handles are drawn bigger than the old 14px so they're actually
+    // hittable with a fingertip, not just a mouse cursor.
+    h.style.cssText = `position:absolute;width:22px;height:22px;background:#fff;border:1px solid #333;border-radius:50%;touch-action:none;${pos}`;
     cropBox.appendChild(h);
   });
   wrap.appendChild(cropBox);
@@ -1961,20 +1970,25 @@ function icpApplyCropBoxStyle() {
   cropBox.style.width = c.w + 'px'; cropBox.style.height = c.h + 'px';
 }
 
+// Uses Pointer Events (not mouse events) so dragging/resizing works with touch
+// input too — mousedown/mousemove/mouseup never fire on iOS Safari or other
+// touchscreens, which silently broke crop-box dragging there entirely.
 function icpWireCropEvents(cropBox) {
-  let dragMode = null, startPointer = null, startBox = null;
+  let dragMode = null, activePointerId = null, startPointer = null, startBox = null;
   function onDown(e, mode) {
     dragMode = mode;
+    activePointerId = e.pointerId;
     startPointer = { x: e.clientX, y: e.clientY };
     startBox = { ...icpState.cropBox };
+    e.target.setPointerCapture?.(e.pointerId); // keep receiving events even if the finger drifts off the handle
     e.preventDefault(); e.stopPropagation();
   }
-  cropBox.addEventListener('mousedown', e => {
+  cropBox.addEventListener('pointerdown', e => {
     if (e.target.classList.contains('icp-handle')) onDown(e, e.target.dataset.dir);
     else onDown(e, 'move');
   });
-  document.addEventListener('mousemove', e => {
-    if (!dragMode || !icpState) return;
+  document.addEventListener('pointermove', e => {
+    if (!dragMode || e.pointerId !== activePointerId || !icpState) return;
     const img = document.getElementById('icpCropImg');
     if (!img) return;
     const maxW = img.clientWidth, maxH = img.clientHeight;
@@ -1995,7 +2009,12 @@ function icpWireCropEvents(cropBox) {
     }
     icpApplyCropBoxStyle();
   });
-  document.addEventListener('mouseup', () => { dragMode = null; });
+  document.addEventListener('pointerup', e => {
+    if (e.pointerId === activePointerId) { dragMode = null; activePointerId = null; }
+  });
+  document.addEventListener('pointercancel', e => {
+    if (e.pointerId === activePointerId) { dragMode = null; activePointerId = null; }
+  });
 }
 
 async function saveIllustratorCropPerson() {
@@ -3408,4 +3427,163 @@ function renderUnkCards() {
       <div class="pub-card-meta"><span>${escapeHtml(years)}</span></div>
     </div>`;
   }).join('');
+}
+
+// ── ILLUSTRATORS TAB ─────────────────────────────────────────────────────────
+// Pick an already-identified illustrator, then browse compositions still
+// credited to the generic "Only Initials" placeholder — each candidate's
+// frontpage image shown side by side with the selected illustrator's photo,
+// one click away from attaching a match. This is the reverse direction of
+// the Person-tab crop tool's "Match mot eksisterende" mode: that one starts
+// from an unknown score and searches for a person; this one starts from a
+// person and walks the unknowns.
+
+let illSelectedPerson = null; // { id, name, photoUrl }
+
+async function loadIllustratorsTab() {
+  illustratorsLoaded = true;
+  const grid = document.getElementById('illCardGrid');
+  grid.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Laster…</div>';
+  document.getElementById('illMatchCard').style.display = 'none';
+  illSelectedPerson = null;
+  try {
+    const credits = await get('/composition_person?role=eq.Illustrator&select=person_id');
+    const personIds = [...new Set(credits.map(c => c.person_id))];
+    if (!personIds.length) {
+      grid.innerHTML = '<p style="color:var(--muted);font-size:.85rem">Ingen illustratører registrert ennå.</p>';
+      document.getElementById('illCount').textContent = '0';
+      return;
+    }
+    const persons = (await get(`/person?person_id=in.(${personIds.join(',')})&select=person_id,first_name,last_name,photo_url`))
+      // "Only Initials" is the catch-all placeholder itself — matching an
+      // unknown score against itself isn't meaningful, so leave it out.
+      .filter(p => !(p.first_name === 'Only' && p.last_name === 'Initials'))
+      .sort((a, b) => (a.last_name || '').localeCompare(b.last_name || '', 'no') || (a.first_name || '').localeCompare(b.first_name || '', 'no'));
+    document.getElementById('illCount').textContent = persons.length;
+    if (!persons.length) {
+      grid.innerHTML = '<p style="color:var(--muted);font-size:.85rem">Ingen identifiserte illustratører ennå.</p>';
+      return;
+    }
+    grid.innerHTML = persons.map(p => {
+      const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || '(uten navn)';
+      const thumb = p.photo_url
+        ? `<img src="${escapeHtml(p.photo_url)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:4px;margin-bottom:0.4rem">`
+        : `<div style="width:100%;aspect-ratio:1;border-radius:4px;border:1px dashed var(--border);margin-bottom:0.4rem;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:1.5rem">?</div>`;
+      return `<div class="pub-card" id="ill-card-${p.person_id}" onclick="selectIllustratorForMatching(${p.person_id}, '${escapeJsAttr(name)}', '${escapeJsAttr(p.photo_url || '')}')">
+        ${thumb}
+        <div class="pub-card-name">${escapeHtml(name)}</div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    grid.innerHTML = `<div style="color:#a03030;font-size:.85rem">Feil: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+async function selectIllustratorForMatching(personId, name, photoUrl) {
+  illSelectedPerson = { id: personId, name, photoUrl: photoUrl || null };
+  document.querySelectorAll('#illCardGrid .pub-card').forEach(c => {
+    const isSelected = c.id === `ill-card-${personId}`;
+    c.style.borderColor = isSelected ? 'var(--accent)' : '';
+    c.style.borderWidth = isSelected ? '2px' : '';
+  });
+
+  const matchCard = document.getElementById('illMatchCard');
+  const candidateGrid = document.getElementById('illCandidateGrid');
+  document.getElementById('illMatchTitle').textContent = `Sammenlign mot: ${name}`;
+  matchCard.style.display = 'block';
+  candidateGrid.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Laster kandidater…</div>';
+  matchCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  try {
+    // "Only Initials" is the shared catch-all placeholder for illustrator
+    // credits where nothing but a mark/initial is known yet.
+    const placeholder = await get(`/person?first_name=eq.Only&last_name=eq.Initials&select=person_id`);
+    if (!placeholder.length) {
+      candidateGrid.innerHTML = '<p style="color:var(--muted);font-size:.85rem">Fant ikke "Only Initials"-personen.</p>';
+      return;
+    }
+    const placeholderId = placeholder[0].person_id;
+    const cp = await get(`/composition_person?person_id=eq.${placeholderId}&role=eq.Illustrator&select=id,composition_id`);
+    if (!cp.length) {
+      candidateGrid.innerHTML = '<p style="color:var(--muted);font-size:.85rem">Ingen ukjente initialer igjen å sammenligne mot.</p>';
+      return;
+    }
+    const compIds = cp.map(r => r.composition_id).join(',');
+    const [comps, scores] = await Promise.all([
+      get(`/composition?composition_id=in.(${compIds})&select=composition_id,title`),
+      get(`/score?composition_id=in.(${compIds})&select=composition_id,frontpage_url`),
+    ]);
+    const titleMap = Object.fromEntries(comps.map(c => [c.composition_id, c.title]));
+    const frontpageMap = {};
+    scores.forEach(s => { if (s.frontpage_url && !frontpageMap[s.composition_id]) frontpageMap[s.composition_id] = s.frontpage_url; });
+
+    const candidates = cp
+      .filter(r => frontpageMap[r.composition_id])
+      .map(r => ({ cpId: r.id, title: titleMap[r.composition_id] || '', frontpageUrl: frontpageMap[r.composition_id] }))
+      .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+
+    if (!candidates.length) {
+      candidateGrid.innerHTML = '<p style="color:var(--muted);font-size:.85rem">Ingen av de gjenværende ukjente initialene har lastet opp forsidebilde ennå.</p>';
+      return;
+    }
+    document.getElementById('illMatchTitle').textContent = `Sammenlign mot: ${name} (${candidates.length} kandidater)`;
+    candidateGrid.innerHTML = candidates.map(c => `
+      <div class="pub-card" onclick="openIllustratorCompareModal(${c.cpId}, '${escapeJsAttr(c.title)}', '${escapeJsAttr(c.frontpageUrl)}')">
+        <img src="${escapeHtml(c.frontpageUrl)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:4px;margin-bottom:0.4rem">
+        <div class="pub-card-name" style="font-size:0.8rem">${escapeHtml(c.title)}</div>
+      </div>`).join('');
+  } catch (e) {
+    candidateGrid.innerHTML = `<div style="color:#a03030;font-size:.85rem">Feil: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function openIllustratorCompareModal(compositionPersonId, title, candidateUrl) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2100;display:flex;align-items:center;justify-content:center';
+  const box = document.createElement('div');
+  box.style.cssText = 'background:var(--paper,#fff);border-radius:8px;padding:1.5rem;max-width:600px;width:92%;max-height:90vh;overflow-y:auto';
+  box.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <h3 style="margin:0;font-size:1rem">Er dette samme illustratør?</h3>
+      <button type="button" onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:1.2rem;cursor:pointer">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+      <div style="text-align:center">
+        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.3rem">Valgt illustratør</div>
+        ${illSelectedPerson?.photoUrl
+          ? `<img src="${escapeHtml(illSelectedPerson.photoUrl)}" style="width:100%;border-radius:6px;border:1px solid var(--border)">`
+          : '<div style="color:var(--muted);font-size:0.8rem;padding:2rem 0">Ingen bilde</div>'}
+        <div style="font-size:0.85rem;margin-top:0.3rem">${escapeHtml(illSelectedPerson?.name || '')}</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.3rem">Kandidat</div>
+        <img src="${escapeHtml(candidateUrl)}" style="width:100%;border-radius:6px;border:1px solid var(--border)">
+        <div style="font-size:0.85rem;margin-top:0.3rem">${escapeHtml(title)}</div>
+      </div>
+    </div>
+    <div id="illCompareMsg" class="msg"></div>
+    <div class="actions">
+      <button type="button" class="btn btn-primary" onclick="confirmIllustratorMatch(${compositionPersonId})">Ja, tilknytt</button>
+      <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Nei</button>
+    </div>`;
+  modal.appendChild(box);
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+
+async function confirmIllustratorMatch(compositionPersonId) {
+  const msgEl = document.getElementById('illCompareMsg');
+  msgEl.textContent = 'Lagrer…';
+  msgEl.className = 'msg';
+  try {
+    await patch('composition_person', `id=eq.${compositionPersonId}`, { person_id: illSelectedPerson.id, credited_as: null });
+    document.querySelector('.modal-overlay')?.remove();
+    // Re-run the candidate list for the currently selected illustrator so
+    // the just-attached one drops off.
+    await selectIllustratorForMatching(illSelectedPerson.id, illSelectedPerson.name, illSelectedPerson.photoUrl);
+  } catch (err) {
+    msgEl.textContent = 'Feil: ' + err.message;
+    msgEl.className = 'msg error';
+  }
 }

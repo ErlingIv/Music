@@ -407,6 +407,7 @@
     <button type="button" class="tab" onclick="switchTab('siste')">Siste</button>
     <button type="button" class="tab" onclick="switchTab('publisher')">Forlag</button>
     <button type="button" class="tab" onclick="switchTab('unknown')">Ukjent nasjonalitet</button>
+    <button type="button" class="tab" onclick="switchTab('illustrators')">Illustratører</button>
   </div>
 
   <!-- ═══════════════════════ NEW ENTRY TAB ═══════════════════════ -->
@@ -1036,6 +1037,25 @@
       </div>
       <div id="unkAlphaBar" class="pub-alpha-bar"></div>
       <div id="unkCardGrid" class="pub-card-grid"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ ILLUSTRATORS TAB ═══════════════════════ -->
+  <div id="tab-illustrators" class="tab-content">
+    <div class="card">
+      <div class="card-title" style="display:flex;align-items:center;gap:1rem">
+        Illustratører
+        <span id="illCount" style="background:var(--muted);color:white;border-radius:3px;padding:1px 6px;font-size:0.75rem">…</span>
+        <button type="button" class="btn btn-secondary" onclick="illustratorsLoaded=false;loadIllustratorsTab()" style="font-size:0.8rem;padding:0.25rem 0.8rem;margin-left:auto">↺ Last på nytt</button>
+      </div>
+      <p style="font-size:0.85rem;color:var(--muted);margin:0 0 1rem">Velg en illustratør for å bla gjennom komposisjoner med ukjente initialer og se om noen kan knyttes til denne personen.</p>
+      <div id="illCardGrid" class="pub-card-grid"></div>
+    </div>
+
+    <div class="card" id="illMatchCard" style="display:none">
+      <div class="card-title" id="illMatchTitle"></div>
+      <p style="font-size:0.85rem;color:var(--muted);margin:0 0 1rem">Klikk på en kandidat for å sammenligne mot valgt illustratør og eventuelt tilknytte.</p>
+      <div id="illCandidateGrid" class="pub-card-grid"></div>
     </div>
   </div>
 
