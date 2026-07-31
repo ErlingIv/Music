@@ -1829,6 +1829,17 @@ async function uploadAndSetPersonPhoto(personId, blob) {
 // with no way to reach the rest, worst on tall portrait scans.
 function mountCropImage(area, imageUrl) {
   area.innerHTML = '';
+  // 'auto' (not 'hidden'): once zoomed in, the image is bigger than the
+  // viewport and needs to be scrollable/pannable to reach every part of it.
+  // Also switch off flex centering here: a flex container with
+  // align-items/justify-content:center silently blocks scrolling to the
+  // "start" side of an overflowing child in most browsers, which would make
+  // zooming in feel broken (can't pan to the top-left). text-align:center on
+  // a block container centers the same way when content fits, without that
+  // scroll-clamping behavior once it doesn't.
+  area.style.overflow = 'auto';
+  area.style.display = 'block';
+  area.style.textAlign = 'center';
   const wrap = document.createElement('div');
   wrap.style.cssText = 'position:relative;display:inline-block;user-select:none';
   const img = document.createElement('img');
@@ -1837,15 +1848,71 @@ function mountCropImage(area, imageUrl) {
   wrap.appendChild(img);
   area.appendChild(wrap);
 
-  function fitToArea() {
+  // fitWidth/fitHeight = the "whole image visible" size (like before);
+  // zoomFactor is relative to that, not to the image's natural resolution.
+  const state = { fitWidth: 1, fitHeight: 1, zoomFactor: 1 };
+
+  function computeFit() {
     const rect = area.getBoundingClientRect();
-    img.style.maxWidth = Math.max(1, Math.floor(rect.width)) + 'px';
-    img.style.maxHeight = Math.max(1, Math.floor(rect.height)) + 'px';
+    const maxW = Math.max(1, Math.floor(rect.width));
+    const maxH = Math.max(1, Math.floor(rect.height));
+    if (img.naturalWidth && img.naturalHeight) {
+      const ratio = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
+      state.fitWidth = Math.max(1, Math.round(img.naturalWidth * ratio));
+      state.fitHeight = Math.max(1, Math.round(img.naturalHeight * ratio));
+    } else {
+      state.fitWidth = maxW; state.fitHeight = maxH;
+    }
   }
-  fitToArea();
-  img.addEventListener('load', fitToArea);
+  function applySize() {
+    img.style.width = Math.round(state.fitWidth * state.zoomFactor) + 'px';
+    img.style.height = Math.round(state.fitHeight * state.zoomFactor) + 'px';
+  }
+  computeFit();
+  applySize();
+  img.addEventListener('load', () => { state.zoomFactor = 1; computeFit(); applySize(); });
   img.src = imageUrl;
-  return { wrap, img };
+
+  // Applies a multiplicative zoom step (>1 = in, <1 = out), clamped to
+  // [1x fit .. 8x fit]. Returns the scale actually applied (post-clamp) so
+  // the caller can rescale a crop box by the same factor to keep it visually
+  // anchored to the same image content — or null if nothing changed (already
+  // at a clamp limit).
+  function zoom(factor) {
+    const oldW = img.clientWidth || state.fitWidth;
+    const next = Math.max(1, Math.min(state.zoomFactor * factor, 8));
+    if (next === state.zoomFactor) return null;
+    state.zoomFactor = next;
+    applySize();
+    return img.clientWidth / oldW;
+  }
+
+  return { wrap, img, zoom };
+}
+
+// Wires zoom in/out buttons plus mouse-wheel zooming over `area`. Rescales
+// the crop box (if one is currently tracked) by the same factor so it stays
+// anchored to the same image content as the image grows/shrinks around it —
+// without this the box would drift to the wrong spot after any zoom step.
+function wireZoomControls(area, zoomFn, cropBoxHandle, getBox, setBox, zoomInBtn, zoomOutBtn) {
+  function applyZoom(factor) {
+    const scale = zoomFn(factor);
+    if (scale == null) return;
+    const box = getBox();
+    if (box) {
+      setBox({
+        x: Math.round(box.x * scale), y: Math.round(box.y * scale),
+        w: Math.round(box.w * scale), h: Math.round(box.h * scale),
+      });
+    }
+    cropBoxHandle?.sync();
+  }
+  zoomInBtn.addEventListener('click', () => applyZoom(1.25));
+  zoomOutBtn.addEventListener('click', () => applyZoom(1 / 1.25));
+  area.addEventListener('wheel', e => {
+    e.preventDefault();
+    applyZoom(e.deltaY < 0 ? 1.15 : 1 / 1.15);
+  }, { passive: false });
 }
 
 // Builds a draggable/resizable crop-box overlay on `imgEl` inside `wrapEl`.
@@ -1932,7 +1999,7 @@ function buildCropBox(wrapEl, imgEl, getBox, setBox) {
 
   imgEl.addEventListener('load', reset);
   if (imgEl.complete) reset();
-  return { el: cropBox, reset };
+  return { el: cropBox, reset, sync: applyStyle };
 }
 
 function openIllustratorPhotoCropper(compositionPersonId, frontpageUrl, creditedPersonId) {
@@ -1953,9 +2020,13 @@ function openIllustratorPhotoCropper(compositionPersonId, frontpageUrl, credited
   box.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
       <h3 style="margin:0;font-size:1rem">Merk illustratør</h3>
-      <button type="button" onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:1.2rem;cursor:pointer">✕</button>
+      <div style="display:flex;align-items:center;gap:0.4rem">
+        <button type="button" id="icpZoomOutBtn" title="Zoom ut" style="background:none;border:1px solid var(--border);border-radius:4px;width:1.8rem;height:1.8rem;font-size:1.1rem;cursor:pointer;line-height:1">−</button>
+        <button type="button" id="icpZoomInBtn" title="Zoom inn (eller scroll over bildet)" style="background:none;border:1px solid var(--border);border-radius:4px;width:1.8rem;height:1.8rem;font-size:1.1rem;cursor:pointer;line-height:1">+</button>
+        <button type="button" onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;margin-left:0.4rem">✕</button>
+      </div>
     </div>
-    <div id="icpCropperArea" style="margin-bottom:1rem;text-align:center;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden"></div>
+    <div id="icpCropperArea" style="margin-bottom:1rem;flex:1;min-height:0;overflow:hidden"></div>
     <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap">
       <button type="button" id="icpModeUseBtn" class="btn btn-primary" style="font-size:0.85rem" onclick="icpSetMode('use')">Bruk som bilde</button>
       <button type="button" id="icpModeNewBtn" class="btn btn-secondary" style="font-size:0.85rem" onclick="icpSetMode('new')">+ Ny person</button>
@@ -2004,9 +2075,11 @@ function openIllustratorPhotoCropper(compositionPersonId, frontpageUrl, credited
   icpWireExistingSearch();
 
   const area = document.getElementById('icpCropperArea');
-  const { wrap, img } = mountCropImage(area, frontpageUrl);
+  const { wrap, img, zoom } = mountCropImage(area, frontpageUrl);
   img.id = 'icpCropImg';
   icpCropBoxHandle = buildCropBox(wrap, img, () => icpState.cropBox, box => { icpState.cropBox = box; });
+  wireZoomControls(area, zoom, icpCropBoxHandle, () => icpState.cropBox, box => { icpState.cropBox = box; },
+    document.getElementById('icpZoomInBtn'), document.getElementById('icpZoomOutBtn'));
 }
 
 function icpSetMode(mode) {
@@ -3661,9 +3734,15 @@ function openIllustratorCompareModal(compositionPersonId, title, candidateUrl) {
         <div style="font-size:0.85rem;margin-top:0.3rem">${escapeHtml(illSelectedPerson?.name || '')}</div>
       </div>
       <div style="text-align:center;${needsPhoto ? 'display:flex;flex-direction:column;min-height:0' : ''}">
-        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.3rem">Kandidat${needsPhoto ? ' — merk utsnitt for bilde' : ''}</div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.3rem;display:flex;align-items:center;justify-content:center;gap:0.4rem">
+          <span>Kandidat${needsPhoto ? ' — merk utsnitt for bilde' : ''}</span>
+          ${needsPhoto ? `
+            <button type="button" id="illCompareZoomOutBtn" title="Zoom ut" style="background:none;border:1px solid var(--border);border-radius:4px;width:1.5rem;height:1.5rem;font-size:0.95rem;cursor:pointer;line-height:1">−</button>
+            <button type="button" id="illCompareZoomInBtn" title="Zoom inn (eller scroll over bildet)" style="background:none;border:1px solid var(--border);border-radius:4px;width:1.5rem;height:1.5rem;font-size:0.95rem;cursor:pointer;line-height:1">+</button>
+          ` : ''}
+        </div>
         ${needsPhoto
-          ? `<div id="illCompareCropArea" style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden"></div>`
+          ? `<div id="illCompareCropArea" style="flex:1;min-height:0;overflow:hidden"></div>`
           : `<img src="${escapeHtml(candidateUrl)}" style="width:100%;border-radius:6px;border:1px solid var(--border)">`}
         <div style="font-size:0.85rem;margin-top:0.3rem">${escapeHtml(title)}</div>
       </div>
@@ -3679,9 +3758,11 @@ function openIllustratorCompareModal(compositionPersonId, title, candidateUrl) {
 
   if (needsPhoto) {
     const area = document.getElementById('illCompareCropArea');
-    const { wrap, img } = mountCropImage(area, candidateUrl);
+    const { wrap, img, zoom } = mountCropImage(area, candidateUrl);
     img.id = 'illCompareCandidateImg';
-    buildCropBox(wrap, img, () => illCompareCropState.box, b => { illCompareCropState.box = b; });
+    const cropBoxHandle = buildCropBox(wrap, img, () => illCompareCropState.box, b => { illCompareCropState.box = b; });
+    wireZoomControls(area, zoom, cropBoxHandle, () => illCompareCropState.box, b => { illCompareCropState.box = b; },
+      document.getElementById('illCompareZoomInBtn'), document.getElementById('illCompareZoomOutBtn'));
   }
 }
 
