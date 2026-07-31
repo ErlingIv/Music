@@ -2870,14 +2870,17 @@ function updatePersonPhotoPreview() {
   const url  = document.getElementById('p_photoUrl').value.trim();
   const img  = document.getElementById('p_photoPreview');
   const link = document.getElementById('p_photoLink');
+  const removeBtn = document.getElementById('p_photoRemoveBtn');
   if (url) {
     img.src = url;
     img.style.display = 'inline-block';
     link.href = url;
     link.style.display = 'inline-block';
+    removeBtn.style.display = 'inline-block';
   } else {
     img.style.display = 'none';
     link.style.display = 'none';
+    removeBtn.style.display = 'none';
   }
 }
 
@@ -2893,6 +2896,28 @@ function extractPhotoStoragePath(url) {
     return decodeURIComponent(encodedPath);
   } catch {
     return encodedPath;
+  }
+}
+
+async function removePersonPhoto() {
+  const personId = document.getElementById('p_personId').value;
+  const currentUrl = document.getElementById('p_photoUrl').value.trim();
+  if (!currentUrl) return;
+  if (!confirm('Fjerne dette bildet? Filen slettes fra lagring, og dette kan ikke angres.')) return;
+  const btn = document.getElementById('p_photoRemoveBtn');
+  btn.disabled = true;
+  try {
+    if (personId) {
+      await patch('person', `person_id=eq.${personId}`, { photo_url: null });
+    }
+    await deletePersonPhotoFromStorage(extractPhotoStoragePath(currentUrl));
+    document.getElementById('p_photoUrl').value = '';
+    updatePersonPhotoPreview();
+    showMsg('personMsg', '✓ Bilde fjernet.', 'success');
+  } catch (err) {
+    showMsg('personMsg', 'Feil: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
   }
 }
 
