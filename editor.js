@@ -1773,7 +1773,7 @@ async function loadPersonCompositions(personId) {
           <td style="text-align:center;padding:0.3rem" title="${c.approved?'Godkjent':'Ikke godkjent'}">${c.approved?'<span style="color:#2d6b27;font-weight:700">✓</span>':''}</td>
           <td style="text-align:center;padding:0.3rem"><button type="button" onclick="switchTab('edit');loadEditForm(${c.composition_id})" style="background:none;border:1px solid var(--border);border-radius:3px;padding:0.1rem 0.4rem;cursor:pointer;font-size:0.8rem">✏️</button></td>
           <td style="text-align:center;padding:0.3rem">${c.role === 'Illustrator' && c.frontpageUrl
-            ? `<button type="button" title="Opprett ny person fra dette forsidebildet" onclick="openIllustratorPhotoCropper(${c.cpId}, '${escapeJsAttr(c.frontpageUrl)}')" style="background:none;border:1px solid var(--border);border-radius:3px;padding:0.1rem 0.4rem;cursor:pointer;font-size:0.8rem">📷</button>`
+            ? `<button type="button" title="Merk illustratørbilde fra dette forsidebildet" onclick="openIllustratorPhotoCropper(${c.cpId}, '${escapeJsAttr(c.frontpageUrl)}', ${personId})" style="background:none;border:1px solid var(--border);border-radius:3px;padding:0.1rem 0.4rem;cursor:pointer;font-size:0.8rem">📷</button>`
             : ''}</td>
         </tr>`).join('')}
       </table>
@@ -1935,8 +1935,13 @@ function buildCropBox(wrapEl, imgEl, getBox, setBox) {
   return { el: cropBox, reset };
 }
 
-function openIllustratorPhotoCropper(compositionPersonId, frontpageUrl) {
-  icpState = { compositionPersonId, cropBox: null };
+function openIllustratorPhotoCropper(compositionPersonId, frontpageUrl, creditedPersonId) {
+  // creditedPersonId is whoever this composition is *already* credited to —
+  // loadPersonCompositions only ever lists compositions already credited to
+  // the person you're viewing, so this is always that same person. It's only
+  // actually useful in "Bruk som bilde" mode (see below); the other two modes
+  // ignore it.
+  icpState = { compositionPersonId, creditedPersonId, cropBox: null };
 
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
@@ -1951,12 +1956,20 @@ function openIllustratorPhotoCropper(compositionPersonId, frontpageUrl) {
       <button type="button" onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:1.2rem;cursor:pointer">✕</button>
     </div>
     <div id="icpCropperArea" style="margin-bottom:1rem;text-align:center;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden"></div>
-    <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem">
-      <button type="button" id="icpModeNewBtn" class="btn btn-primary" style="font-size:0.85rem" onclick="icpSetMode('new')">+ Ny person</button>
+    <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap">
+      <button type="button" id="icpModeUseBtn" class="btn btn-primary" style="font-size:0.85rem" onclick="icpSetMode('use')">Bruk som bilde</button>
+      <button type="button" id="icpModeNewBtn" class="btn btn-secondary" style="font-size:0.85rem" onclick="icpSetMode('new')">+ Ny person</button>
       <button type="button" id="icpModeExistingBtn" class="btn btn-secondary" style="font-size:0.85rem" onclick="icpSetMode('existing')">Match mot eksisterende</button>
     </div>
 
-    <div id="icpNewPanel">
+    <div id="icpUsePanel">
+      <p style="font-size:0.85rem;color:var(--muted);margin:0 0 0.75rem">Setter dette utsnittet som bilde for personen som allerede er kreditert her — kobling mellom komposisjon og person endres ikke.</p>
+      <div class="actions" style="margin-bottom:0">
+        <button type="button" class="btn btn-primary" id="icpUseSaveBtn" onclick="saveIllustratorPhotoForCreditedPerson()">Lagre som bilde</button>
+      </div>
+    </div>
+
+    <div id="icpNewPanel" style="display:none">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
         <div class="field" style="margin:0">
           <label>Fornavn</label>
@@ -1997,16 +2010,19 @@ function openIllustratorPhotoCropper(compositionPersonId, frontpageUrl) {
 }
 
 function icpSetMode(mode) {
-  const isNew = mode === 'new';
-  document.getElementById('icpNewPanel').style.display = isNew ? 'block' : 'none';
-  document.getElementById('icpExistingPanel').style.display = isNew ? 'none' : 'block';
-  document.getElementById('icpModeNewBtn').className = 'btn ' + (isNew ? 'btn-primary' : 'btn-secondary');
-  document.getElementById('icpModeExistingBtn').className = 'btn ' + (isNew ? 'btn-secondary' : 'btn-primary');
-  if (icpCropBoxHandle) icpCropBoxHandle.el.style.display = isNew ? 'block' : 'none';
+  document.getElementById('icpUsePanel').style.display = mode === 'use' ? 'block' : 'none';
+  document.getElementById('icpNewPanel').style.display = mode === 'new' ? 'block' : 'none';
+  document.getElementById('icpExistingPanel').style.display = mode === 'existing' ? 'block' : 'none';
+  document.getElementById('icpModeUseBtn').className = 'btn ' + (mode === 'use' ? 'btn-primary' : 'btn-secondary');
+  document.getElementById('icpModeNewBtn').className = 'btn ' + (mode === 'new' ? 'btn-primary' : 'btn-secondary');
+  document.getElementById('icpModeExistingBtn').className = 'btn ' + (mode === 'existing' ? 'btn-primary' : 'btn-secondary');
+  // The crop box is only needed for the two modes that actually crop an
+  // image ("use" and "new") — "existing" is a pure search-and-attach.
+  if (icpCropBoxHandle) icpCropBoxHandle.el.style.display = mode === 'existing' ? 'none' : 'block';
   const msgEl = document.getElementById('icpMsg');
   msgEl.textContent = '';
   msgEl.className = 'msg';
-  if (!isNew) document.getElementById('icp_existingSearch')?.focus();
+  if (mode === 'existing') document.getElementById('icp_existingSearch')?.focus();
 }
 
 // Search-as-you-type against existing persons, so a mark that's already been
@@ -2064,6 +2080,43 @@ async function attachIllustratorToExistingPerson(personId, personName) {
   } catch (err) {
     msgEl.textContent = 'Feil: ' + err.message;
     msgEl.className = 'msg error';
+  }
+}
+
+// "Bruk som bilde" — the simple case: this composition is already correctly
+// credited to a known person, and the crop is just becoming their photo. No
+// new person, no reassignment, composition_person is untouched.
+async function saveIllustratorPhotoForCreditedPerson() {
+  const msgEl = document.getElementById('icpMsg');
+  const img = document.getElementById('icpCropImg');
+  if (!img || !icpState?.cropBox) {
+    msgEl.textContent = 'Ingen beskjæring valgt.';
+    msgEl.className = 'msg error';
+    return;
+  }
+  const btn = document.getElementById('icpUseSaveBtn');
+  btn.disabled = true;
+  msgEl.textContent = 'Lagrer…';
+  msgEl.className = 'msg';
+  try {
+    const blob = await cropImageToBlob(img, icpState.cropBox);
+    const publicUrl = await uploadAndSetPersonPhoto(icpState.creditedPersonId, blob);
+
+    // If this is the person currently open in the Person tab (the normal
+    // case — you opened this from their own composition list), refresh the
+    // visible photo field/preview immediately rather than requiring a reload.
+    if (parseInt(document.getElementById('p_personId').value, 10) === icpState.creditedPersonId) {
+      document.getElementById('p_photoUrl').value = publicUrl;
+      updatePersonPhotoPreview();
+    }
+
+    showMsg('personMsg', '✓ Bilde lagret.', 'success');
+    document.querySelector('.modal-overlay')?.remove();
+  } catch (err) {
+    msgEl.textContent = 'Feil: ' + err.message;
+    msgEl.className = 'msg error';
+  } finally {
+    btn.disabled = false;
   }
 }
 
