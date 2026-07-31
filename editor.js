@@ -1816,6 +1816,38 @@ async function uploadAndSetPersonPhoto(personId, blob) {
   return publicUrl;
 }
 
+// Mounts a croppable image inside `area` and returns { wrap, img }. `wrap`
+// stays shrink-wrapped tightly to the image's actual rendered size (like
+// inline-block normally does) so a crop box positioned absolutely within it
+// always lines up with real image pixels — important because `img`'s fit
+// constraints are set here as computed PIXEL values (from `area`'s own
+// rendered size), not CSS percentages. Percentage max-height only resolves
+// against an ancestor with a *definite* height, which an auto-sized
+// shrink-wrap div never has; letting that silently fail meant the image
+// rendered at full natural size and overflowed its (overflow:hidden)
+// container — visible as the image being "stuck" showing only its top part,
+// with no way to reach the rest, worst on tall portrait scans.
+function mountCropImage(area, imageUrl) {
+  area.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:relative;display:inline-block;user-select:none';
+  const img = document.createElement('img');
+  img.crossOrigin = 'anonymous';
+  img.style.cssText = 'display:block;object-fit:contain';
+  wrap.appendChild(img);
+  area.appendChild(wrap);
+
+  function fitToArea() {
+    const rect = area.getBoundingClientRect();
+    img.style.maxWidth = Math.max(1, Math.floor(rect.width)) + 'px';
+    img.style.maxHeight = Math.max(1, Math.floor(rect.height)) + 'px';
+  }
+  fitToArea();
+  img.addEventListener('load', fitToArea);
+  img.src = imageUrl;
+  return { wrap, img };
+}
+
 // Builds a draggable/resizable crop-box overlay on `imgEl` inside `wrapEl`.
 // Box state lives in the caller (getBox/setBox) so independent crop UIs (new-
 // person creation, existing-illustrator photo capture) share one
@@ -1959,16 +1991,8 @@ function openIllustratorPhotoCropper(compositionPersonId, frontpageUrl) {
   icpWireExistingSearch();
 
   const area = document.getElementById('icpCropperArea');
-  const wrap = document.createElement('div');
-  wrap.style.cssText = 'position:relative;display:inline-block;max-width:100%;max-height:100%;user-select:none';
-  const img = document.createElement('img');
+  const { wrap, img } = mountCropImage(area, frontpageUrl);
   img.id = 'icpCropImg';
-  img.crossOrigin = 'anonymous';
-  img.src = frontpageUrl;
-  img.style.cssText = 'display:block;max-width:100%;max-height:100%;object-fit:contain';
-  wrap.appendChild(img);
-  area.appendChild(wrap);
-
   icpCropBoxHandle = buildCropBox(wrap, img, () => icpState.cropBox, box => { icpState.cropBox = box; });
 }
 
@@ -3597,15 +3621,8 @@ function openIllustratorCompareModal(compositionPersonId, title, candidateUrl) {
 
   if (needsPhoto) {
     const area = document.getElementById('illCompareCropArea');
-    const wrap = document.createElement('div');
-    wrap.style.cssText = 'position:relative;display:inline-block;max-width:100%;max-height:100%;user-select:none';
-    const img = document.createElement('img');
+    const { wrap, img } = mountCropImage(area, candidateUrl);
     img.id = 'illCompareCandidateImg';
-    img.crossOrigin = 'anonymous';
-    img.src = candidateUrl;
-    img.style.cssText = 'display:block;max-width:100%;max-height:100%;object-fit:contain';
-    wrap.appendChild(img);
-    area.appendChild(wrap);
     buildCropBox(wrap, img, () => illCompareCropState.box, b => { illCompareCropState.box = b; });
   }
 }
