@@ -91,6 +91,7 @@ GRANT SELECT ON public.new_table TO anon, authenticated;
 **Naming conventions for unknown/folk persons:**
 - Unknown/folk composer: `first_name = 'Trad'`, `last_name = [country]`
 - Unknown/various composer or lyricist: `first_name = 'Composer'/'Lyricist'`, `last_name = 'Unknown'/'Various'`
+- Unidentified illustrator (known only by initials or an unreadable graphic mark/monogram): `last_name = 'Illustrator'` (deliberately a separate bucket from `'Unknown'`, so composer/lyricist placeholders don't get diluted by what could be dozens of these), `first_name` = the transcribed initials (e.g. `'H.G.'`, trailing `?` if uncertain) or a short description of the mark (e.g. `'Ankermerke'`). `person.photo_url` is used to hold a cropped image of the actual mark, so visually near-identical placeholders can be told apart at a glance rather than by name alone — see `openIllustratorPhotoCropper` in editor.js.
 
 ### composition
 
@@ -318,6 +319,11 @@ Data source: `composition_person` table.
 - Supports: contributors with `credited_as`, `under_arbeid` flag with amber badge/filter, `has_frontpage`/`ai_frontpage` checkboxes, `year_published`, `musescore_uploaded` auto-date checkbox, photo upload, translator support, dedication/illustrator fields
 - Person tab: `p_bioText` textarea (min-height 16rem, sized for full transcribed articles, not just short notes) saves to `person.bio_text`; `p_bioSource` text input saves to `person.bio_source` (citation, shown on `bio.html`). "+ Ny person" button (`startNewPerson()`) clears the loaded person panel and hands back a blank "add new person" form, without going via "Avbryt". `deletePerson()` checks `composition_person` for the person first and blocks the delete (before `confirm()` even runs) if any compositions are still attached
 - Contributor rows (composer/lyricist/arranger/illustrator/translator, in both "Ny innføring" and "Rediger"): the displayed person name is clickable and jumps straight to that person's record on the Person tab (`switchTab('person'); loadPersonForm(person_id)`)
+- Person tab → "Vis komposisjoner" list: rows with `role = Illustrator` and an uploaded `score.frontpage_url` get a 📷 button (`openIllustratorPhotoCropper`) that opens a modal built entirely in JS (same pattern as `openComposerScores`), with two modes toggled by `icpSetMode('new'|'existing')`:
+  - **"+ Ny person"** (default): drag/resize a crop box over the frontpage image, type a name, and save — crops via `<canvas>`, creates a new `person` row (naming convention: `last_name = "Illustrator"`, `first_name` = transcribed initials or a short description of the mark), uploads the crop to the `person-photos` bucket as that person's `photo_url`, and reassigns that one `composition_person` row to the new person.
+  - **"Match mot eksisterende"**: search-as-you-type over existing persons (`icpWireExistingSearch`), showing each match's `photo_url` thumbnail inline for visual comparison against the image on screen — clicking one just `PATCH`es the `composition_person` row to that person's id (`attachIllustratorToExistingPerson`), no crop/upload needed. This is what lets a second (third, fourth…) sighting of an already-identified mark get attached to the same person instead of creating a duplicate placeholder each time.
+
+  Deliberately URL-based (not local-file-based like `frontpage_crop_tool.html`) so it works on any browser, including iOS Safari, which has no File System Access API.
 
 ### Key architecture rules (editor.js)
 

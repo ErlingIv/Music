@@ -1737,12 +1737,15 @@ async function savePerson() {
 async function loadPersonCompositions(personId) {
   const container = document.getElementById('personCompositions');
   container.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Laster komposisjoner…</div>';
-  const cc = await get(`/composition_person?person_id=eq.${personId}&select=composition_id,role&limit=200`);
+  const cc = await get(`/composition_person?person_id=eq.${personId}&select=id,composition_id,role&limit=200`);
   if (!cc.length) { container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:0.5rem 0">Ingen komposisjoner funnet.</div>'; return; }
   const ids = cc.map(r => r.composition_id).join(',');
-  const roleMap = Object.fromEntries(cc.map(r => [r.composition_id, r.role]));
+  const cpMap = Object.fromEntries(cc.map(r => [r.composition_id, r]));
+  const scores = await get(`/score?composition_id=in.(${ids})&select=composition_id,frontpage_url`);
+  const frontpageMap = {};
+  scores.forEach(s => { if (s.frontpage_url && !frontpageMap[s.composition_id]) frontpageMap[s.composition_id] = s.frontpage_url; });
   const comps = (await get(`/composition?composition_id=in.(${ids})&select=composition_id,title,year_composed,public_domain,musescore_link,approved`))
-    .map(c => ({ ...c, role: roleMap[c.composition_id] }))
+    .map(c => ({ ...c, role: cpMap[c.composition_id].role, cpId: cpMap[c.composition_id].id, frontpageUrl: frontpageMap[c.composition_id] || null }))
     .sort((a,b) => (a.title||'').localeCompare(b.title||''));
   if (!comps.length) { container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:0.5rem 0">Ingen komposisjoner funnet.</div>'; return; }
   container.innerHTML = `
@@ -1757,6 +1760,7 @@ async function loadPersonCompositions(personId) {
           <th style="text-align:center;padding:0.3rem">MS</th>
           <th style="text-align:center;padding:0.3rem" title="Godkjent">✓</th>
           <th style="text-align:center;padding:0.3rem">Rediger</th>
+          <th style="text-align:center;padding:0.3rem"></th>
         </tr>
         ${comps.map(c => `<tr style="border-bottom:1px solid var(--border)">
           <td style="padding:0.3rem 0.5rem">${escapeHtml(c.title)}</td>
@@ -1766,9 +1770,293 @@ async function loadPersonCompositions(personId) {
           <td style="text-align:center;padding:0.3rem">${c.musescore_link?`<a href="${escapeHtml(c.musescore_link)}" target="_blank" rel="noopener noreferrer">🔗</a>`:''}</td>
           <td style="text-align:center;padding:0.3rem" title="${c.approved?'Godkjent':'Ikke godkjent'}">${c.approved?'<span style="color:#2d6b27;font-weight:700">✓</span>':''}</td>
           <td style="text-align:center;padding:0.3rem"><button type="button" onclick="switchTab('edit');loadEditForm(${c.composition_id})" style="background:none;border:1px solid var(--border);border-radius:3px;padding:0.1rem 0.4rem;cursor:pointer;font-size:0.8rem">✏️</button></td>
+          <td style="text-align:center;padding:0.3rem">${c.role === 'Illustrator' && c.frontpageUrl
+            ? `<button type="button" title="Opprett ny person fra dette forsidebildet" onclick="openIllustratorPhotoCropper(${c.cpId}, '${escapeJsAttr(c.frontpageUrl)}')" style="background:none;border:1px solid var(--border);border-radius:3px;padding:0.1rem 0.4rem;cursor:pointer;font-size:0.8rem">📷</button>`
+            : ''}</td>
         </tr>`).join('')}
       </table>
     </div>`;
+}
+
+// ── Create a new person from a cropped region of an already-uploaded score
+// frontpage image — for turning an illustrator's mark/monogram/initials on a
+// specific score into a proper, photo-identified person record, without
+// needing local file access (works from any browser, including iOS Safari,
+// since it only ever touches an already-public frontpage_url via <canvas>).
+let icpState = null; // { compositionPersonId, cropBox: {x,y,w,h} }
+
+function openIllustratorPhotoCropper(compositionPersonId, frontpageUrl) {
+  icpState = { compositionPersonId, cropBox: null };
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center';
+  const box = document.createElement('div');
+  box.style.cssText = 'background:var(--paper,#fff);border-radius:8px;padding:1.5rem;max-width:560px;width:92%;max-height:90vh;overflow-y:auto';
+  box.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <h3 style="margin:0;font-size:1rem">Merk illustratør</h3>
+      <button type="button" onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:1.2rem;cursor:pointer">✕</button>
+    </div>
+    <div id="icpCropperArea" style="margin-bottom:1rem;text-align:center"></div>
+    <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem">
+      <button type="button" id="icpModeNewBtn" class="btn btn-primary" style="font-size:0.85rem" onclick="icpSetMode('new')">+ Ny person</button>
+      <button type="button" id="icpModeExistingBtn" class="btn btn-secondary" style="font-size:0.85rem" onclick="icpSetMode('existing')">Match mot eksisterende</button>
+    </div>
+
+    <div id="icpNewPanel">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
+        <div class="field" style="margin:0">
+          <label>Fornavn</label>
+          <input type="text" id="icp_firstName" placeholder="f.eks. H.G. eller Ankermerke">
+        </div>
+        <div class="field" style="margin:0">
+          <label>Etternavn</label>
+          <input type="text" id="icp_lastName" value="Illustrator">
+        </div>
+      </div>
+      <div class="actions" style="margin-bottom:0">
+        <button type="button" class="btn btn-primary" id="icpSaveBtn" onclick="saveIllustratorCropPerson()">Lagre ny person</button>
+      </div>
+    </div>
+
+    <div id="icpExistingPanel" style="display:none">
+      <div class="field" style="margin:0 0 0.5rem">
+        <label>Søk etter person (f.eks. tidligere merket «H.G.»)</label>
+        <input type="text" id="icp_existingSearch" placeholder="Søk på etternavn…" autocomplete="off">
+      </div>
+      <div id="icpExistingResults" style="display:flex;flex-direction:column;gap:0.4rem;max-height:14rem;overflow-y:auto"></div>
+    </div>
+
+    <div id="icpMsg" class="msg"></div>
+    <div class="actions">
+      <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Avbryt</button>
+    </div>`;
+  modal.appendChild(box);
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+
+  icpWireExistingSearch();
+
+  const area = document.getElementById('icpCropperArea');
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:relative;display:inline-block;max-width:100%;user-select:none';
+  const img = document.createElement('img');
+  img.id = 'icpCropImg';
+  img.crossOrigin = 'anonymous';
+  img.src = frontpageUrl;
+  img.style.cssText = 'display:block;max-width:100%;max-height:55vh';
+  wrap.appendChild(img);
+  const cropBox = document.createElement('div');
+  cropBox.id = 'icpCropBox';
+  cropBox.style.cssText = 'position:absolute;border:2px dashed #fff;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;box-sizing:border-box';
+  ['nw', 'ne', 'sw', 'se'].forEach(dir => {
+    const h = document.createElement('div');
+    h.className = 'icp-handle';
+    h.dataset.dir = dir;
+    const pos = dir === 'nw' ? 'top:-7px;left:-7px;cursor:nwse-resize'
+      : dir === 'ne' ? 'top:-7px;right:-7px;cursor:nesw-resize'
+      : dir === 'sw' ? 'bottom:-7px;left:-7px;cursor:nesw-resize'
+      : 'bottom:-7px;right:-7px;cursor:nwse-resize';
+    h.style.cssText = `position:absolute;width:14px;height:14px;background:#fff;border:1px solid #333;border-radius:50%;${pos}`;
+    cropBox.appendChild(h);
+  });
+  wrap.appendChild(cropBox);
+  area.appendChild(wrap);
+
+  img.addEventListener('load', icpResetCropBox);
+  if (img.complete) icpResetCropBox();
+  icpWireCropEvents(cropBox);
+}
+
+function icpSetMode(mode) {
+  const isNew = mode === 'new';
+  document.getElementById('icpNewPanel').style.display = isNew ? 'block' : 'none';
+  document.getElementById('icpExistingPanel').style.display = isNew ? 'none' : 'block';
+  document.getElementById('icpModeNewBtn').className = 'btn ' + (isNew ? 'btn-primary' : 'btn-secondary');
+  document.getElementById('icpModeExistingBtn').className = 'btn ' + (isNew ? 'btn-secondary' : 'btn-primary');
+  const cropBox = document.getElementById('icpCropBox');
+  if (cropBox) cropBox.style.display = isNew ? 'block' : 'none';
+  const msgEl = document.getElementById('icpMsg');
+  msgEl.textContent = '';
+  msgEl.className = 'msg';
+  if (!isNew) document.getElementById('icp_existingSearch')?.focus();
+}
+
+// Search-as-you-type against existing persons, so a mark that's already been
+// identified once (e.g. a previously-created "H.G. Illustrator") can be
+// matched again on a later score by its photo, instead of creating a
+// duplicate placeholder every time the same mark turns up.
+function icpWireExistingSearch() {
+  const input = document.getElementById('icp_existingSearch');
+  const results = document.getElementById('icpExistingResults');
+  let timer, controller;
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    const q = input.value.trim();
+    if (q.length < 2) { results.innerHTML = ''; return; }
+    timer = setTimeout(async () => {
+      controller?.abort();
+      controller = new AbortController();
+      let rows;
+      try {
+        rows = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name,photo_url&order=last_name&limit=15`, controller.signal);
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        throw err;
+      }
+      if (!rows.length) { results.innerHTML = '<div style="color:var(--muted);font-size:0.82rem">Ingen treff.</div>'; return; }
+      results.innerHTML = rows.map(p => {
+        const name = [p.first_name, p.last_name].filter(Boolean).join(' ');
+        const thumb = p.photo_url
+          ? `<img src="${escapeHtml(p.photo_url)}" style="width:34px;height:34px;object-fit:cover;border-radius:4px;border:1px solid var(--border);flex-shrink:0">`
+          : `<div style="width:34px;height:34px;border-radius:4px;border:1px dashed var(--border);flex-shrink:0"></div>`;
+        return `<div class="icp-existing-item" data-pid="${p.person_id}" data-name="${escapeJsAttr(name)}"
+          style="display:flex;align-items:center;gap:0.6rem;padding:0.35rem 0.5rem;border:1px solid var(--border);border-radius:5px;cursor:pointer">
+          ${thumb}<span style="font-size:0.85rem">${escapeHtml(name)}</span>
+        </div>`;
+      }).join('');
+      results.querySelectorAll('.icp-existing-item').forEach(item => {
+        item.addEventListener('click', () => {
+          attachIllustratorToExistingPerson(parseInt(item.dataset.pid, 10), item.dataset.name);
+        });
+      });
+    }, 250);
+  });
+}
+
+async function attachIllustratorToExistingPerson(personId, personName) {
+  const msgEl = document.getElementById('icpMsg');
+  msgEl.textContent = 'Lagrer…';
+  msgEl.className = 'msg';
+  try {
+    await patch('composition_person', `id=eq.${icpState.compositionPersonId}`, { person_id: personId, credited_as: null });
+    showMsg('personMsg', `✓ Tilknyttet "${personName}".`, 'success');
+    document.querySelector('.modal-overlay')?.remove();
+    const currentPersonId = document.getElementById('p_personId').value;
+    if (currentPersonId) await loadPersonCompositions(currentPersonId);
+  } catch (err) {
+    msgEl.textContent = 'Feil: ' + err.message;
+    msgEl.className = 'msg error';
+  }
+}
+
+function icpResetCropBox() {
+  const img = document.getElementById('icpCropImg');
+  const cropBox = document.getElementById('icpCropBox');
+  if (!img || !cropBox || !icpState) return;
+  // Default to a small centered box — usually cropping just a mark/monogram,
+  // not the whole page.
+  const w = img.clientWidth, h = img.clientHeight;
+  const bw = Math.round(w * 0.3), bh = Math.round(h * 0.3);
+  icpState.cropBox = { x: Math.round((w - bw) / 2), y: Math.round((h - bh) / 2), w: bw, h: bh };
+  icpApplyCropBoxStyle();
+}
+
+function icpApplyCropBoxStyle() {
+  const cropBox = document.getElementById('icpCropBox');
+  if (!cropBox || !icpState?.cropBox) return;
+  const c = icpState.cropBox;
+  cropBox.style.left = c.x + 'px'; cropBox.style.top = c.y + 'px';
+  cropBox.style.width = c.w + 'px'; cropBox.style.height = c.h + 'px';
+}
+
+function icpWireCropEvents(cropBox) {
+  let dragMode = null, startPointer = null, startBox = null;
+  function onDown(e, mode) {
+    dragMode = mode;
+    startPointer = { x: e.clientX, y: e.clientY };
+    startBox = { ...icpState.cropBox };
+    e.preventDefault(); e.stopPropagation();
+  }
+  cropBox.addEventListener('mousedown', e => {
+    if (e.target.classList.contains('icp-handle')) onDown(e, e.target.dataset.dir);
+    else onDown(e, 'move');
+  });
+  document.addEventListener('mousemove', e => {
+    if (!dragMode || !icpState) return;
+    const img = document.getElementById('icpCropImg');
+    if (!img) return;
+    const maxW = img.clientWidth, maxH = img.clientHeight;
+    const dx = e.clientX - startPointer.x, dy = e.clientY - startPointer.y;
+    if (dragMode === 'move') {
+      const x = Math.max(0, Math.min(startBox.x + dx, maxW - startBox.w));
+      const y = Math.max(0, Math.min(startBox.y + dy, maxH - startBox.h));
+      icpState.cropBox = { ...startBox, x, y };
+    } else {
+      let { x, y, w, h } = startBox;
+      if (dragMode === 'nw') { x = startBox.x + dx; y = startBox.y + dy; w = startBox.w - dx; h = startBox.h - dy; }
+      if (dragMode === 'ne') { y = startBox.y + dy; w = startBox.w + dx; h = startBox.h - dy; }
+      if (dragMode === 'sw') { x = startBox.x + dx; w = startBox.w - dx; h = startBox.h + dy; }
+      if (dragMode === 'se') { w = startBox.w + dx; h = startBox.h + dy; }
+      x = Math.max(0, Math.min(x, maxW - 10)); y = Math.max(0, Math.min(y, maxH - 10));
+      w = Math.max(10, Math.min(w, maxW - x)); h = Math.max(10, Math.min(h, maxH - y));
+      icpState.cropBox = { x, y, w, h };
+    }
+    icpApplyCropBoxStyle();
+  });
+  document.addEventListener('mouseup', () => { dragMode = null; });
+}
+
+async function saveIllustratorCropPerson() {
+  const msgEl = document.getElementById('icpMsg');
+  const firstName = document.getElementById('icp_firstName').value.trim();
+  const lastName  = document.getElementById('icp_lastName').value.trim() || 'Illustrator';
+  if (!firstName) {
+    msgEl.textContent = 'Fornavn (initialer eller beskrivelse) er påkrevd.';
+    msgEl.className = 'msg error';
+    return;
+  }
+  const img = document.getElementById('icpCropImg');
+  if (!img || !icpState?.cropBox) {
+    msgEl.textContent = 'Ingen beskjæring valgt.';
+    msgEl.className = 'msg error';
+    return;
+  }
+  const btn = document.getElementById('icpSaveBtn');
+  btn.disabled = true;
+  msgEl.textContent = 'Lagrer…';
+  msgEl.className = 'msg';
+  try {
+    const scale = img.naturalWidth / img.clientWidth;
+    const c = icpState.cropBox;
+    const sx = c.x * scale, sy = c.y * scale, sw = c.w * scale, sh = c.h * scale;
+    const canvas = document.createElement('canvas');
+    canvas.width = sw; canvas.height = sh;
+    canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+    if (!blob) throw new Error('Kunne ikke lage bildeutsnitt (er bildet fra en annen kilde enn Supabase Storage?).');
+
+    // 1. Create the person row first, so we have a person_id for the filename.
+    const person = await post('person', { first_name: firstName, last_name: lastName });
+    const personId = person?.person_id;
+    if (!personId) throw new Error('Kunne ikke opprette person.');
+
+    // 2. Upload the crop as that person's photo.
+    const filename = `${personId}_${Date.now()}_illustrator.jpg`;
+    const uploadUrl = `${SB.replace('/rest/v1', '')}/storage/v1/object/${PHOTO_BUCKET}/${encodeURIComponent(filename)}`;
+    const res = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'image/jpeg', 'x-upsert': 'true' },
+      body: blob,
+    });
+    if (!res.ok) throw new Error(`Opplasting feilet (${res.status}): ${await res.text()}`);
+    const publicUrl = `${SB.replace('/rest/v1', '')}/storage/v1/object/public/${PHOTO_BUCKET}/${encodeURIComponent(filename)}`;
+    await patch('person', `person_id=eq.${personId}`, { photo_url: publicUrl });
+
+    // 3. Reassign this specific illustrator credit to the new person.
+    await patch('composition_person', `id=eq.${icpState.compositionPersonId}`, { person_id: personId, credited_as: null });
+
+    showMsg('personMsg', `✓ Ny person "${firstName} ${lastName}" opprettet og tilknyttet.`, 'success');
+    document.querySelector('.modal-overlay')?.remove();
+    const currentPersonId = document.getElementById('p_personId').value;
+    if (currentPersonId) await loadPersonCompositions(currentPersonId);
+  } catch (err) {
+    msgEl.textContent = 'Feil: ' + err.message;
+    msgEl.className = 'msg error';
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function closePerson() {
