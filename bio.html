@@ -236,7 +236,7 @@ async function load() {
 
     el.innerHTML = `
       <div class="bio-header">
-        ${person.photo_url ? `<img src="${person.photo_url}" alt="" class="bio-photo">` : ''}
+        ${person.photo_url ? `<a href="${person.photo_url}" target="_blank" rel="noopener noreferrer" title="View full photo" style="display:contents"><img src="${person.photo_url}" alt="" class="bio-photo"></a>` : ''}
         <div>
           <div class="bio-eyebrow">Biography</div>
           <h1 class="bio-name">${person.first_name} ${person.last_name}</h1>
