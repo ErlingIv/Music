@@ -1743,6 +1743,11 @@ async function savePerson() {
 async function loadPersonCompositions(personId) {
   const container = document.getElementById('personCompositions');
   container.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Laster komposisjoner…</div>';
+  // This list is always the person currently loaded in the Person tab form,
+  // so its own last_name tells us whether it's a shared not-yet-identified
+  // placeholder ("Only Initials", "H.G. Illustrator", etc. — see naming
+  // convention) rather than a distinct, already-identified individual.
+  const isPlaceholder = document.getElementById('p_lastName').value.trim() === 'Illustrator';
   const cc = await get(`/composition_person?person_id=eq.${personId}&select=id,composition_id,role&limit=200`);
   if (!cc.length) { container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:0.5rem 0">Ingen komposisjoner funnet.</div>'; return; }
   const ids = cc.map(r => r.composition_id).join(',');
@@ -1777,7 +1782,7 @@ async function loadPersonCompositions(personId) {
           <td style="text-align:center;padding:0.3rem" title="${c.approved?'Godkjent':'Ikke godkjent'}">${c.approved?'<span style="color:#2d6b27;font-weight:700">✓</span>':''}</td>
           <td style="text-align:center;padding:0.3rem"><button type="button" onclick="switchTab('edit');loadEditForm(${c.composition_id})" style="background:none;border:1px solid var(--border);border-radius:3px;padding:0.1rem 0.4rem;cursor:pointer;font-size:0.8rem">✏️</button></td>
           <td style="text-align:center;padding:0.3rem">${c.role === 'Illustrator' && c.frontpageUrl
-            ? `<button type="button" title="Merk illustratørbilde fra dette forsidebildet" onclick="openIllustratorPhotoCropper(${c.cpId}, '${escapeJsAttr(c.frontpageUrl)}', ${personId})" style="background:none;border:1px solid var(--border);border-radius:3px;padding:0.1rem 0.4rem;cursor:pointer;font-size:0.8rem">📷</button>`
+            ? `<button type="button" title="Merk illustratørbilde fra dette forsidebildet" onclick="openIllustratorPhotoCropper(${c.cpId}, '${escapeJsAttr(c.frontpageUrl)}', ${personId}, ${isPlaceholder})" style="background:none;border:1px solid var(--border);border-radius:3px;padding:0.1rem 0.4rem;cursor:pointer;font-size:0.8rem">📷</button>`
             : ''}</td>
         </tr>`).join('')}
       </table>
@@ -2006,12 +2011,21 @@ function buildCropBox(wrapEl, imgEl, getBox, setBox) {
   return { el: cropBox, reset, sync: applyStyle };
 }
 
-function openIllustratorPhotoCropper(compositionPersonId, frontpageUrl, creditedPersonId) {
+function openIllustratorPhotoCropper(compositionPersonId, frontpageUrl, creditedPersonId, isPlaceholder) {
   // creditedPersonId is whoever this composition is *already* credited to —
   // loadPersonCompositions only ever lists compositions already credited to
   // the person you're viewing, so this is always that same person. It's only
   // actually useful in "Bruk som bilde" mode (see below); the other two modes
   // ignore it.
+  //
+  // isPlaceholder means that person is a shared not-yet-identified bucket
+  // (last_name === "Illustrator", e.g. "Only Initials"). "Bruk som bilde"
+  // doesn't reassign the credit, so on a placeholder's own composition list,
+  // using it leaves the row exactly where it was — no-op-looking, but really
+  // it set the *shared placeholder's* photo to one arbitrary crop, which
+  // isn't meaningful. Hide that mode entirely there and default to
+  // reassigning instead, since that's what's actually being done in this
+  // context nearly 100% of the time.
   icpState = { compositionPersonId, creditedPersonId, cropBox: null };
 
   const modal = document.createElement('div');
@@ -2084,6 +2098,11 @@ function openIllustratorPhotoCropper(compositionPersonId, frontpageUrl, credited
   icpCropBoxHandle = buildCropBox(wrap, img, () => icpState.cropBox, box => { icpState.cropBox = box; });
   wireZoomControls(area, zoom, icpCropBoxHandle, () => icpState.cropBox, box => { icpState.cropBox = box; },
     document.getElementById('icpZoomInBtn'), document.getElementById('icpZoomOutBtn'));
+
+  if (isPlaceholder) {
+    document.getElementById('icpModeUseBtn').style.display = 'none';
+    icpSetMode('new');
+  }
 }
 
 function icpSetMode(mode) {
