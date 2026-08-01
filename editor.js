@@ -960,11 +960,13 @@ let editSearchTimeout;
 
 function setSearchMode(mode) {
   document.getElementById('editSearchMode').value = mode;
-  document.getElementById('editSearch').placeholder = mode === 'composer' ? 'Søk på komponist…' : 'Søk på tittel…';
+  document.getElementById('editSearch').placeholder =
+    mode === 'composer' ? 'Søk på komponist…' : mode === 'title' ? 'Søk på tittel…' : 'Søk på score-ID (tallet i filnavn fra staging)…';
   document.getElementById('editSearch').value = '';
   document.getElementById('editSearchResults').innerHTML = '';
   document.getElementById('searchModeComposer').style.fontWeight = mode === 'composer' ? '700' : '';
   document.getElementById('searchModeTitle').style.fontWeight    = mode === 'title'    ? '700' : '';
+  document.getElementById('searchModeScoreId').style.fontWeight  = mode === 'scoreid'  ? '700' : '';
 }
 
 let editSearchToken = 0;
@@ -988,6 +990,18 @@ async function searchCompositions(q, myToken) {
 
   if (mode === 'title') {
     results = await get(`/composition?title=ilike.*${encodeURIComponent(q)}*&select=composition_id,title,year_composed,public_domain,approved,musescore_link,to_investigate,under_arbeid&limit=30&order=title`);
+
+  } else if (mode === 'scoreid') {
+    // Direct score_id -> composition lookup — for matching a staged
+    // frontpage filename (prefixed with score_id, see extraction scripts)
+    // straight back to the score it belongs to, without guessing by title.
+    const scoreId = parseInt(q, 10);
+    if (!isNaN(scoreId)) {
+      const scores = await get(`/score?score_id=eq.${scoreId}&select=composition_id`);
+      if (scores.length) {
+        results = await get(`/composition?composition_id=eq.${scores[0].composition_id}&select=composition_id,title,year_composed,public_domain,approved,musescore_link,to_investigate,under_arbeid`);
+      }
+    }
 
   } else {
     // Composer mode — find persons by last name, then their compositions
@@ -1104,6 +1118,7 @@ async function loadEditForm(compId) {
   const score = pickPrimaryScore(scores);
   document.getElementById('e_scoreId').value = score ? score.score_id : '';
   document.getElementById('e_scoreIdLabel').textContent = score ? `score_id ${score.score_id}` : '';
+  document.getElementById('e_frontpageScoreIdLabel').textContent = score ? `score_id ${score.score_id}` : '';
   document.getElementById('e_plateNumber').value = score?.plate_number || '';
   document.getElementById('e_yearPublished').value = score?.year_published || '';
   document.getElementById('e_uploadedToday').checked = false;
