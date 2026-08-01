@@ -1000,6 +1000,10 @@ async function searchCompositions(q, myToken) {
       const scores = await get(`/score?score_id=eq.${scoreId}&select=composition_id`);
       if (scores.length) {
         results = await get(`/composition?composition_id=eq.${scores[0].composition_id}&select=composition_id,title,year_composed,public_domain,approved,musescore_link,to_investigate,under_arbeid`);
+        // Carried through to the click handler below, so loadEditForm loads
+        // this exact score row rather than whichever one it would otherwise
+        // guess is "most complete" for the composition.
+        results.forEach(c => { c._preferredScoreId = scoreId; });
       }
     }
 
@@ -1043,12 +1047,12 @@ async function searchCompositions(q, myToken) {
     d.innerHTML = `<div class="result-title">${escapeHtml(c.title)}${approvedBadge}${investigateBadge}${underArbeidBadge}</div>
                    <div class="result-meta">${escapeHtml(c.year_composed || '—')} · ${c.public_domain === 'Yes' ? 'PD' : 'Opphavsrett'}${composerMeta}</div>`;
     if (c.approved) d.classList.add('is-approved');
-    d.onclick = () => loadEditForm(c.composition_id);
+    d.onclick = () => loadEditForm(c.composition_id, c._preferredScoreId);
     container.appendChild(d);
   });
 }
 
-async function loadEditForm(compId) {
+async function loadEditForm(compId, preferredScoreId) {
   showMsg('editMsg', '', '');
   // Clear contributors immediately so stale data doesn't show during async fetch
   eContributors.length = 0; eRowIdxRef.value = 0;
@@ -1115,7 +1119,15 @@ async function loadEditForm(compId) {
   // be the most complete row, not just the newest score_id. Picking by newest
   // alone can surface a near-blank stub as "primary" while the row with real
   // data sits in the deletable list.
-  const score = pickPrimaryScore(scores);
+  //
+  // Exception: if we got here via a specific score_id (e.g. the Rediger
+  // search's "Score-ID" mode, matching a staged frontpage filename back to
+  // its score), that exact row wins regardless of completeness — loading a
+  // different row of the same composition would silently show the wrong
+  // score's frontpage_url, which is exactly the case that mode exists to
+  // avoid.
+  const score = (preferredScoreId && scores.find(s => s.score_id === preferredScoreId))
+    || pickPrimaryScore(scores);
   document.getElementById('e_scoreId').value = score ? score.score_id : '';
   document.getElementById('e_scoreIdLabel').textContent = score ? `score_id ${score.score_id}` : '';
   document.getElementById('e_frontpageScoreIdLabel').textContent = score ? `score_id ${score.score_id}` : '';
