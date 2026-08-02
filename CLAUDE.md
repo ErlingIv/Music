@@ -178,6 +178,8 @@ Replaces the old `composition_composer` / `composition_lyricist` / `composition_
 - credited_as (text) — name variant as printed on the score
 - translates_person_id (nullable FK → person.person_id) — links a translator credit to the original lyricist/author
 
+**`UNIQUE (composition_id, person_id, role)`** (added August 2026, after "China Town" turned out to credit the same lyricist twice — once plain, once as `credited_as = "S. S. Wilson"`, a documented pseudonym). A person can only be credited once per role per composition; a pseudonym variant goes in `credited_as` on that single row, not a second row. `editor.js`'s `findDuplicateContributorCredit()` checks for this client-side in both "Ny innføring" and "Rediger" before writing, so a violation shows a clear message rather than a raw constraint error — but the constraint is the actual backstop for any other write path (illustrator reassignment, merges, direct SQL, etc.).
+
 ### tag / composition_tag
 
 - tag: tag_id (PK), tag_name

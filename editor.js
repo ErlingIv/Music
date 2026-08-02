@@ -573,6 +573,23 @@ const ROLE_NO = { Composer:'Komponist', Lyricist:'Tekstforfatter', Arranger:'Arr
 const ROLE_DISPLAY_ORDER = { Composer: 0, Arranger: 1, Lyricist: 2, Translator: 3, Illustrator: 4 };
 
 
+// Returns { name, role } for the first person credited more than once with
+// the same role among `contributors`, or null if there are none. The DB also
+// enforces this now (composition_person_unique_credit, added after "China
+// Town" turned out to credit the same lyricist twice under two different
+// credited_as values) — this just catches it before the write, so it's a
+// clear message instead of a raw constraint-violation error.
+function findDuplicateContributorCredit(contributors) {
+  const seen = new Map();
+  for (const c of contributors) {
+    if (!c.person_id) continue;
+    const key = `${c.person_id}|${c.role}`;
+    if (seen.has(key)) return { name: c.name || seen.get(key), role: c.role };
+    seen.set(key, c.name);
+  }
+  return null;
+}
+
 // ── Shared contributor row factory ────────────────────────────────────────────
 
 function addContributorRow(prefix, contributors, rowIdxRef, person, role, creditedAs, translatesPersonId) {
@@ -740,6 +757,16 @@ document.getElementById('newForm').addEventListener('submit', async e => {
         resetBtn();
         return;
       }
+    }
+
+    // 2b. Same person, same role, twice — the DB rejects this outright now,
+    //     but this gives a clear message instead of a raw constraint error.
+    const dupCredit = findDuplicateContributorCredit(data.contributors);
+    if (dupCredit) {
+      showMsg('newMsg', `Feil: "${dupCredit.name}" er lagt til som ${ROLE_NO[dupCredit.role] || dupCredit.role} to ganger. Fjern en av radene.`, 'error');
+      msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      resetBtn();
+      return;
     }
 
     // 3. Source validation — decide now whether an unknown source will be created,
@@ -1256,6 +1283,15 @@ async function saveEdit() {
     ...c,
     role: document.getElementById(`e_crole_${c.idx}`)?.value || 'Composer',
   }));
+
+  // Same person, same role, twice — the DB rejects this outright now, but
+  // this gives a clear message instead of a raw constraint error.
+  const dupCredit = findDuplicateContributorCredit(frozenContributors);
+  if (dupCredit) {
+    showMsg('editMsg', `Feil: "${dupCredit.name}" er lagt til som ${ROLE_NO[dupCredit.role] || dupCredit.role} to ganger. Fjern en av radene.`, 'error');
+    document.getElementById('editMsg').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
 
   // Validate source BEFORE touching the database or showing the spinner —
   // and remember whether it needs to be created, rather than discarding it later.
