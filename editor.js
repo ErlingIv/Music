@@ -2273,6 +2273,7 @@ async function attachIllustratorToExistingPerson(personId, personName) {
     await patch('composition_person', `id=eq.${icpState.compositionPersonId}`, { person_id: personId, credited_as: null });
     showMsg('personMsg', `✓ Tilknyttet "${personName}".`, 'success');
     document.querySelector('.modal-overlay')?.remove();
+    document.getElementById('personMsg').scrollIntoView({ behavior: 'smooth', block: 'center' });
     const currentPersonId = document.getElementById('p_personId').value;
     if (currentPersonId) await loadPersonCompositions(currentPersonId);
   } catch (err) {
@@ -2310,6 +2311,7 @@ async function saveIllustratorPhotoForCreditedPerson() {
 
     showMsg('personMsg', '✓ Bilde lagret.', 'success');
     document.querySelector('.modal-overlay')?.remove();
+    document.getElementById('personMsg').scrollIntoView({ behavior: 'smooth', block: 'center' });
   } catch (err) {
     msgEl.textContent = 'Feil: ' + err.message;
     msgEl.className = 'msg error';
@@ -2355,6 +2357,13 @@ async function saveIllustratorCropPerson() {
 
     showMsg('personMsg', `✓ Ny person "${firstName} ${lastName}" opprettet og tilknyttet.`, 'success');
     document.querySelector('.modal-overlay')?.remove();
+    // The modal was near-fullscreen, covering the whole page — without this,
+    // the confirmation lands silently on whatever part of the page was
+    // scrolled behind it, indistinguishable from nothing having happened at
+    // all. That's exactly how the "unclear initials" duplicate (person_id
+    // 2461, August 2026) went unnoticed: the save had actually succeeded,
+    // looked like it hadn't, and got retried.
+    document.getElementById('personMsg').scrollIntoView({ behavior: 'smooth', block: 'center' });
     const currentPersonId = document.getElementById('p_personId').value;
     if (currentPersonId) await loadPersonCompositions(currentPersonId);
   } catch (err) {
