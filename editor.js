@@ -1916,12 +1916,43 @@ function mountCropImage(area, imageUrl) {
   area.style.display = 'block';
   area.style.textAlign = 'center';
   const wrap = document.createElement('div');
-  wrap.style.cssText = 'position:relative;display:inline-block;user-select:none';
+  wrap.style.cssText = 'position:relative;display:inline-block;user-select:none;touch-action:none;cursor:grab';
   const img = document.createElement('img');
   img.crossOrigin = 'anonymous';
+  img.draggable = false; // otherwise a mousedown+move on the <img> starts a native drag-ghost instead of our own pan
   img.style.cssText = 'display:block;object-fit:contain';
   wrap.appendChild(img);
   area.appendChild(wrap);
+
+  // Drag-to-pan on the background: once zoomed past the visible area, the
+  // crop box only covers the small selection rectangle (see buildCropBox),
+  // so clicking/dragging anywhere else on the image previously did nothing —
+  // the only way to reach a corner was the area's native scrollbar, easy to
+  // miss (especially thin/auto-hiding OS scrollbars) and unusable by touch.
+  // buildCropBox's own pointerdown handlers call stopPropagation(), so this
+  // listener (added on `wrap`, a parent of the crop box) only ever fires for
+  // pointer events that started outside the crop box itself.
+  let panPointerId = null, panStart = null, panScrollStart = null;
+  wrap.addEventListener('pointerdown', e => {
+    panPointerId = e.pointerId;
+    panStart = { x: e.clientX, y: e.clientY };
+    panScrollStart = { left: area.scrollLeft, top: area.scrollTop };
+    wrap.setPointerCapture?.(e.pointerId);
+    wrap.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+  wrap.addEventListener('pointermove', e => {
+    if (e.pointerId !== panPointerId) return;
+    area.scrollLeft = panScrollStart.left - (e.clientX - panStart.x);
+    area.scrollTop = panScrollStart.top - (e.clientY - panStart.y);
+  });
+  function endPan(e) {
+    if (e.pointerId !== panPointerId) return;
+    panPointerId = null;
+    wrap.style.cursor = 'grab';
+  }
+  wrap.addEventListener('pointerup', endPan);
+  wrap.addEventListener('pointercancel', endPan);
 
   // fitWidth/fitHeight = the "whole image visible" size (like before);
   // zoomFactor is relative to that, not to the image's natural resolution.
