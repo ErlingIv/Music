@@ -276,7 +276,7 @@ async function loadTags() {
   );
   allTags = await r.json();
   allTags.sort((a, b) => (a.tag_name || '').localeCompare(b.tag_name || '', 'no'));
-  const HIDDEN_TAGS = ['Music for the Norwegian Royal Family'];
+  const HIDDEN_TAGS = [];
   allTags = allTags.filter(t => !HIDDEN_TAGS.includes(t.tag_name));
 
   const pdFilter = modePdFilter(siteMode);
