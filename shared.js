@@ -10,6 +10,22 @@ function scoreHref(id) {
   return 'score.html?id=' + id;
 }
 
+// Creates the <meta name="description"> tag if the page doesn't already have
+// one (it should, as a static fallback, but this covers pages that don't),
+// then updates its content once real data has loaded. Search engines index
+// whatever's in the DOM after JS runs, but the static fallback in <head>
+// still matters for the brief window before that / for any crawler that
+// doesn't execute JS at all.
+function setMetaDescription(text) {
+  let tag = document.querySelector('meta[name="description"]');
+  if (!tag) {
+    tag = document.createElement('meta');
+    tag.setAttribute('name', 'description');
+    document.head.appendChild(tag);
+  }
+  tag.setAttribute('content', text);
+}
+
 function lifespan(born, died, diedUncertain) {
   const uncertain = (diedUncertain === 'yes' || diedUncertain === true);
   if (!born && !died) return '';

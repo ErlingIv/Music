@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /musikk_editor.html
+Disallow: /linkfix.html
+Disallow: /index-copyright.html
+Disallow: /composer-copyright.html
+Disallow: /score-copyright.html
+Disallow: /musikk-grid-copyright.html
+
+Sitemap: https://erlingiv.github.io/Music/sitemap.xml
