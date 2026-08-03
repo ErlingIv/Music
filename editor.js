@@ -2337,16 +2337,18 @@ async function saveIllustratorCropPerson() {
   btn.disabled = true;
   msgEl.textContent = 'Lagrer…';
   msgEl.className = 'msg';
+  let personId = null;
+  let photoUrl = null;
   try {
     const blob = await cropImageToBlob(img, icpState.cropBox);
 
     // 1. Create the person row first, so we have a person_id for the filename.
     const person = await post('person', { first_name: firstName, last_name: lastName });
-    const personId = person?.person_id;
+    personId = person?.person_id;
     if (!personId) throw new Error('Kunne ikke opprette person.');
 
     // 2. Upload the crop as that person's photo.
-    await uploadAndSetPersonPhoto(personId, blob);
+    photoUrl = await uploadAndSetPersonPhoto(personId, blob);
 
     // 3. Reassign this specific illustrator credit to the new person.
     await patch('composition_person', `id=eq.${icpState.compositionPersonId}`, { person_id: personId, credited_as: null });
@@ -2356,6 +2358,21 @@ async function saveIllustratorCropPerson() {
     const currentPersonId = document.getElementById('p_personId').value;
     if (currentPersonId) await loadPersonCompositions(currentPersonId);
   } catch (err) {
+    // If person creation (or the photo upload) already succeeded before a
+    // later step failed - e.g. this final PATCH, on a network blip - retrying
+    // by clicking "Lagre ny person" again would otherwise create a *second*
+    // person+photo rather than reusing or replacing the first, leaving an
+    // orphaned duplicate with 0 credits behind (see person_id 2461, "unclear
+    // initials", August 2026). Roll back what already committed so a retry
+    // starts clean.
+    if (personId) {
+      try {
+        if (photoUrl) await deletePersonPhotoFromStorage(extractPhotoStoragePath(photoUrl));
+        await del('person', `person_id=eq.${personId}`);
+      } catch (cleanupErr) {
+        console.warn('Rollback of partially-created illustrator person failed:', cleanupErr);
+      }
+    }
     msgEl.textContent = 'Feil: ' + err.message;
     msgEl.className = 'msg error';
   } finally {
