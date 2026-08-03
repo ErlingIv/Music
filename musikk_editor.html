@@ -1199,7 +1199,13 @@
     window.__SUPABASE_KEY__ = key;
     overlay.remove();
     const s = document.createElement('script');
-    s.src = 'editor.js';
+    // Cache-bust on every load: the saved-key path (below) skips the login
+    // screen entirely on repeat visits, so without this a browser (iPad
+    // Safari in particular) can keep serving a stale cached editor.js across
+    // sessions indefinitely, silently missing fixes pushed after the last
+    // real cache refresh - e.g. a save that fully succeeds but shows no
+    // confirmation because the running copy predates that fix.
+    s.src = 'editor.js?v=' + Date.now();
     document.body.appendChild(s);
   }
 
