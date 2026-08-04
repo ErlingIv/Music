@@ -3282,6 +3282,12 @@ async function uploadPersonPhoto(input) {
     switchTab('edit');
     loadEditForm(parseInt(editId));
   }
+  // Support both ?person=ID (hosted) and #person=ID (local file://)
+  const personId = p.get('person') || h.get('person');
+  if (personId) {
+    switchTab('person');
+    loadPersonForm(parseInt(personId));
+  }
 })();
 
 // ── Arbeidsliste ──────────────────────────────────────────────────────────────

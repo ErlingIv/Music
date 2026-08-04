@@ -397,11 +397,13 @@ Data source: `composition_person` table.
 - Python 3.12.6 — command is `python` (not `python3`, which is not available on this machine)
 - Installed: openpyxl, curl_cffi, selenium, beautifulsoup4, requests, thefuzz
 - Node.js v24.14.0
+- Any script that `print()`s person/composer names or other Nordic-language text must start with `sys.stdout.reconfigure(encoding="utf-8", errors="replace")` (see `nationality_review.py`) — Windows' default cp1252 console codepage otherwise renders Norwegian/Danish æ/ø/å and Swedish ä/ö/å as `�`. This is a **display-only** artifact of the terminal, not file corruption — files written via `openpyxl`/`open(..., encoding='utf-8')` are unaffected. Don't conflate the two: before concluding a Nordic letter is wrong in the actual data, check the raw stored value (e.g. a byte-level `curl` dump of the Supabase row) rather than trusting a terminal print.
 
 ## Preferred Working Method
 
 - Database changes: use Supabase SQL editor directly (not curl/bash)
 - File editing: Python string replacement (`encoding='utf-8'`) for files with Norwegian Unicode characters when `str_replace` fails
+- **Preserve Nordic letters exactly in all database selection/reporting tasks** — Norwegian/Danish æ/ø/å AND Swedish ä/ö/å (the person table includes plenty of Swedish composers, e.g. via the `"Nordic" composers` sheet — see Sheets status table). Any script that reads names out of Supabase and writes them to a file (Excel, CSV, txt) must use explicit UTF-8 (`openpyxl` does this by default; plain `open()` needs `encoding='utf-8'`). Note ø and ö are visually similar but not interchangeable — ø is Norwegian/Danish, ö is Swedish/German/Finnish; don't "fix" one into the other without checking which language the name actually is. Found August 2026: person_id 1916 ("Fred A. Fredhøi", Norwegian) has `last_name` stored as "Fredhöi" (ö) in the live DB, confirmed via a raw byte-level Supabase fetch — a genuine pre-existing data typo, not a script/encoding bug. Worth a broader one-off scan for ö-where-ø-expected typos in Norwegian surnames if this pattern shows up again.
 - Files uploaded directly to GitHub via web UI — no build step
 - Both this file and in-session memory must be updated when schema/architecture changes — they can drift independently
 
