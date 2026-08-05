@@ -391,6 +391,7 @@ Data source: `composition_person` table.
 1. Analytics/visit tracking via `page_view` table (owner-filtering via `localStorage` `is_owner` flag + `?owner=true` param) — deferred
 1. Private draft visibility (`musescore_visibility` column or `is_private_draft` boolean) — paused
 1. Domain name for the site — `oldmusic.com` taken/expensive; `oldmusic.uk` / `oldemusic.com` considered, not decided
+1. Add `ON DELETE CASCADE` to `composition_person.composition_id`'s foreign key (currently no cascade — every composition-delete path in `editor.js` has to remember to manually `del('composition_person', ...)` first, and an older/missed one already left 290 orphaned rows behind, found August 2026 after they caused the Person tab's delete-guard count to disagree with the KOMPOSISJONER (N) panel count — see `fetchPersonCompositionRows()`; cleanup SQL provided to the user, run status unconfirmed). Cascade would make this class of orphan structurally impossible instead of relying on app-level discipline.
 
 ## Python Environment (Windows PC)
 
