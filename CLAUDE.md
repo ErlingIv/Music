@@ -88,6 +88,7 @@ GRANT SELECT ON public.new_table TO anon, authenticated;
 - died, died_uncertain (**boolean**)
 - gender (text) — "M" / "F"
 - nationality (text, ISO code, stored **lowercase**) — many non-Norwegian composers not yet filled in
+- nationality_uncertain (boolean, DEFAULT false) — flags cases where `nationality` was inferred from the person's name pattern rather than confirmed via `bio_url`/`bio_source`
 - birth_country (text)
 - birth_country_primary (boolean, DEFAULT false) — supports dual-nationality display
 - photo_url (text)

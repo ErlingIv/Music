@@ -1646,6 +1646,7 @@ async function loadPersonForm(personId) {
   document.getElementById('p_died').value             = p.died       || '';
   document.getElementById('p_died_uncertain').checked = (p.died_uncertain === 'yes' || p.died_uncertain === true);
   document.getElementById('p_nationality').value     = p.nationality   || '';
+  document.getElementById('p_nationality_uncertain').checked = (p.nationality_uncertain === true);
   document.getElementById('p_birth_country').value          = p.birth_country || '';
   document.getElementById('p_birth_country_primary').checked = (p.birth_country_primary === true);
   document.getElementById('p_pseudonym').value       = p.pseudonym     || '';
@@ -1786,6 +1787,7 @@ async function savePerson() {
       died:                 parseInt(document.getElementById('p_died').value) || null,
       died_uncertain:       document.getElementById('p_died_uncertain').checked,
       nationality,
+      nationality_uncertain: document.getElementById('p_nationality_uncertain').checked,
       birth_country,
       birth_country_primary,
       pseudonym:            document.getElementById('p_pseudonym').value.trim() || null,
@@ -2483,6 +2485,7 @@ async function forceAddPerson(btn) {
       born:             parseInt(document.getElementById('np_born').value) || null,
       died:             parseInt(document.getElementById('np_died').value) || null,
       nationality,
+      nationality_uncertain: false,
       birth_country,
       birth_country_primary,
       gender:           gender || null,
@@ -2529,6 +2532,7 @@ async function addNewPerson() {
       born:                parseInt(document.getElementById('np_born').value) || null,
       died:                parseInt(document.getElementById('np_died').value) || null,
       nationality,
+      nationality_uncertain: false,
       birth_country,
       gender:              gender || null,
       bio_url:             document.getElementById('np_bioUrl').value.trim() || null,

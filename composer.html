@@ -278,7 +278,7 @@ async function load() {
   try {
     // 1. Fetch person
     const pR = await fetch(
-      `${SUPABASE_URL}/rest/v1/person?person_id=eq.${personId}&select=person_id,first_name,last_name,born,died,died_uncertain,nationality,birth_country,birth_country_primary,gender,bio_url,bio_text,pseudonym,photo_url`,
+      `${SUPABASE_URL}/rest/v1/person?person_id=eq.${personId}&select=person_id,first_name,last_name,born,died,died_uncertain,nationality,nationality_uncertain,birth_country,birth_country_primary,gender,bio_url,bio_text,pseudonym,photo_url`,
       { headers: H }
     );
     const person = (await pR.json())[0];
@@ -354,7 +354,7 @@ async function load() {
     // ── Render ──────────────────────────────────────────────────────────────
 
     const years  = lifespan(person.born, person.died, person.died_uncertain);
-    const flag   = renderFlags(person.nationality, person.birth_country, person.birth_country_primary);
+    const flag   = renderFlags(person.nationality, person.birth_country, person.birth_country_primary, person.nationality_uncertain);
     const female = person.gender === 'F';
 
     // Role switcher: only show if person appears in multiple roles

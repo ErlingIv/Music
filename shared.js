@@ -40,20 +40,29 @@ function codeToFlag(code) {
     .map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('');
 }
 
-function renderFlags(nationality, birthCountry, birthCountryPrimary) {
+function renderFlags(nationality, birthCountry, birthCountryPrimary, nationalityUncertain) {
   const bcp    = (birthCountryPrimary === true);
   const prime  = bcp && birthCountry ? birthCountry : nationality;
   const second = bcp && birthCountry ? nationality  : birthCountry;
   const pFlag  = codeToFlag(prime);
   if (!pFlag) return '';
+  let out = pFlag;
   if (second && second !== prime) {
     const sFlag = codeToFlag(second);
     if (sFlag) {
       const title = bcp ? 'Karriereland: ' : 'Born: ';
-      return pFlag + '<span style="font-size:0.65em;vertical-align:super" title="' + title + second + '">' + sFlag + '</span>';
+      out = pFlag + '<span style="font-size:0.65em;vertical-align:super" title="' + title + second + '">' + sFlag + '</span>';
     }
   }
-  return pFlag;
+  // nationality_uncertain flags cases where the career-country flag was
+  // inferred from the name rather than confirmed — fade the flag itself and
+  // add a small "?" badge, both carrying an explanatory tooltip.
+  if (nationalityUncertain === true) {
+    const tip = 'Nasjonalitet antatt ut fra navn, ikke bekreftet';
+    return '<span style="opacity:0.5" title="' + tip + '">' + out + '</span>'
+         + '<sup style="font-size:0.6em" title="' + tip + '">?</sup>';
+  }
+  return out;
 }
 
 function wordCount(text) {
