@@ -1675,8 +1675,8 @@ async function loadPersonForm(personId) {
   deleteBtn.title    = 'Laster…';
   countSpan.textContent = '';
   try {
-    const cc = await get(`/composition_person?person_id=eq.${p.person_id}&select=composition_id`);
-    const count = cc.length;
+    const comps = await fetchPersonCompositionRows(p.person_id);
+    const count = comps.length;
     if (count === 0) {
       deleteBtn.disabled = false;
       deleteBtn.title    = 'Slett denne personen';
@@ -1806,6 +1806,26 @@ async function savePerson() {
   document.getElementById('personMsg').scrollIntoView({behavior:'smooth',block:'center'});
 }
 
+// Fetches the compositions `personId` is credited on, deduped by
+// composition_id and filtered to compositions that still exist. Two things
+// make a naive `composition_person` count wrong: (1) a person can carry more
+// than one role (e.g. Composer and Arranger) on the same composition, which
+// must count once, not twice; (2) composition_person has no ON DELETE CASCADE
+// on composition_id, so a removed composition can leave an orphaned
+// composition_person row behind, which must not count at all. This is the
+// single source of truth for "how many compositions is this person credited
+// on" — used by both the delete-guard count and the composition list panel,
+// so the two can't drift apart the way they did before (guard counted raw
+// composition_person rows; panel counted deduped, existing compositions).
+async function fetchPersonCompositionRows(personId) {
+  const cc = await get(`/composition_person?person_id=eq.${personId}&select=id,composition_id,role&limit=200`);
+  if (!cc.length) return [];
+  const ids = cc.map(r => r.composition_id).join(',');
+  const cpMap = Object.fromEntries(cc.map(r => [r.composition_id, r]));
+  const comps = await get(`/composition?composition_id=in.(${ids})&select=composition_id,title,year_composed,public_domain,musescore_link,approved`);
+  return comps.map(c => ({ ...c, role: cpMap[c.composition_id].role, cpId: cpMap[c.composition_id].id }));
+}
+
 async function loadPersonCompositions(personId) {
   const container = document.getElementById('personCompositions');
   container.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Laster komposisjoner…</div>';
@@ -1814,17 +1834,15 @@ async function loadPersonCompositions(personId) {
   // placeholder ("Only Initials", "H.G. Illustrator", etc. — see naming
   // convention) rather than a distinct, already-identified individual.
   const isPlaceholder = document.getElementById('p_lastName').value.trim() === 'Illustrator';
-  const cc = await get(`/composition_person?person_id=eq.${personId}&select=id,composition_id,role&limit=200`);
-  if (!cc.length) { container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:0.5rem 0">Ingen komposisjoner funnet.</div>'; return; }
-  const ids = cc.map(r => r.composition_id).join(',');
-  const cpMap = Object.fromEntries(cc.map(r => [r.composition_id, r]));
+  const rows = await fetchPersonCompositionRows(personId);
+  if (!rows.length) { container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:0.5rem 0">Ingen komposisjoner funnet.</div>'; return; }
+  const ids = rows.map(c => c.composition_id).join(',');
   const scores = await get(`/score?composition_id=in.(${ids})&select=composition_id,frontpage_url`);
   const frontpageMap = {};
   scores.forEach(s => { if (s.frontpage_url && !frontpageMap[s.composition_id]) frontpageMap[s.composition_id] = s.frontpage_url; });
-  const comps = (await get(`/composition?composition_id=in.(${ids})&select=composition_id,title,year_composed,public_domain,musescore_link,approved`))
-    .map(c => ({ ...c, role: cpMap[c.composition_id].role, cpId: cpMap[c.composition_id].id, frontpageUrl: frontpageMap[c.composition_id] || null }))
+  const comps = rows
+    .map(c => ({ ...c, frontpageUrl: frontpageMap[c.composition_id] || null }))
     .sort((a,b) => (a.title||'').localeCompare(b.title||''));
-  if (!comps.length) { container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:0.5rem 0">Ingen komposisjoner funnet.</div>'; return; }
   container.innerHTML = `
     <div class="card">
       <div class="card-title">Komposisjoner (${comps.length})</div>
