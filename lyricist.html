@@ -200,6 +200,7 @@
 const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
+function fullName(p) { return [p.first_name, p.last_name].filter(Boolean).join(' '); }
 
 const FLAGS = { NO:'🇳🇴', SE:'🇸🇪', DK:'🇩🇰', FI:'🇫🇮', IS:'🇮🇸',
                 DE:'🇩🇪', US:'🇺🇸', FR:'🇫🇷', GB:'🇬🇧', IT:'🇮🇹',
@@ -224,7 +225,7 @@ async function load() {
     );
     const person = (await pR.json())[0];
     if (!person) throw new Error('Composer not found');
-    document.title = `${person.first_name} ${person.last_name} — Norske Musikknoter`;
+    document.title = `${fullName(person)} — Norske Musikknoter`;
 
     // 2. Fetch composition_ids for this composer
     const ccR = await fetch(
@@ -262,7 +263,7 @@ async function load() {
       <div class="composer-hero">
         <div class="hero-top">
           <div>
-            <h1 class="composer-name">${person.first_name} ${person.last_name} ${flag}</h1>
+            <h1 class="composer-name">${fullName(person)} ${flag}</h1>
             ${years ? `<p class="composer-dates">${years}</p>` : ''}
             <div class="badges">
               ${female ? '<span class="badge badge-female">♀ Female composer</span>' : ''}

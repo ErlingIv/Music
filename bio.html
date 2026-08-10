@@ -179,6 +179,7 @@ document.getElementById('siteNameLink').textContent = SITE_NAME;
 const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
+function fullName(p) { return [p.first_name, p.last_name].filter(Boolean).join(' '); }
 
 const params   = new URLSearchParams(window.location.search);
 const personId = params.get('id');
@@ -224,12 +225,12 @@ async function load() {
     );
     const person = (await pR.json())[0];
     if (!person) throw new Error('Person not found');
-    document.title = `${person.first_name} ${person.last_name} — Biography — ${SITE_NAME}`;
+    document.title = `${fullName(person)} — Biography — ${SITE_NAME}`;
 
     if (!person.bio_text) {
       el.innerHTML = `
         <p class="error-state">No biography text is available for this person yet.</p>
-        <a class="composer-link-back" href="composer.html?id=${personId}${modeParam}">← Back to ${person.first_name} ${person.last_name}</a>`;
+        <a class="composer-link-back" href="composer.html?id=${personId}${modeParam}">← Back to ${fullName(person)}</a>`;
       return;
     }
 
@@ -240,7 +241,7 @@ async function load() {
         ${person.photo_url ? `<a href="${person.photo_url}" target="_blank" rel="noopener noreferrer" title="View full photo" style="display:contents"><img src="${person.photo_url}" alt="" class="bio-photo"></a>` : ''}
         <div>
           <div class="bio-eyebrow">Biography</div>
-          <h1 class="bio-name">${person.first_name} ${person.last_name}</h1>
+          <h1 class="bio-name">${fullName(person)}</h1>
           ${years ? `<p class="bio-dates">${years}</p>` : ''}
         </div>
       </div>
@@ -248,7 +249,7 @@ async function load() {
 
       <article class="bio-article">${renderArticle(person.bio_text)}</article>
 
-      <a class="composer-link-back" href="composer.html?id=${personId}${modeParam}">← Back to ${person.first_name} ${person.last_name}</a>
+      <a class="composer-link-back" href="composer.html?id=${personId}${modeParam}">← Back to ${fullName(person)}</a>
     `;
   } catch (e) {
     el.innerHTML = `<p class="error-state">Error: ${e.message}</p>`;

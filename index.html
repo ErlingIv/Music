@@ -1102,7 +1102,7 @@ function composerCard(c, sec) {
   const tier = n >= 20 ? 'tier-4' : n >= 6 ? 'tier-3' : n >= 2 ? 'tier-2' : 'tier-1';
   return `
     <a class="composer-card ${tier}" href="${composerHref(c.person_id, '', sec)}">
-      <div class="composer-name">${c.last_name}, ${c.first_name} ${flag}</div>
+      <div class="composer-name">${[c.last_name, c.first_name].filter(Boolean).join(', ')} ${flag}</div>
       <div class="composer-meta">
         ${years ? `<span>${years}</span>` : ''}
         ${female}${media}

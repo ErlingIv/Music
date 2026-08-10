@@ -338,7 +338,7 @@ async function load() {
       );
       const p = (await pR.json())[0];
       if (p) {
-        const displayName = row.credited_as || `${p.first_name} ${p.last_name}`;
+        const displayName = row.credited_as || [p.first_name, p.last_name].filter(Boolean).join(' ');
         const years = lifespan(p.born, p.died, p.died_uncertain);
         const yearsStr = years ? ` <span style="color:var(--muted);font-size:0.88rem">(${years})</span>` : '';
         composerDisplayParts.push(`<a class="composer-link" href="composer.html?id=${p.person_id}${modeParam()}">${displayName}</a>${yearsStr}`);
@@ -361,7 +361,7 @@ async function load() {
       );
       const p = (await pR.json())[0];
       if (p) {
-        const displayName = row.credited_as || `${p.first_name} ${p.last_name}`;
+        const displayName = row.credited_as || [p.first_name, p.last_name].filter(Boolean).join(' ');
         const years = lifespan(p.born, p.died, p.died_uncertain);
         const yearsStr = years ? ` <span style="color:var(--muted);font-size:0.88rem">(${years})</span>` : '';
         const line = `<a class="composer-link" href="composer.html?id=${p.person_id}&role=Lyricist${modeParam()}">${displayName}</a>${yearsStr}`;
@@ -378,7 +378,7 @@ async function load() {
           );
           const tp = (await tR.json())[0];
           if (tp) {
-            const tDisplayName = tRow.credited_as || `${tp.first_name} ${tp.last_name}`;
+            const tDisplayName = tRow.credited_as || [tp.first_name, tp.last_name].filter(Boolean).join(' ');
             const tYears = lifespan(tp.born, tp.died, tp.died_uncertain);
             const tYearsStr = tYears ? ` <span style="color:var(--muted);font-size:0.88rem">(${tYears})</span>` : '';
             translatorLinesAll.push(`translated by <a class="composer-link" href="composer.html?id=${tp.person_id}&role=Translator${modeParam()}">${tDisplayName}</a>${tYearsStr}`);
@@ -400,7 +400,7 @@ async function load() {
       );
       const p = (await pR.json())[0];
       if (p) {
-        const displayName = row.credited_as || `${p.first_name} ${p.last_name}`;
+        const displayName = row.credited_as || [p.first_name, p.last_name].filter(Boolean).join(' ');
         const years = lifespan(p.born, p.died, p.died_uncertain);
         const yearsStr = years ? ` <span style="color:var(--muted);font-size:0.88rem">(${years})</span>` : '';
         illustratorDisplayParts.push(`<span style="white-space:nowrap"><a class="composer-link" href="composer.html?id=${p.person_id}&role=Illustrator${modeParam()}">${displayName}</a>${yearsStr}</span>`);
