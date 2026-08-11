@@ -33,6 +33,17 @@ body { font-family: 'Libre Franklin', 'Calibri', 'Segoe UI', sans-serif; font-si
 #reset-sort { font-size: 11px; padding: 2px 8px; background: #fff; border: 1px solid #bbb; border-radius: 2px; cursor: pointer; color: #555; display: none; font-family: inherit; }
 #reset-sort:hover { background: #f0f0f0; }
 
+/* ── Mode switch (Public Domain / Copyright) ── */
+#mode-switch-wrap { display: inline-flex; align-items: center; gap: 0.5em; margin-left: auto; }
+.mode-switch-label { font-size: 11px; color: #888; cursor: pointer; user-select: none; }
+.mode-switch-label.active { color: #1a1a1a; font-weight: 600; }
+.mode-switch { position: relative; display: inline-block; width: 32px; height: 17px; }
+.mode-switch input { opacity: 0; width: 0; height: 0; }
+.mode-switch-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #ccc; border-radius: 17px; transition: background 0.15s; }
+.mode-switch-slider::before { content: ''; position: absolute; height: 12px; width: 12px; left: 2px; bottom: 2px; background: #fff; border-radius: 50%; transition: transform 0.15s; }
+.mode-switch input:checked + .mode-switch-slider { background: #4472C4; }
+.mode-switch input:checked + .mode-switch-slider::before { transform: translateX(15px); }
+
 /* ── Grid ── */
 #grid-wrap { flex: 1; overflow: auto; background: #fff; }
 #grid-inner { padding-bottom: 20px; }
@@ -92,7 +103,7 @@ td:first-child { border-left: none; }
 
 <div id="titlebar">
   <h1>Music Database</h1>
-  <span class="sub">Published on MuseScore · Public domain</span>
+  <span class="sub" id="sub-label">Published on MuseScore · Public domain</span>
   <span id="count-display">Loading…</span>
 </div>
 
@@ -105,6 +116,18 @@ td:first-child { border-left: none; }
   </div>
   <span id="sort-info"></span>
   <button id="reset-sort" onclick="resetSort()">Reset sort</button>
+  <div id="mode-switch-wrap" title="Switch between public domain and copyright-protected scores">
+    <span class="mode-switch-label active" id="modeLabelPD" role="button" tabindex="0"
+          onclick="switchSiteMode('pd')"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchSiteMode('pd')}">Public Domain</span>
+    <label class="mode-switch">
+      <input type="checkbox" id="modeToggle" aria-label="Toggle between public domain and copyright mode" onchange="switchSiteMode(this.checked ? 'copyright' : 'pd')">
+      <span class="mode-switch-slider"></span>
+    </label>
+    <span class="mode-switch-label" id="modeLabelCopyright" role="button" tabindex="0"
+          onclick="switchSiteMode('copyright')"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchSiteMode('copyright')}">Copyright</span>
+  </div>
 </div>
 
 <div id="grid-wrap">
@@ -132,18 +155,23 @@ td:first-child { border-left: none; }
   <span id="status-right">Music Database · Public domain</span>
 </div>
 
+<script src="config.js"></script>
+<script src="shared.js"></script>
 <script>
 var BASE = 'https://tfqnzszyjsdgdeksizel.supabase.co/rest/v1/';
 var KEY  = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
 var NORDIC = ['SE','DK','FI','IS'];
 var NO_ALPHA_TABS = 5;
 
+// ── Site mode: 'pd' (public domain) or 'copyright' ──
+var siteMode = new URLSearchParams(window.location.search).get('mode') === 'copyright' ? 'copyright' : 'pd';
+
 var COLS = [
   { k:'row_num',    l:'#',              w:46,  a:'center', ns:true },
   { k:'title',      l:'Title',          w:270, a:'left' },
   { k:'composer',   l:'Composer',       w:280, a:'left' },
-  { k:'lyricist',   l:'Lyricist',  w:260, a:'left',  ns:true },
-  { k:'year_composed', l:'Year',           w:60,  a:'center', ns:true },
+  { k:'lyricist',   l:'Lyricist',  w:260, a:'left' },
+  { k:'year_composed', l:'Year',           w:60,  a:'center' },
   { k:'notes',      l:'Notes',          w:260, a:'left',  ns:true }
 ];
 
@@ -155,7 +183,7 @@ var sortK = null, sortD = 'asc', selId = null, q = '';
 function apiFetch(table) {
   var results = [];
   function page(offset) {
-    var extra = table === 'composition' ? '&musescore_link=not.is.null' : '';
+    var extra = table === 'composition' ? modeLinkParam(siteMode) : '';
     var url = BASE + table + '?select=*' + extra + '&limit=1000&offset=' + offset;
     return fetch(url, { headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY } })
       .then(function(r) {
@@ -208,9 +236,10 @@ function load() {
       }
     });
 
-    // Only PD
+    // PD mode: public_domain = 'Yes'. Copyright mode: everything else.
     var pdComp = comp.filter(function(c) {
-      return String(c.public_domain || '').toLowerCase() === 'yes';
+      var isPD = String(c.public_domain || '').toLowerCase() === 'yes';
+      return siteMode === 'copyright' ? !isPD : isPD;
     });
 
     allRows = pdComp.map(function(c, i) {
@@ -370,6 +399,7 @@ function switchTab(idx) {
 
 function buildHead() {
   var tr = document.getElementById('hrow');
+  tr.innerHTML = '';
   COLS.forEach(function(col, i) {
     var th = document.createElement('th');
     th.style.width = col.w + 'px';
@@ -542,6 +572,38 @@ function startResize(e, col, th) {
   window.addEventListener('mouseup', up);
 }
 
+// ── Mode switch ──
+function applyModeUI(mode) {
+  document.getElementById('modeToggle').checked = (mode === 'copyright');
+  document.getElementById('modeLabelPD').classList.toggle('active', mode === 'pd');
+  document.getElementById('modeLabelCopyright').classList.toggle('active', mode === 'copyright');
+  var subText = mode === 'copyright' ? 'Published on MuseScore · Copyright' : 'Published on MuseScore · Public domain';
+  document.getElementById('sub-label').textContent = subText;
+  document.getElementById('status-right').textContent = 'Music Database · ' + (mode === 'copyright' ? 'Copyright' : 'Public domain');
+}
+
+function switchSiteMode(mode) {
+  if (mode === siteMode) return;
+  siteMode = mode;
+
+  var newUrl = mode === 'copyright' ? '?mode=copyright' : window.location.pathname;
+  history.replaceState(null, '', newUrl);
+  applyModeUI(mode);
+
+  // Underlying composition set has changed — reset search/sort/selection state.
+  sortK = null; sortD = 'asc'; selId = null; q = '';
+  document.getElementById('search').value = '';
+  document.getElementById('sort-info').textContent = '';
+  document.getElementById('reset-sort').style.display = 'none';
+  closeDetail();
+
+  document.getElementById('grid').style.display = 'none';
+  document.getElementById('errmsg').style.display = 'none';
+  document.getElementById('loading').style.display = '';
+  load();
+}
+
+applyModeUI(siteMode);
 load();
 </script>
 </body>
