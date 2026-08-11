@@ -530,7 +530,7 @@ function personListHtml(persons) {
     var dates = personDates(p);
     var datesSpan = dates ? ' <span class="person-dates">' + escapeHtml(dates) + '</span>' : '';
     var href = safeHref(p.bio_url);
-    return href ? '<a class="person-link" href="' + href + '" target="_blank">' + n + '</a>' + datesSpan : n + datesSpan;
+    return href ? '<a class="person-link" href="' + href + '" target="_blank" rel="noreferrer">' + n + '</a>' + datesSpan : n + datesSpan;
   }).join(', ');
 }
 
@@ -538,7 +538,7 @@ function showDetail(row) {
   document.getElementById('detail').style.display = 'block';
   var titleHref = safeHref(row.musescore_link);
   document.getElementById('detail-title').innerHTML = titleHref
-    ? '<a class="title-link" href="' + titleHref + '" target="_blank">' + escapeHtml(row.title) + ' ↗</a>'
+    ? '<a class="title-link" href="' + titleHref + '" target="_blank" rel="noreferrer">' + escapeHtml(row.title) + ' ↗</a>'
     : escapeHtml(row.title);
   document.getElementById('status-sel').textContent = 'Selected: ' + row.title;
   var h = '';
