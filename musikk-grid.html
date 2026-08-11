@@ -21,6 +21,7 @@ body { font-family: 'Libre Franklin', 'Calibri', 'Segoe UI', sans-serif; font-si
 .tab { padding: 4px 14px 5px; font-size: 11.5px; font-weight: 500; border: 1px solid #ccc; border-bottom: none; border-radius: 3px 3px 0 0; cursor: pointer; background: #e8e8e8; color: #444; margin-top: 4px; white-space: nowrap; transition: background 0.1s; }
 .tab:hover { background: #d8d8d8; }
 .tab.active { background: #ffffff; color: #1a1a1a; font-weight: 600; border-color: #bbb; border-bottom-color: #fff; }
+.tab:focus-visible { outline: 2px solid #4472C4; outline-offset: -2px; }
 .tab-group-sep { width: 10px; }
 
 /* ── Toolbar ── */
@@ -107,7 +108,7 @@ td:first-child { border-left: none; }
   <span id="count-display">Loading…</span>
 </div>
 
-<div id="tabbar"></div>
+<div id="tabbar" role="tablist" aria-label="Composer nationality / letter group"></div>
 
 <div id="toolbar">
   <div id="search-wrap">
@@ -356,14 +357,43 @@ function renderTabs() {
     if (tab.id === 'nordic') {
       var sep = document.createElement('div');
       sep.className = 'tab-group-sep';
+      sep.setAttribute('role', 'presentation');
       bar.appendChild(sep);
     }
     var el = document.createElement('div');
     el.className = 'tab' + (idx === activeTab ? ' active' : '');
     el.textContent = tab.label;
+    el.id = 'tab-' + idx;
+    el.setAttribute('role', 'tab');
+    el.setAttribute('aria-selected', idx === activeTab ? 'true' : 'false');
+    el.setAttribute('tabindex', idx === activeTab ? '0' : '-1');
     el.onclick = (function(i){ return function(){ switchTab(i); }; })(idx);
+    el.onkeydown = (function(i){ return function(e){ onTabKeydown(e, i); }; })(idx);
     bar.appendChild(el);
   });
+}
+
+// Standard ARIA tablist keyboard pattern: Enter/Space activates the focused
+// tab, arrow keys/Home/End move focus (and activate, matching this bar's
+// simple click-to-switch behavior rather than a separate focus-vs-select step).
+function onTabKeydown(e, idx) {
+  var count = tabs.length;
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    switchTab(idx);
+    return;
+  }
+  var next = null;
+  if (e.key === 'ArrowRight') next = (idx + 1) % count;
+  else if (e.key === 'ArrowLeft') next = (idx - 1 + count) % count;
+  else if (e.key === 'Home') next = 0;
+  else if (e.key === 'End') next = count - 1;
+  if (next !== null) {
+    e.preventDefault();
+    switchTab(next);
+    var el = document.getElementById('tab-' + next);
+    if (el) el.focus();
+  }
 }
 
 function switchTab(idx) {
@@ -582,8 +612,12 @@ function switchSiteMode(mode) {
   if (mode === siteMode) return;
   siteMode = mode;
 
-  var newUrl = mode === 'copyright' ? '?mode=copyright' : window.location.pathname;
-  history.replaceState(null, '', newUrl);
+  // Only touch the mode param — preserves any other query params and the hash
+  // instead of blindly replacing the whole URL.
+  var u = new URL(window.location.href);
+  if (mode === 'copyright') u.searchParams.set('mode', 'copyright');
+  else u.searchParams.delete('mode');
+  history.replaceState(null, '', u.pathname + u.search + u.hash);
   applyModeUI(mode);
 
   // Underlying composition set has changed — reset search/sort/selection state.
