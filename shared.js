@@ -23,6 +23,18 @@ function safeHref(url) {
   return escapeHtml(u);
 }
 
+// For a value interpolated into a single-quoted JS string literal that itself
+// sits inside a double-quoted inline onclick="..." HTML attribute (a nested
+// context plain escapeHtml() doesn't cover) — a stray double-quote in the
+// value would otherwise break out of the attribute early.
+function escapeJsAttr(value) {
+  return String(value == null ? '' : value)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 // score.html determines PD vs copyright itself from the composition's own
 // public_domain value, so no mode param is needed here.
 function scoreHref(id) {

@@ -301,14 +301,14 @@ async function loadTags() {
   }
 
   cloud.innerHTML = visibleTags.map(t => {
-    const name = t.tag_name.replace(/'/g, "\\'");
-    const img  = (t.image_url || '').replace(/'/g, "\\'");
+    const name = escapeJsAttr(t.tag_name);
+    const img  = escapeJsAttr(t.image_url || '');
     return `
     <div class="tag-pill" id="tag-pill-${t.tag_id}" role="button" tabindex="0"
-         aria-label="${t.tag_name} — ${countMap[t.tag_id] || 0} works"
+         aria-label="${escapeHtml(t.tag_name)} — ${countMap[t.tag_id] || 0} works"
          onclick="selectTag(${t.tag_id}, '${name}', '${img}')"
          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectTag(${t.tag_id}, '${name}', '${img}')}">
-      ${t.tag_name}
+      ${escapeHtml(t.tag_name)}
       <span class="tag-count" aria-hidden="true">${countMap[t.tag_id] || 0}</span>
     </div>
   `;
@@ -381,12 +381,12 @@ async function selectTag(tagId, tagName, imageUrl) {
   document.getElementById('compList').innerHTML = comps.length
     ? comps.map(comp => {
         const s = scoreMap[comp.composition_id];
-        const composers = (ccMap[comp.composition_id] || []).join(', ') || '—';
+        const composers = escapeHtml((ccMap[comp.composition_id] || []).join(', ') || '—');
         return `
           <a class="comp-row" href="${scoreHref(comp.composition_id)}">
             <div>
-              <div class="comp-title">${comp.title}${comp.approved ? '<span class="godkjent-mark" role="img" aria-label="Curator approved" title="Curator approved"></span>' : ''}</div>
-              <div class="comp-meta">${composers}${comp.year_composed ? ' · ' + comp.year_composed : ''}</div>
+              <div class="comp-title">${escapeHtml(comp.title)}${comp.approved ? '<span class="godkjent-mark" role="img" aria-label="Curator approved" title="Curator approved"></span>' : ''}</div>
+              <div class="comp-meta">${composers}${comp.year_composed ? ' · ' + escapeHtml(comp.year_composed) : ''}</div>
             </div>
             <div class="comp-icons">
               ${s?.pdf_url ? '<span class="icon-badge pdf">PDF</span>' : ''}

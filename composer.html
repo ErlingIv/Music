@@ -376,29 +376,29 @@ async function load() {
       <div class="composer-hero">
         <div class="hero-top">
           <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
-            ${person.photo_url ? `<a href="${person.photo_url}" target="_blank" rel="noopener noreferrer" title="View full photo" style="display:contents"><img src="${person.photo_url}" alt="Photo of ${fullName(person)}" class="composer-photo"></a>` : ''}
+            ${person.photo_url ? `<a href="${safeHref(person.photo_url)}" target="_blank" rel="noopener noreferrer" title="View full photo" style="display:contents"><img src="${safeHref(person.photo_url)}" alt="Photo of ${escapeHtml(fullName(person))}" class="composer-photo"></a>` : ''}
             <div>
-            <h1 class="composer-name">${fullName(person)} ${flag}</h1>
-            ${years ? `<p class="composer-dates">${years}</p>` : ''}
+            <h1 class="composer-name">${escapeHtml(fullName(person))} ${flag}</h1>
+            ${years ? `<p class="composer-dates">${escapeHtml(years)}</p>` : ''}
             <div class="badges" style="margin-top:0.5rem">
               ${female ? '<span class="badge badge-female">♀ Female composer</span>' : ''}
-              ${person.nationality ? `<span class="badge badge-nation">${person.nationality.toUpperCase()}</span>` : ''}
+              ${person.nationality ? `<span class="badge badge-nation">${escapeHtml(person.nationality.toUpperCase())}</span>` : ''}
               ${roleParam === 'Lyricist' && !hasComposer ? '<span class="badge badge-lyricist">Lyricist</span>' : ''}
             </div>
-            ${person.pseudonym ? `<p class="composer-dates" style="font-style:italic;margin-top:0.5rem">Also known as: ${person.pseudonym}</p>` : ''}
+            ${person.pseudonym ? `<p class="composer-dates" style="font-style:italic;margin-top:0.5rem">Also known as: ${escapeHtml(person.pseudonym)}</p>` : ''}
             </div>
           </div>
           ${(person.bio_text || person.bio_url) ? `
           <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-start;gap:0.4rem">
             ${person.bio_url ? `
-            <a class="bio-link" href="${person.bio_url}" target="_blank" rel="noreferrer" style="margin-top:0">
+            <a class="bio-link" href="${safeHref(person.bio_url)}" target="_blank" rel="noreferrer" style="margin-top:0">
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                 <path d="M4.5 1.5H2a1 1 0 00-1 1v7a1 1 0 001 1h7a1 1 0 001-1V7m-3-5.5h4m0 0v4m0-4L5.5 7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
               Biography
             </a>` : ''}
             ${person.bio_text ? `
-            <a class="bio-link" href="bio.html?id=${personId}${siteMode === 'copyright' ? '&mode=copyright' : ''}" style="margin-top:0">
+            <a class="bio-link" href="bio.html?id=${encodeURIComponent(personId)}${siteMode === 'copyright' ? '&mode=copyright' : ''}" style="margin-top:0">
               Read more
             </a>` : ''}
           </div>` : ''}
@@ -435,13 +435,13 @@ function scoreRowHtml(c, scoreMap, tagMap, creditedAsMap) {
   return `
     <a class="score-row" href="${scoreHref(c.composition_id)}" data-has-media="${hasMedia}">
       <div>
-        <div class="score-title">${c.title}${c.approved ? '<span class="godkjent-mark" role="img" aria-label="Curator approved" title="Curator approved"></span>' : ''}</div>
+        <div class="score-title">${escapeHtml(c.title)}${c.approved ? '<span class="godkjent-mark" role="img" aria-label="Curator approved" title="Curator approved"></span>' : ''}</div>
         <div class="score-meta">
-          ${c.year_composed ? `<span>${c.year_composed}</span>` : ''}
-          ${s?.publisher?.publisher_name ? `<span>${s.publisher.publisher_name}</span>` : ''}
-          ${s?.plate_number ? `<span style="font-family:monospace;font-size:0.72rem;opacity:0.85">${s.plate_number}</span>` : ''}
-          ${creditedAsMap[c.composition_id] ? `<span style="font-style:italic;color:var(--muted)">as ${creditedAsMap[c.composition_id]}</span>` : ''}
-          ${(tagMap[c.composition_id]||[]).map(t => `<span style="background:#eaf3ee;color:var(--accent2);border:1px solid #b8d4c0;border-radius:3px;padding:1px 6px;font-size:0.7rem;">${t}</span>`).join('')}
+          ${c.year_composed ? `<span>${escapeHtml(c.year_composed)}</span>` : ''}
+          ${s?.publisher?.publisher_name ? `<span>${escapeHtml(s.publisher.publisher_name)}</span>` : ''}
+          ${s?.plate_number ? `<span style="font-family:monospace;font-size:0.72rem;opacity:0.85">${escapeHtml(s.plate_number)}</span>` : ''}
+          ${creditedAsMap[c.composition_id] ? `<span style="font-style:italic;color:var(--muted)">as ${escapeHtml(creditedAsMap[c.composition_id])}</span>` : ''}
+          ${(tagMap[c.composition_id]||[]).map(t => `<span style="background:#eaf3ee;color:var(--accent2);border:1px solid #b8d4c0;border-radius:3px;padding:1px 6px;font-size:0.7rem;">${escapeHtml(t)}</span>`).join('')}
         </div>
       </div>
       <div class="score-icons">
@@ -505,7 +505,7 @@ function renderScoreItems(compositions, scoreMap, tagMap, creditedAsMap) {
       <div class="opus-group">
         <button type="button" class="opus-group-header" aria-expanded="false"
                 onclick="this.parentElement.classList.toggle('open'); this.setAttribute('aria-expanded', this.parentElement.classList.contains('open'))">
-          <span class="opus-group-title">${item.opus}</span>
+          <span class="opus-group-title">${escapeHtml(item.opus)}</span>
           <span class="opus-group-count">${item.list.length} works</span>
           <span class="opus-group-chevron" aria-hidden="true">▾</span>
         </button>

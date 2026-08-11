@@ -239,9 +239,13 @@ const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 let compMode = 'pd';
 function modeParam() { return compMode === 'copyright' ? '&mode=copyright' : ''; }
 
-// Global linkify — also used by translate.js
+// Global linkify — also used by translate.js. Takes raw text (not yet
+// HTML-escaped or newline-converted — both happen here, in that order, so
+// nothing in the source text can inject markup before the real <br>/<a>
+// tags this function adds are mixed in).
 function linkify(text) {
   if (!text) return '';
+  text = escapeHtml(text).replace(/\n/g, '<br>');
   // Tag links: [tag=ID]name[/tag]
   text = text.replace(/\[tag=(\d+)\]([^\[]*)\[\/tag\]/gi,
     '<a href="tags.html?tag=$1' + modeParam() + '" style="color:var(--accent2);text-decoration:underline;font-size:0.88em;border:1px solid var(--accent2);border-radius:3px;padding:1px 7px;">🏷 $2</a>');
@@ -338,12 +342,13 @@ async function load() {
       );
       const p = (await pR.json())[0];
       if (p) {
-        const displayName = row.credited_as || [p.first_name, p.last_name].filter(Boolean).join(' ');
+        const displayNameRaw = row.credited_as || [p.first_name, p.last_name].filter(Boolean).join(' ');
+        const displayName = escapeHtml(displayNameRaw);
         const years = lifespan(p.born, p.died, p.died_uncertain);
-        const yearsStr = years ? ` <span style="color:var(--muted);font-size:0.88rem">(${years})</span>` : '';
+        const yearsStr = years ? ` <span style="color:var(--muted);font-size:0.88rem">(${escapeHtml(years)})</span>` : '';
         composerDisplayParts.push(`<a class="composer-link" href="composer.html?id=${p.person_id}${modeParam()}">${displayName}</a>${yearsStr}`);
         if (composerName === '—') {
-          composerName = displayName;
+          composerName = displayNameRaw;
           composerYears = years ? `(${years})` : '';
         }
       }
@@ -361,12 +366,13 @@ async function load() {
       );
       const p = (await pR.json())[0];
       if (p) {
-        const displayName = row.credited_as || [p.first_name, p.last_name].filter(Boolean).join(' ');
+        const displayNameRaw = row.credited_as || [p.first_name, p.last_name].filter(Boolean).join(' ');
+        const displayName = escapeHtml(displayNameRaw);
         const years = lifespan(p.born, p.died, p.died_uncertain);
-        const yearsStr = years ? ` <span style="color:var(--muted);font-size:0.88rem">(${years})</span>` : '';
+        const yearsStr = years ? ` <span style="color:var(--muted);font-size:0.88rem">(${escapeHtml(years)})</span>` : '';
         const line = `<a class="composer-link" href="composer.html?id=${p.person_id}&role=Lyricist${modeParam()}">${displayName}</a>${yearsStr}`;
         lyricistDisplayParts.push(line);
-        if (lyricistName === null) lyricistName = displayName;
+        if (lyricistName === null) lyricistName = displayNameRaw;
 
         // Any translators of this specific lyricist's text, on this composition —
         // rendered as their own flush-left line(s) below, not nested under the name.
@@ -378,9 +384,9 @@ async function load() {
           );
           const tp = (await tR.json())[0];
           if (tp) {
-            const tDisplayName = tRow.credited_as || [tp.first_name, tp.last_name].filter(Boolean).join(' ');
+            const tDisplayName = escapeHtml(tRow.credited_as || [tp.first_name, tp.last_name].filter(Boolean).join(' '));
             const tYears = lifespan(tp.born, tp.died, tp.died_uncertain);
-            const tYearsStr = tYears ? ` <span style="color:var(--muted);font-size:0.88rem">(${tYears})</span>` : '';
+            const tYearsStr = tYears ? ` <span style="color:var(--muted);font-size:0.88rem">(${escapeHtml(tYears)})</span>` : '';
             translatorLinesAll.push(`translated by <a class="composer-link" href="composer.html?id=${tp.person_id}&role=Translator${modeParam()}">${tDisplayName}</a>${tYearsStr}`);
           }
         }
@@ -400,9 +406,9 @@ async function load() {
       );
       const p = (await pR.json())[0];
       if (p) {
-        const displayName = row.credited_as || [p.first_name, p.last_name].filter(Boolean).join(' ');
+        const displayName = escapeHtml(row.credited_as || [p.first_name, p.last_name].filter(Boolean).join(' '));
         const years = lifespan(p.born, p.died, p.died_uncertain);
-        const yearsStr = years ? ` <span style="color:var(--muted);font-size:0.88rem">(${years})</span>` : '';
+        const yearsStr = years ? ` <span style="color:var(--muted);font-size:0.88rem">(${escapeHtml(years)})</span>` : '';
         illustratorDisplayParts.push(`<span style="white-space:nowrap"><a class="composer-link" href="composer.html?id=${p.person_id}&role=Illustrator${modeParam()}">${displayName}</a>${yearsStr}</span>`);
       }
     }
@@ -418,7 +424,7 @@ async function load() {
 
     // Render notes: linkify URLs, newlines → <br>
     const notesHtml = comp.musescore_notes
-      ? linkify(comp.musescore_notes.replace(/\n/g, '<br>'))
+      ? linkify(comp.musescore_notes)
       : '';
     // Store raw notes in a JS variable — never inline into HTML attributes
     window._notesRaw = comp.musescore_notes || '';
@@ -426,7 +432,7 @@ async function load() {
     // Kommentar / composition_notes — distinct field from musescore_notes,
     // rendered as its own section (not translatable, no translate button)
     const compNotesHtml = comp.composition_notes
-      ? linkify(comp.composition_notes.replace(/\n/g, '<br>'))
+      ? linkify(comp.composition_notes)
       : '';
 
     // Media tab availability, in display order: Cover (frontpage) is inserted
@@ -442,15 +448,15 @@ async function load() {
 
     el.innerHTML = `
       <div class="title-row">
-        <h1 class="score-title">${comp.title}${comp.opus_number ? ` <span class="meta-opus">${comp.opus_number}</span>` : ''}${comp.approved ? '<span class="godkjent-mark" role="img" aria-label="Curator approved" title="Curator approved"></span>' : ''}</h1>
+        <h1 class="score-title">${escapeHtml(comp.title)}${comp.opus_number ? ` <span class="meta-opus">${escapeHtml(comp.opus_number)}</span>` : ''}${comp.approved ? '<span class="godkjent-mark" role="img" aria-label="Curator approved" title="Curator approved"></span>' : ''}</h1>
         <p class="score-sub">${composerDisplay}</p>
       </div>
 
       <div style="margin-bottom:1.5rem;margin-top:1rem;">
         ${(comp.year_composed || publisherName || score?.plate_number) ? `
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:2rem;flex-wrap:wrap;">
-          <div>${comp.year_composed ? `<p class="meta-year">Composed ${comp.year_composed}</p>` : ''}</div>
-          <div style="text-align:right">${(publisherName || score?.plate_number) ? `<p style="font-size:0.85rem;color:var(--muted)">${publisherName || ''}${publisherName && score?.plate_number ? ' · ' : ''}${score?.plate_number ? 'Pl. ' + score.plate_number : ''}</p>` : ''}</div>
+          <div>${comp.year_composed ? `<p class="meta-year">Composed ${escapeHtml(comp.year_composed)}</p>` : ''}</div>
+          <div style="text-align:right">${(publisherName || score?.plate_number) ? `<p style="font-size:0.85rem;color:var(--muted)">${escapeHtml(publisherName || '')}${publisherName && score?.plate_number ? ' · ' : ''}${score?.plate_number ? 'Pl. ' + escapeHtml(score.plate_number) : ''}</p>` : ''}</div>
         </div>` : ''}
         ${(() => {
           // If there's no dedication, pair illustrator with the lyricist row to save a line.
@@ -467,7 +473,7 @@ async function load() {
           if (comp.dedication || illustratorOnDedicationRow) {
             html += `
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:2rem;flex-wrap:wrap;margin-top:0.3rem;">
-          <div>${comp.dedication ? `<p class="meta-value" style="font-style:italic;color:var(--muted);">Dedicated to ${comp.dedication}</p>` : ''}</div>
+          <div>${comp.dedication ? `<p class="meta-value" style="font-style:italic;color:var(--muted);">Dedicated to ${escapeHtml(comp.dedication)}</p>` : ''}</div>
           <div style="text-align:right">${illustratorOnDedicationRow ? `<p class="meta-value">Illustrator: ${illustratorDisplay}</p>` : ''}</div>
         </div>`;
           }
@@ -511,11 +517,11 @@ async function load() {
                 <p>Score preview isn't available for copyrighted works. To view them you need to be a member on the MuseScore website and subscribed to my (erlingi) group "Eldre populærmusikk".</p>
               </div>` : `
               <div class="score-embed-wrapper" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px;">
-                <iframe src="${comp.musescore_link}/embed" title="MuseScore embedded score preview"
+                <iframe src="${safeHref(comp.musescore_link)}/embed" title="MuseScore embedded score preview"
                   allowfullscreen allow="autoplay; fullscreen">
                 </iframe>
               </div>`}
-              <a class="musescore-link" href="${comp.musescore_link}" target="_blank" rel="noreferrer">
+              <a class="musescore-link" href="${safeHref(comp.musescore_link)}" target="_blank" rel="noreferrer">
                 <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                   <path d="M5.5 2H3a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1V8.5M8 2h4m0 0v4m0-4L6 8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -526,7 +532,7 @@ async function load() {
           ${hasFrontpage ? `
             <div class="media-tab-panel ${firstActive === 'cover' ? 'active' : ''}" id="tab-cover" role="tabpanel" aria-labelledby="mediatab-cover">
               <div class="frontpage-wrapper">
-                <img src="${score.frontpage_url}" alt="Score frontpage${illustratorDisplay ? ' — illustrated by ' + illustratorDisplay.replace(/<[^>]+>/g, '') : ''}" loading="lazy">
+                <img src="${safeHref(score.frontpage_url)}" alt="Score frontpage${illustratorDisplay ? ' — illustrated by ' + illustratorDisplay.replace(/<[^>]+>/g, '') : ''}" loading="lazy">
               </div>
               ${illustratorDisplay ? `<p style="font-size:0.8rem;color:var(--muted);text-align:center;margin-top:-4px;">Illustration: ${illustratorDisplay}</p>` : ''}
             </div>` : ''}
@@ -543,7 +549,7 @@ async function load() {
                   <canvas id="pdf-canvas" style="display:block;margin:0 auto;max-width:100%;" role="img" aria-label="PDF page preview"></canvas>
                 </div>
               </div>
-              <a class="btn" href="${score.pdf_url}" target="_blank" rel="noreferrer">
+              <a class="btn" href="${safeHref(score.pdf_url)}" target="_blank" rel="noreferrer">
                 <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                   <path d="M2 12h10M7 2v7M4 6l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -553,8 +559,8 @@ async function load() {
 
           ${hasAudio ? `
             <div class="media-tab-panel ${firstActive === 'audio' ? 'active' : ''}" id="tab-audio" role="tabpanel" aria-labelledby="mediatab-audio">
-              <audio controls src="${score.mp3_url}" style="width:100%;margin-bottom:0.5rem;">
-                Your browser does not support the audio element. <a href="${score.mp3_url}">Download the audio file</a> instead.
+              <audio controls src="${safeHref(score.mp3_url)}" style="width:100%;margin-bottom:0.5rem;">
+                Your browser does not support the audio element. <a href="${safeHref(score.mp3_url)}" rel="noreferrer">Download the audio file</a> instead.
               </audio>
             </div>` : ''}
         </div>` : ''}
