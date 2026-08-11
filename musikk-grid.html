@@ -156,10 +156,11 @@ td:first-child { border-left: none; }
   <span id="status-right">Music Database · Public domain</span>
 </div>
 
+<script src="config.js"></script>
 <script src="shared.js"></script>
 <script>
-var BASE = 'https://tfqnzszyjsdgdeksizel.supabase.co/rest/v1/';
-var KEY  = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
+var BASE = SUPABASE_URL + '/rest/v1/';
+var KEY  = SUPABASE_KEY;
 var NORDIC = ['SE','DK','FI','IS'];
 var NO_ALPHA_TABS = 5;
 

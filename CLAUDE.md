@@ -65,6 +65,7 @@ Staged filenames are prefixed with the score_id when it's unambiguously known (`
 - **Project ID**: `tfqnzszyjsdgdeksizel`
 - **URL**: `https://tfqnzszyjsdgdeksizel.supabase.co`
 - **Publishable key**: `sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij`
+- **Frontend**: `SUPABASE_URL`/`SUPABASE_KEY` live in `config.js` (added August 2026) — every page loads `config.js` before its own inline script and uses those globals rather than a local literal, so a project migration or key rotation is a one-file edit instead of updating each page separately. `musikk-grid.html` derives its own `BASE`/`KEY` variable names from them (`BASE = SUPABASE_URL + '/rest/v1/'`) rather than being renamed to match, since `BASE` is used throughout that file's existing code. `editor.js` is the one exception — it uses a separately-entered service-role key (`window.__SUPABASE_KEY__`, see Admin editor below), not the publishable key, so it was intentionally left alone.
 - RLS public SELECT policies applied to all tables
 - All API calls use `requests` library with apikey + Authorization headers
 - **Table names are ALL LOWERCASE** in the REST API — never PascalCase
