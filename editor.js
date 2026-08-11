@@ -67,7 +67,18 @@ let unknownPersonsLoaded = false;
 let illustratorsLoaded = false;
 let unverifiedLoaded   = false;
 
+// Which tab was active right before switching into 'edit' (Rediger) — e.g.
+// 'arbeidsliste', 'unverified', 'person'. Lets closeEditPanel()'s "Tilbake"
+// return to wherever the score was actually opened from, instead of always
+// trying to restore Rediger's own search box (which does nothing when the
+// edit form was opened from a different tab entirely — the search box was
+// never touched, so there's nothing to restore).
+let editEntryTab = null;
+
 function switchTab(name) {
+  const currentActive = document.querySelector('.tab-content.active');
+  const currentName = currentActive ? currentActive.id.slice(4) : null; // strip "tab-"
+  if (name === 'edit' && currentName && currentName !== 'edit') editEntryTab = currentName;
   if (name === 'biolinks' && !bioLoaded) loadBioPersons();
   if (name === 'arbeidsliste' && !arbeidslisteLoaded) loadArbeidsliste();
   if (name === 'siste' && !sisteLoaded) loadSiste();
@@ -1473,7 +1484,19 @@ function closeEditPanel() {
   if (dd)  { dd.innerHTML = ''; dd.style.display = 'none'; }
   if (lbl) lbl.textContent = 'Ingen tagger valgt';
 
-  // Restore previous search state
+  // If the edit form was opened from a different tab (Arbeidsliste, Ikke
+  // godkjent, Person, a deep-link, etc.), go back there instead of trying
+  // to restore Rediger's own search box — it was never touched, so there's
+  // nothing to restore and this used to silently do nothing.
+  if (editEntryTab) {
+    const target = editEntryTab;
+    editEntryTab = null;
+    switchTab(target);
+    return;
+  }
+
+  // Otherwise we were already on Rediger (e.g. clicked a different search
+  // result) — restore the previous search state.
   if (window._savedSearch) {
     const s = window._savedSearch;
     setSearchMode(s.mode || 'composer');
