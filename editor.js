@@ -845,7 +845,7 @@ async function performNewEntrySave(data, sourceIsNew) {
       sourceId = sourceIsNew ? await ensureSourceId(data.source) : getSourceId(data.source);
     }
 
-    const pubDomain = data.cat === 'pd' ? 'Yes' : 'No';
+    const pubDomain = data.cat === 'pd' ? 'Yes' : data.cat === 'copyright' ? 'No' : 'Unknown';
     const today = new Date().toISOString().slice(0,10);
 
     const comp = await post('composition', {
@@ -1072,7 +1072,7 @@ async function searchCompositions(q, myToken) {
       ? ` · <span style="cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();openComposerScores(${c._composer_id||'null'},'${escapeJsAttr(c._composer||'')}')">🎵 ${escapeHtml(c._composer)}</span>`
       : '';
     d.innerHTML = `<div class="result-title">${escapeHtml(c.title)}${approvedBadge}${investigateBadge}${underArbeidBadge}</div>
-                   <div class="result-meta">${escapeHtml(c.year_composed || '—')} · ${c.public_domain === 'Yes' ? 'PD' : 'Opphavsrett'}${composerMeta}</div>`;
+                   <div class="result-meta">${escapeHtml(c.year_composed || '—')} · ${c.public_domain === 'Yes' ? 'PD' : c.public_domain === 'No' ? 'Opphavsrett' : 'Ikke vurdert'}${composerMeta}</div>`;
     if (c.approved) d.classList.add('is-approved');
     d.onclick = () => loadEditForm(c.composition_id, c._preferredScoreId);
     container.appendChild(d);
@@ -1114,7 +1114,7 @@ async function loadEditForm(compId, preferredScoreId) {
   document.getElementById('e_compId').value  = compId;
   document.getElementById('e_title').value   = c.title || '';
   document.getElementById('e_year').value    = c.year_composed || '';
-  document.getElementById('e_category').value = c.public_domain === 'Yes' ? 'pd' : 'copyright';
+  document.getElementById('e_category').value = c.public_domain === 'Yes' ? 'pd' : c.public_domain === 'No' ? 'copyright' : 'unknown';
   document.getElementById('e_msLink').value  = c.musescore_link || '';
   document.getElementById('e_opus').value    = c.opus_number || '';
   document.getElementById('e_notes').value       = c.composition_notes || '';
@@ -1314,7 +1314,7 @@ async function saveEdit() {
       title:             document.getElementById('e_title').value.trim(),
       year_composed:     document.getElementById('e_year').value.trim() || null,
       opus_number:       document.getElementById('e_opus').value.trim() || null,
-      public_domain:     cat === 'pd' ? 'Yes' : 'No',
+      public_domain:     cat === 'pd' ? 'Yes' : cat === 'copyright' ? 'No' : 'Unknown',
       musescore_link:    document.getElementById('e_msLink').value.trim() || null,
       composition_notes: document.getElementById('e_notes').value.trim() || null,
       musescore_notes:    document.getElementById('e_msNotes').value.trim() || null,
