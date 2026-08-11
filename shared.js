@@ -4,6 +4,25 @@
 // Load after config.js, before each page's own inline script.
 // ============================================
 
+// Any value pulled from Supabase (titles, names, notes) is admin-entered but
+// not trusted verbatim — without this, "<", "&" or a stray quote in a title
+// or note breaks the surrounding markup, and a crafted value could inject it.
+function escapeHtml(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, function(ch) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+  });
+}
+
+// Only http(s) URLs are allowed into an href — guards against a stray
+// javascript:/data: value (typo'd or otherwise) ever being clickable, and
+// escapes the result so it can't break out of the attribute it's placed in.
+function safeHref(url) {
+  if (!url) return '';
+  var u = String(url).trim();
+  if (!/^https?:\/\//i.test(u)) return '';
+  return escapeHtml(u);
+}
+
 // score.html determines PD vs copyright itself from the composition's own
 // public_domain value, so no mode param is needed here.
 function scoreHref(id) {

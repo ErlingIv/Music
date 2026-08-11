@@ -485,11 +485,12 @@ function render() {
 function personHtml(persons) {
   if (!persons || !persons.length) return '<span class="empty">—</span>';
   return persons.map(function(p) {
-    var name = personName(p);
+    var name = escapeHtml(personName(p));
     var dates = personDates(p);
-    var datesSpan = dates ? ' <span class="person-dates">' + dates + '</span>' : '';
-    if (p.bio_url) {
-      return '<a class="person-link" href="' + p.bio_url + '" target="_blank" rel="noreferrer">' + name + '</a>' + datesSpan;
+    var datesSpan = dates ? ' <span class="person-dates">' + escapeHtml(dates) + '</span>' : '';
+    var href = safeHref(p.bio_url);
+    if (href) {
+      return '<a class="person-link" href="' + href + '" target="_blank" rel="noreferrer">' + name + '</a>' + datesSpan;
     }
     return name + datesSpan;
   }).join('<br>');
@@ -499,16 +500,17 @@ function personHtml(persons) {
 function cellHtml(col, row) {
   if (col.k === 'row_num') return '<span class="rn">' + row.row_num + '</span>';
   if (col.k === 'title') {
-    var t = row.title || '';
-    if (row.musescore_link) return '<a class="title-link" href="' + row.musescore_link + '" target="_blank" rel="noreferrer" title="' + t.replace(/"/g,'&quot;') + '">' + t + '</a>';
+    var t = escapeHtml(row.title || '');
+    var href = safeHref(row.musescore_link);
+    if (href) return '<a class="title-link" href="' + href + '" target="_blank" rel="noreferrer" title="' + t + '">' + t + '</a>';
     return t || '<span class="empty">—</span>';
   }
   if (col.k === 'composer')   return personHtml(row.composers);
   if (col.k === 'lyricist')   return personHtml(row.lyricists);
-  if (col.k === 'year_composed') return row.year_composed || '<span class="empty">—</span>';
+  if (col.k === 'year_composed') return escapeHtml(row.year_composed) || '<span class="empty">—</span>';
   if (col.k === 'notes') {
     if (!row.notes) return '<span class="empty">—</span>';
-    return '<span style="display:block;white-space:normal;word-break:break-word;line-height:1.4">' + row.notes + '</span>';
+    return '<span style="display:block;white-space:normal;word-break:break-word;line-height:1.4">' + escapeHtml(row.notes) + '</span>';
   }
   return '<span class="empty">—</span>';
 }
@@ -524,24 +526,26 @@ function selectRow(row) {
 // comma-joined instead of <br>-joined to fit the detail panel's inline style.
 function personListHtml(persons) {
   return persons.map(function(p) {
-    var n = personName(p);
+    var n = escapeHtml(personName(p));
     var dates = personDates(p);
-    var datesSpan = dates ? ' <span class="person-dates">' + dates + '</span>' : '';
-    return p.bio_url ? '<a class="person-link" href="' + p.bio_url + '" target="_blank">' + n + '</a>' + datesSpan : n + datesSpan;
+    var datesSpan = dates ? ' <span class="person-dates">' + escapeHtml(dates) + '</span>' : '';
+    var href = safeHref(p.bio_url);
+    return href ? '<a class="person-link" href="' + href + '" target="_blank">' + n + '</a>' + datesSpan : n + datesSpan;
   }).join(', ');
 }
 
 function showDetail(row) {
   document.getElementById('detail').style.display = 'block';
-  document.getElementById('detail-title').innerHTML = row.musescore_link
-    ? '<a class="title-link" href="' + row.musescore_link + '" target="_blank">' + row.title + ' ↗</a>'
-    : row.title;
+  var titleHref = safeHref(row.musescore_link);
+  document.getElementById('detail-title').innerHTML = titleHref
+    ? '<a class="title-link" href="' + titleHref + '" target="_blank">' + escapeHtml(row.title) + ' ↗</a>'
+    : escapeHtml(row.title);
   document.getElementById('status-sel').textContent = 'Selected: ' + row.title;
   var h = '';
   if (row.composers.length) h += '<div><span class="dl">Composer: </span>' + personListHtml(row.composers) + '</div>';
   if (row.lyricists.length) h += '<div><span class="dl">Lyricist: </span>' + personListHtml(row.lyricists) + '</div>';
-  if (row.year_composed) h += '<div><span class="dl">Year: </span>' + row.year_composed + '</div>';
-  if (row.notes) h += '<div><span class="dl">Notes: </span>' + row.notes + '</div>';
+  if (row.year_composed) h += '<div><span class="dl">Year: </span>' + escapeHtml(row.year_composed) + '</div>';
+  if (row.notes) h += '<div><span class="dl">Notes: </span>' + escapeHtml(row.notes) + '</div>';
   document.getElementById('detail-fields').innerHTML = h || '<span style="color:#999">No additional info</span>';
 }
 
