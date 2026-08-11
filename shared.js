@@ -35,6 +35,32 @@ function escapeJsAttr(value) {
     .replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// Converts [tag=ID]name[/tag], [url=https://...]text[/url], markdown-style
+// [text](https://...), and bare https?:// URLs into real links. Escapes the
+// input first and converts \n to <br> — both before any of the regex-built
+// <a>/<br> tags are mixed in, so nothing in the source text can inject
+// markup of its own (moved here from score.html, also used by
+// musikk-grid.html's Notes column and by translate.js).
+// tagModeParam is an optional string (e.g. '&mode=copyright') appended to
+// [tag=...] links' href — omit it on a page with no PD/Copyright toggle.
+function linkify(text, tagModeParam) {
+  if (!text) return '';
+  var mp = tagModeParam || '';
+  text = escapeHtml(text).replace(/\n/g, '<br>');
+  text = text.replace(/\[tag=(\d+)\]([^\[]*)\[\/tag\]/gi,
+    '<a href="tags.html?tag=$1' + mp + '" style="color:var(--accent2, #2a5c45);text-decoration:underline;font-size:0.88em;border:1px solid var(--accent2, #2a5c45);border-radius:3px;padding:1px 7px;">🏷 $2</a>');
+  text = text.replace(/\[url=(https?:\/\/[^\]]+)\]([^\[]*)\[\/url\]/gi,
+    '<a href="$1" target="_blank" rel="noreferrer" style="color:var(--accent, #1155CC);text-decoration:underline">$2</a>');
+  // Markdown-style: [text](https://...) — allow one level of parens inside the URL
+  // itself (e.g. Wikipedia titles like Symphony_(1945_song)) without breaking early.
+  text = text.replace(/\[([^\[\]]+)\]\((https?:\/\/(?:[^\s()]|\([^\s()]*\))+)\)/gi,
+    '<a href="$2" target="_blank" rel="noreferrer" style="color:var(--accent, #1155CC);text-decoration:underline">$1</a>');
+  // Plain URLs not already inside an href or BBCode
+  text = text.replace(/(?<!["=])(https?:\/\/[^\s<\[]+)/g,
+    '<a href="$1" target="_blank" rel="noreferrer" style="color:var(--accent, #1155CC);text-decoration:underline">$1</a>');
+  return text;
+}
+
 // score.html determines PD vs copyright itself from the composition's own
 // public_domain value, so no mode param is needed here.
 function scoreHref(id) {

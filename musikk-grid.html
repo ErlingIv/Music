@@ -523,7 +523,8 @@ function cellHtml(col, row) {
   if (col.k === 'year_composed') return escapeHtml(row.year_composed) || '<span class="empty">—</span>';
   if (col.k === 'notes') {
     if (!row.notes) return '<span class="empty">—</span>';
-    return '<span style="display:block;white-space:normal;word-break:break-word;line-height:1.4">' + escapeHtml(row.notes) + '</span>';
+    var tagMp = siteMode === 'copyright' ? '&mode=copyright' : '';
+    return '<span style="display:block;white-space:normal;word-break:break-word;line-height:1.4">' + linkify(row.notes, tagMp) + '</span>';
   }
   return '<span class="empty">—</span>';
 }
@@ -558,7 +559,7 @@ function showDetail(row) {
   if (row.composers.length) h += '<div><span class="dl">Composer: </span>' + personListHtml(row.composers) + '</div>';
   if (row.lyricists.length) h += '<div><span class="dl">Lyricist: </span>' + personListHtml(row.lyricists) + '</div>';
   if (row.year_composed) h += '<div><span class="dl">Year: </span>' + escapeHtml(row.year_composed) + '</div>';
-  if (row.notes) h += '<div><span class="dl">Notes: </span>' + escapeHtml(row.notes) + '</div>';
+  if (row.notes) h += '<div><span class="dl">Notes: </span>' + linkify(row.notes, siteMode === 'copyright' ? '&mode=copyright' : '') + '</div>';
   document.getElementById('detail-fields').innerHTML = h || '<span style="color:#999">No additional info</span>';
 }
 

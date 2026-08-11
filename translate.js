@@ -48,7 +48,7 @@ async function translateNotes(btn) {
 
   if (_translated) {
     // Restore original — run through linkify so links are still clickable
-    el.innerHTML = linkify(originalText);
+    el.innerHTML = linkify(originalText, modeParam());
     btn.textContent = 'Translate to Norwegian';
     _translated = false;
     btn.disabled = false;
@@ -101,7 +101,7 @@ async function translateNotes(btn) {
     });
 
     const translated = applyCorrections(withLinks, corrections);
-    el.innerHTML = linkify(translated);
+    el.innerHTML = linkify(translated, modeParam());
     btn.textContent = 'Show original';
     _translated = true;
   } catch (e) {
