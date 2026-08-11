@@ -520,6 +520,17 @@ function selectRow(row) {
   showDetail(row);
 }
 
+// Each person's own dates follow their own name — mirrors personHtml(), just
+// comma-joined instead of <br>-joined to fit the detail panel's inline style.
+function personListHtml(persons) {
+  return persons.map(function(p) {
+    var n = personName(p);
+    var dates = personDates(p);
+    var datesSpan = dates ? ' <span class="person-dates">' + dates + '</span>' : '';
+    return p.bio_url ? '<a class="person-link" href="' + p.bio_url + '" target="_blank">' + n + '</a>' + datesSpan : n + datesSpan;
+  }).join(', ');
+}
+
 function showDetail(row) {
   document.getElementById('detail').style.display = 'block';
   document.getElementById('detail-title').innerHTML = row.musescore_link
@@ -527,8 +538,8 @@ function showDetail(row) {
     : row.title;
   document.getElementById('status-sel').textContent = 'Selected: ' + row.title;
   var h = '';
-  if (row.composers.length) h += '<div><span class="dl">Composer: </span>' + row.composers.map(function(p){ var n=personName(p); return p.bio_url?'<a class="person-link" href="'+p.bio_url+'" target="_blank">'+n+'</a>':n; }).join(', ') + (row.comp_dates ? ' <span class="person-dates">'+row.comp_dates+'</span>' : '') + '</div>';
-  if (row.lyricists.length) h += '<div><span class="dl">Lyricist: </span>' + row.lyricists.map(function(p){ var n=personName(p); return p.bio_url?'<a class="person-link" href="'+p.bio_url+'" target="_blank">'+n+'</a>':n; }).join(', ') + (row.lyr_dates ? ' <span class="person-dates">'+row.lyr_dates+'</span>' : '') + '</div>';
+  if (row.composers.length) h += '<div><span class="dl">Composer: </span>' + personListHtml(row.composers) + '</div>';
+  if (row.lyricists.length) h += '<div><span class="dl">Lyricist: </span>' + personListHtml(row.lyricists) + '</div>';
   if (row.year_composed) h += '<div><span class="dl">Year: </span>' + row.year_composed + '</div>';
   if (row.notes) h += '<div><span class="dl">Notes: </span>' + row.notes + '</div>';
   document.getElementById('detail-fields').innerHTML = h || '<span style="color:#999">No additional info</span>';
