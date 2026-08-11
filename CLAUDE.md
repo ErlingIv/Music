@@ -435,6 +435,7 @@ node --check <path printed above>
 - A JS syntax error silently breaks ALL interactivity (tabs, buttons, everything stops working)
 - Never deliver an HTML file without passing this check first
 - Always grep score.html for existing variable names before writing any new .js file that shares scope with it (duplicate `const` declarations across script tags/files crash all JS silently)
+- **Any DB-sourced value (or URL query param) inserted into `innerHTML` must go through `escapeHtml()` first, and any DB-sourced URL used as `href`/`src` must go through `safeHref()`** (both in `shared.js`) — added August 2026, applied across every page (`musikk-grid.html`, `index.html`, `composer.html`, `tags.html`, `score.html`/`translate.js`, `bio.html`, `lyricists.html`, `linkfix.html`). `escapeJsAttr()` (also in `shared.js`, mirrors the one already in `editor.js`) is for the narrower case of a DB value interpolated into a single-quoted JS string literal that itself sits inside a double-quoted `onclick="..."` attribute — plain `escapeHtml()` alone doesn't close that nested-context hole. Pages not yet loading `shared.js` need `<script src="shared.js"></script>` added (after `config.js`, before the page's own inline script) before these are available.
 
 ## Refactoring Rules
 
