@@ -275,7 +275,7 @@ function renderSection(sec) {
     Object.entries(groups).map(function(entry) {
       var letter = entry[0], glist = entry[1];
       return '<div class="letter-group">' +
-        '<div class="letter-heading">' + letter + '</div>' +
+        '<div class="letter-heading">' + escapeHtml(letter) + '</div>' +
         '<div class="lyricist-grid">' + glist.map(lyricistCard).join('') + '</div>' +
         '</div>';
     }).join('');
@@ -287,9 +287,9 @@ function lyricistCard(p) {
   var female = p.gender === 'F' ? '<span class="female-badge">♀</span>' : '';
   var mode   = siteMode === 'copyright' ? '&mode=copyright' : '';
   return '<a class="lyricist-card" href="composer.html?id=' + p.person_id + '&role=Lyricist' + mode + '">' +
-    '<div class="lyricist-name">' + (p.last_name || '') + ', ' + (p.first_name || '') + ' ' + flag + '</div>' +
+    '<div class="lyricist-name">' + escapeHtml(p.last_name || '') + ', ' + escapeHtml(p.first_name || '') + ' ' + flag + '</div>' +
     '<div class="lyricist-meta">' +
-      (years ? '<span>' + years + '</span>' : '') +
+      (years ? '<span>' + escapeHtml(years) + '</span>' : '') +
       female +
       '<span class="work-count">' + p.work_count + ' work' + (p.work_count !== 1 ? 's' : '') + '</span>' +
     '</div>' +

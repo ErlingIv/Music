@@ -180,6 +180,7 @@
   <div id="app"><div class="loading-state">Scanning database…</div></div>
 </main>
 
+<script src="shared.js"></script>
 <script>
 const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TxNG1PKrOD3NuBwCKzEfMA_b3-21kij';
@@ -211,17 +212,13 @@ function buildNotesHtml(notes, bareUrls, currentUrl) {
   let pos = 0;
   const sorted = [...bareUrls].sort((a, b) => a.index - b.index);
   for (const { url, index } of sorted) {
-    result += escHtml(notes.slice(pos, index));
+    result += escapeHtml(notes.slice(pos, index));
     const isCurrent = url === currentUrl;
-    result += `<span class="bare-url ${isCurrent ? 'current' : ''}">${escHtml(url)}</span>`;
+    result += `<span class="bare-url ${isCurrent ? 'current' : ''}">${escapeHtml(url)}</span>`;
     pos = index + url.length;
   }
-  result += escHtml(notes.slice(pos));
+  result += escapeHtml(notes.slice(pos));
   return result;
-}
-
-function escHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 function progressHtml() {
@@ -277,7 +274,7 @@ async function init() {
     advance();
   } catch(e) {
     document.getElementById('app').innerHTML =
-      `<div class="loading-state" style="color:#a32d2d">Error: ${escHtml(e.message)}</div>`;
+      `<div class="loading-state" style="color:#a32d2d">Error: ${escapeHtml(e.message)}</div>`;
   }
 }
 
@@ -299,15 +296,15 @@ function renderUrl() {
     ${progressHtml()}
     <div class="card">
       <div class="card-header">
-        <span class="card-title">${escHtml(current.title)}</span>
+        <span class="card-title">${escapeHtml(current.title)}</span>
         <span class="card-id">#${current.composition_id}</span>
         <span class="card-phase">Label URL</span>
       </div>
       <div class="notes-display">${notesHtml}</div>
       <div class="url-section">
         <div class="url-label-row">
-          <span class="url-pill" title="${escHtml(current.url)}">${escHtml(current.url)}</span>
-          <a class="url-open" href="${escHtml(current.url)}" target="_blank">↗ open</a>
+          <span class="url-pill" title="${escapeHtml(current.url)}">${escapeHtml(current.url)}</span>
+          <a class="url-open" href="${safeHref(current.url)}" target="_blank" rel="noreferrer">↗ open</a>
         </div>
         <div class="input-row">
           <input class="label-field" id="labelInput" type="text"
@@ -380,7 +377,7 @@ async function saveUrl() {
     }
   } catch(e) {
     document.getElementById('errMsg').innerHTML =
-      `<div class="error-msg">Save failed: ${escHtml(e.message)}</div>`;
+      `<div class="error-msg">Save failed: ${escapeHtml(e.message)}</div>`;
     btn.disabled = false;
     btn.textContent = 'Save';
   }
@@ -405,13 +402,13 @@ function renderEdit(compositionId, title, notes) {
     ${progressHtml()}
     <div class="card">
       <div class="card-header">
-        <span class="card-title">${escHtml(title)}</span>
+        <span class="card-title">${escapeHtml(title)}</span>
         <span class="card-id">#${compositionId}</span>
         <span class="card-phase edit-phase">Review &amp; edit</span>
       </div>
       <div class="edit-section">
         <div class="edit-label">Full notes text — edit freely before continuing</div>
-        <textarea class="edit-textarea" id="editArea" spellcheck="true">${escHtml(notes)}</textarea>
+        <textarea class="edit-textarea" id="editArea" spellcheck="true">${escapeHtml(notes)}</textarea>
         <div class="edit-actions">
           <button class="btn btn-save" id="editSaveBtn" onclick="saveEdit(${compositionId})">Save &amp; continue</button>
           <button class="btn btn-continue" onclick="advance()">Continue without saving</button>
@@ -443,7 +440,7 @@ async function saveEdit(compositionId) {
     advance();
   } catch(e) {
     document.getElementById('editErrMsg').innerHTML =
-      `<div class="error-msg">Save failed: ${escHtml(e.message)}</div>`;
+      `<div class="error-msg">Save failed: ${escapeHtml(e.message)}</div>`;
     btn.disabled = false;
     btn.textContent = 'Save & continue';
   }

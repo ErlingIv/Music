@@ -174,6 +174,7 @@
 </main>
 
 <script src="config.js"></script>
+<script src="shared.js"></script>
 <script>
 document.getElementById('siteNameLink').textContent = SITE_NAME;
 const SUPABASE_URL = 'https://tfqnzszyjsdgdeksizel.supabase.co';
@@ -186,17 +187,10 @@ const personId = params.get('id');
 const mode     = params.get('mode');
 const modeParam = mode ? `&mode=${encodeURIComponent(mode)}` : '';
 
-function lifespan(born, died, diedUncertain) {
-  const uncertain = (diedUncertain === 'yes' || diedUncertain === true);
-  if (!born && !died) return '';
-  if (born && !died) return String(born);
-  if (!born && died)  return uncertain ? 'after ' + died : String(died);
-  return born + '–' + (uncertain ? 'after ' + died : died);
-}
-
 // Splits on blank lines into blocks. A block starting with "## " becomes a
 // subheading, "# " becomes a heading, otherwise it's a paragraph (single
-// line breaks within it become <br>).
+// line breaks within it become <br>). Escapes each block's text before
+// wrapping it in real markup, so bio_text can't inject HTML of its own.
 function renderArticle(text) {
   if (!text) return '';
   return text
@@ -204,9 +198,9 @@ function renderArticle(text) {
     .map(p => p.trim())
     .filter(Boolean)
     .map(block => {
-      if (block.startsWith('## ')) return `<h3 class="bio-subheading">${block.slice(3).trim()}</h3>`;
-      if (block.startsWith('# '))  return `<h2 class="bio-heading">${block.slice(2).trim()}</h2>`;
-      return `<p>${block.replace(/\n/g, '<br>')}</p>`;
+      if (block.startsWith('## ')) return `<h3 class="bio-subheading">${escapeHtml(block.slice(3).trim())}</h3>`;
+      if (block.startsWith('# '))  return `<h2 class="bio-heading">${escapeHtml(block.slice(2).trim())}</h2>`;
+      return `<p>${escapeHtml(block).replace(/\n/g, '<br>')}</p>`;
     })
     .join('');
 }
@@ -230,7 +224,7 @@ async function load() {
     if (!person.bio_text) {
       el.innerHTML = `
         <p class="error-state">No biography text is available for this person yet.</p>
-        <a class="composer-link-back" href="composer.html?id=${personId}${modeParam}">← Back to ${fullName(person)}</a>`;
+        <a class="composer-link-back" href="composer.html?id=${encodeURIComponent(personId)}${modeParam}">← Back to ${escapeHtml(fullName(person))}</a>`;
       return;
     }
 
@@ -238,18 +232,18 @@ async function load() {
 
     el.innerHTML = `
       <div class="bio-header">
-        ${person.photo_url ? `<a href="${person.photo_url}" target="_blank" rel="noopener noreferrer" title="View full photo" style="display:contents"><img src="${person.photo_url}" alt="" class="bio-photo"></a>` : ''}
+        ${person.photo_url ? `<a href="${safeHref(person.photo_url)}" target="_blank" rel="noopener noreferrer" title="View full photo" style="display:contents"><img src="${safeHref(person.photo_url)}" alt="" class="bio-photo"></a>` : ''}
         <div>
           <div class="bio-eyebrow">Biography</div>
-          <h1 class="bio-name">${fullName(person)}</h1>
-          ${years ? `<p class="bio-dates">${years}</p>` : ''}
+          <h1 class="bio-name">${escapeHtml(fullName(person))}</h1>
+          ${years ? `<p class="bio-dates">${escapeHtml(years)}</p>` : ''}
         </div>
       </div>
-      ${person.bio_source ? `<p class="bio-source"><span>Kilde:</span> ${person.bio_source}</p>` : ''}
+      ${person.bio_source ? `<p class="bio-source"><span>Kilde:</span> ${escapeHtml(person.bio_source)}</p>` : ''}
 
       <article class="bio-article">${renderArticle(person.bio_text)}</article>
 
-      <a class="composer-link-back" href="composer.html?id=${personId}${modeParam}">← Back to ${fullName(person)}</a>
+      <a class="composer-link-back" href="composer.html?id=${encodeURIComponent(personId)}${modeParam}">← Back to ${escapeHtml(fullName(person))}</a>
     `;
   } catch (e) {
     el.innerHTML = `<p class="error-state">Error: ${e.message}</p>`;
