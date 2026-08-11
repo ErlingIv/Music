@@ -155,7 +155,6 @@ td:first-child { border-left: none; }
   <span id="status-right">Music Database · Public domain</span>
 </div>
 
-<script src="config.js"></script>
 <script src="shared.js"></script>
 <script>
 var BASE = 'https://tfqnzszyjsdgdeksizel.supabase.co/rest/v1/';
@@ -183,7 +182,7 @@ var sortK = null, sortD = 'asc', selId = null, q = '';
 function apiFetch(table) {
   var results = [];
   function page(offset) {
-    var extra = table === 'composition' ? modeLinkParam(siteMode) : '';
+    var extra = table === 'composition' ? ('&public_domain=' + modePdFilter(siteMode) + modeLinkParam(siteMode)) : '';
     var url = BASE + table + '?select=*' + extra + '&limit=1000&offset=' + offset;
     return fetch(url, { headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY } })
       .then(function(r) {
@@ -214,12 +213,16 @@ function primeNat(p) {
   return (p.birth_country_primary === true && p.birth_country) ? p.birth_country : (p.nationality || '');
 }
 
+var loadGen = 0;
+
 function load() {
+  var gen = ++loadGen;
   Promise.all([
     apiFetch('composition'),
     apiFetch('composition_person'),
     apiFetch('person')
   ]).then(function(res) {
+    if (gen !== loadGen) return; // a newer load() (mode switch) superseded this one
     var comp = res[0], cp = res[1], ppl = res[2];
 
     var pmap = {};
@@ -236,11 +239,9 @@ function load() {
       }
     });
 
-    // PD mode: public_domain = 'Yes'. Copyright mode: everything else.
-    var pdComp = comp.filter(function(c) {
-      var isPD = String(c.public_domain || '').toLowerCase() === 'yes';
-      return siteMode === 'copyright' ? !isPD : isPD;
-    });
+    // Already scoped to the current mode server-side via modePdFilter (apiFetch's
+    // extra param, above) — same canonical rule shared.js documents for index.html.
+    var pdComp = comp;
 
     allRows = pdComp.map(function(c, i) {
       var composers = cmap[c.composition_id] || [];
@@ -293,6 +294,7 @@ function load() {
     switchTab(0);
 
   }).catch(function(e) {
+    if (gen !== loadGen) return;
     document.getElementById('loading').style.display = 'none';
     var el = document.getElementById('errmsg');
     el.style.display = 'block';
