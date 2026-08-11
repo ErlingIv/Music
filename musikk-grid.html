@@ -185,7 +185,10 @@ var GRID_COLS = 'composition_id,title,musescore_link,year_composed,public_domain
 function apiFetch(table, extra) {
   var results = [];
   function page(offset) {
-    var url = BASE + table + '?select=' + GRID_COLS + (extra || '') + '&limit=1000&offset=' + offset;
+    // order= is required for correct multi-page pagination — without it, Postgres
+    // doesn't guarantee stable row order across repeated LIMIT/OFFSET calls, so
+    // rows could be missed or duplicated once a mode's result set exceeds 1000.
+    var url = BASE + table + '?select=' + GRID_COLS + (extra || '') + '&order=composition_id.asc&limit=1000&offset=' + offset;
     return fetch(url, { headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY } })
       .then(function(r) {
         if (!r.ok) throw new Error(table + ': HTTP ' + r.status);
