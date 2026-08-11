@@ -404,6 +404,7 @@
     <button type="button" class="tab" onclick="switchTab('person')">Person</button>
     <button type="button" class="tab" onclick="switchTab('biolinks')">Bio-lenker</button>
     <button type="button" class="tab" onclick="switchTab('arbeidsliste')">Arbeidsliste</button>
+    <button type="button" class="tab" onclick="switchTab('unverified')">Ikke godkjent</button>
     <button type="button" class="tab" onclick="switchTab('siste')">Siste</button>
     <button type="button" class="tab" onclick="switchTab('publisher')">Forlag</button>
     <button type="button" class="tab" onclick="switchTab('unknown')">Ukjent nasjonalitet</button>
@@ -1046,6 +1047,24 @@
       </div>
     </div>
     <div id="arbeidsListArea"></div>
+  </div>
+
+  <!-- ═══════════════════════ UNVERIFIED (IKKE GODKJENT) TAB ═══════════════════════ -->
+  <div id="tab-unverified" class="tab-content">
+    <div class="card">
+      <div class="card-title" style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+        Ikke godkjent
+        <span id="unvCount" style="background:var(--muted);color:white;border-radius:3px;padding:1px 6px;font-size:0.75rem">…</span>
+        <div style="display:flex;gap:0.5rem;margin-left:auto">
+          <button type="button" class="btn btn-secondary" id="unvBtnPD" onclick="switchUnverifiedMode('pd')" style="font-size:0.82rem;padding:0.3rem 0.9rem;font-weight:700">PD</button>
+          <button type="button" class="btn btn-secondary" id="unvBtnCopyright" onclick="switchUnverifiedMode('copyright')" style="font-size:0.82rem;padding:0.3rem 0.9rem">Copyright</button>
+          <button type="button" class="btn btn-secondary" onclick="unverifiedLoaded=false;loadUnverified()" style="font-size:0.8rem;padding:0.25rem 0.8rem">↺ Last på nytt</button>
+        </div>
+      </div>
+      <p style="font-size:0.85rem;color:var(--muted);margin:0 0 1rem">Ikke-godkjente innføringer for gjeldende modus, gruppert per komponist. Klikk en tittel for å åpne den i Rediger.</p>
+      <div id="unvAlphaBar" class="pub-alpha-bar"></div>
+      <div id="unvListArea"></div>
+    </div>
   </div>
 
   <!-- ═══════════════════════ PUBLISHER TAB ═══════════════════════ -->

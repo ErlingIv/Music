@@ -65,6 +65,7 @@ let sisteLoaded        = false;
 let publisherLoaded    = false;
 let unknownPersonsLoaded = false;
 let illustratorsLoaded = false;
+let unverifiedLoaded   = false;
 
 function switchTab(name) {
   if (name === 'biolinks' && !bioLoaded) loadBioPersons();
@@ -73,6 +74,7 @@ function switchTab(name) {
   if (name === 'publisher' && !publisherLoaded) loadPublishers();
   if (name === 'unknown' && !unknownPersonsLoaded) loadUnknownPersons();
   if (name === 'illustrators' && !illustratorsLoaded) loadIllustratorsTab();
+  if (name === 'unverified' && !unverifiedLoaded) loadUnverified();
   document.querySelectorAll('.tab').forEach(t => {
     t.classList.toggle('active', t.getAttribute('onclick') === `switchTab('${name}')`);
   });
@@ -3467,6 +3469,148 @@ async function toggleUnderArbeid(checkbox, compositionId) {
     checkbox.checked  = false;
     showStatus('Kunne ikke lagre: ' + e.message, 'error');
   }
+}
+
+// ── Ikke godkjent (unverified, by composer) ────────────────────────────────────
+// "Unverified" = composition.approved is not true (false or null) — a
+// separate axis from Arbeidsliste's under_arbeid/to_investigate/mangler
+// categories. Grouped by composer, alphabetical, filtered by the current
+// PD/Copyright mode; clicking a score jumps straight into Rediger.
+
+let unverifiedMode      = 'pd'; // 'pd' | 'copyright'
+let unvActiveLetter     = null;
+let allUnverifiedGroups = []; // [{ person_id, name, lastName, scores: [...] }]
+
+async function loadUnverified() {
+  unverifiedLoaded = true;
+  const alphaBar = document.getElementById('unvAlphaBar');
+  alphaBar.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Laster…</div>';
+  document.getElementById('unvListArea').innerHTML = '';
+
+  try {
+    const pdFilter = unverifiedMode === 'copyright' ? 'neq.Yes' : 'eq.Yes';
+    const comps = await get(`/composition?public_domain=${pdFilter}&or=(approved.eq.false,approved.is.null)&select=composition_id,title,year_composed,musescore_link&order=title&limit=2000`);
+    document.getElementById('unvCount').textContent = comps.length;
+
+    if (!comps.length) {
+      allUnverifiedGroups = [];
+      unvActiveLetter = null;
+      renderUnvAlphaBar();
+      document.getElementById('unvListArea').innerHTML = '<p style="color:var(--muted);font-size:.85rem;padding:0.5rem 0">Ingen ikke-godkjente innføringer i denne modusen.</p>';
+      return;
+    }
+
+    // Composer credits for these compositions, chunked (composition_id list can exceed URL limits)
+    const ids = comps.map(c => c.composition_id);
+    let cpRows = [];
+    for (let i = 0; i < ids.length; i += 200) {
+      const chunk = ids.slice(i, i + 200).join(',');
+      cpRows = cpRows.concat(await get(`/composition_person?composition_id=in.(${chunk})&role=eq.Composer&select=composition_id,person_id`));
+    }
+    const personIds = [...new Set(cpRows.map(r => r.person_id))];
+    let persons = [];
+    for (let i = 0; i < personIds.length; i += 200) {
+      const chunk = personIds.slice(i, i + 200).join(',');
+      persons = persons.concat(await get(`/person?person_id=in.(${chunk})&select=person_id,first_name,last_name`));
+    }
+    const personMap = Object.fromEntries(persons.map(p => [p.person_id, p]));
+    const compMap   = Object.fromEntries(comps.map(c => [c.composition_id, c]));
+
+    const groups = {}; // person_id -> { person, scores }
+    cpRows.forEach(row => {
+      const comp = compMap[row.composition_id];
+      const person = personMap[row.person_id];
+      if (!comp || !person) return;
+      if (!groups[row.person_id]) groups[row.person_id] = { person, scores: [] };
+      groups[row.person_id].scores.push(comp);
+    });
+
+    allUnverifiedGroups = Object.values(groups).map(g => ({
+      person_id: g.person.person_id,
+      name: [g.person.last_name, g.person.first_name].filter(Boolean).join(', ') || '(uten navn)',
+      lastName: g.person.last_name || '',
+      scores: g.scores.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'no')),
+    }));
+
+    // Compositions with no Composer credit at all get their own bucket, sorted last
+    const creditedIds = new Set(cpRows.map(r => r.composition_id));
+    const noComposer = comps.filter(c => !creditedIds.has(c.composition_id));
+    if (noComposer.length) {
+      allUnverifiedGroups.push({
+        person_id: null,
+        name: 'Ukjent komponist',
+        lastName: '￿',
+        scores: noComposer.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'no')),
+      });
+    }
+
+    allUnverifiedGroups.sort((a, b) => a.lastName.localeCompare(b.lastName, 'no'));
+
+    const usedLetters = new Set(allUnverifiedGroups.map(g => (g.lastName || '?')[0]?.toUpperCase()).filter(Boolean));
+    if (!unvActiveLetter || !usedLetters.has(unvActiveLetter)) {
+      unvActiveLetter = [...usedLetters].sort((a, b) => a.localeCompare(b, 'no'))[0] || null;
+    }
+
+    renderUnvAlphaBar();
+    renderUnvList();
+  } catch(e) {
+    alphaBar.innerHTML = `<div style="color:#a03030;font-size:.85rem">Feil: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function switchUnverifiedMode(mode) {
+  document.getElementById('unvBtnPD').style.fontWeight = mode === 'pd' ? '700' : '';
+  document.getElementById('unvBtnCopyright').style.fontWeight = mode === 'copyright' ? '700' : '';
+  if (mode === unverifiedMode) return;
+  unverifiedMode = mode;
+  unvActiveLetter = null;
+  loadUnverified();
+}
+
+function renderUnvAlphaBar() {
+  const alphaBar = document.getElementById('unvAlphaBar');
+  const usedLetters = new Set(allUnverifiedGroups.map(g => (g.lastName || '?')[0]?.toUpperCase()).filter(Boolean));
+  alphaBar.innerHTML = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ'.split('').map(l =>
+    usedLetters.has(l)
+      ? `<div class="pub-alpha-btn${unvActiveLetter === l ? ' active' : ''}" onclick="setUnvLetter('${l}')">${l}</div>`
+      : `<div class="pub-alpha-btn disabled">${l}</div>`
+  ).join('');
+}
+
+function setUnvLetter(letter) {
+  unvActiveLetter = letter;
+  document.querySelectorAll('#unvAlphaBar .pub-alpha-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.trim() === letter);
+  });
+  renderUnvList();
+}
+
+function renderUnvList() {
+  const area = document.getElementById('unvListArea');
+  const filtered = allUnverifiedGroups.filter(g => (g.lastName || '?')[0]?.toUpperCase() === unvActiveLetter);
+
+  if (!filtered.length) {
+    area.innerHTML = '<p style="color:var(--muted);font-size:.85rem;padding:0.5rem 0">Ingen ikke-godkjente innføringer for denne bokstaven.</p>';
+    return;
+  }
+
+  area.innerHTML = filtered.map(g => `
+    <div style="margin-bottom:1.25rem">
+      <div style="font-weight:600;font-size:0.92rem;color:var(--ink);margin-bottom:0.4rem${g.person_id ? ';cursor:pointer' : ''}"
+           ${g.person_id ? `onclick="switchTab('person');loadPersonForm(${g.person_id})"` : ''}>
+        ${escapeHtml(g.name)} <span style="font-weight:400;color:var(--muted);font-size:0.8rem">(${g.scores.length})</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        ${g.scores.map(s => `
+          <div style="display:flex;align-items:center;gap:0.6rem;padding:0.35rem 0.6rem;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:0.85rem"
+               onclick="switchTab('edit');loadEditForm(${s.composition_id})">
+            <span style="flex:1">${escapeHtml(s.title)}</span>
+            <span style="color:var(--muted);font-size:0.78rem">${escapeHtml(s.year_composed || '')}</span>
+            ${s.musescore_link ? '<span style="color:var(--accent2)" title="Har MuseScore-lenke">♪</span>' : ''}
+          </div>`).join('')}
+      </div>
+    </div>
+  `).join('');
 }
 
 // ── Siste innføringer ─────────────────────────────────────────────────────────

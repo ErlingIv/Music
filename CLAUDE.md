@@ -338,7 +338,7 @@ Data source: `composition_person` table.
 
 ### Admin editor (`musikk_editor.html` + `editor.js`)
 
-- Tabs: Ny innføring (new entry), Rediger (edit/search), Siste (last 10 entries), Arbeidsliste (work list), Bio-lenker, Person management
+- Tabs: Ny innføring (new entry), Rediger (edit/search), Siste (last 10 entries), Arbeidsliste (work list), Ikke godkjent (unverified, by composer — added August 2026), Bio-lenker, Person management
 - Login overlay prompts for service-role key, stored in `localStorage`, assigned to `window.__SUPABASE_KEY__`
 - Supports: contributors with `credited_as`, `under_arbeid` flag with amber badge/filter, `has_frontpage`/`ai_frontpage` checkboxes, `year_published`, `musescore_uploaded` auto-date checkbox, photo upload, translator support, dedication/illustrator fields
 - Person tab: `p_bioText` textarea (min-height 16rem, sized for full transcribed articles, not just short notes) saves to `person.bio_text`; `p_bioSource` text input saves to `person.bio_source` (citation, shown on `bio.html`). "+ Ny person" button (`startNewPerson()`) clears the loaded person panel and hands back a blank "add new person" form, without going via "Avbryt". `deletePerson()` checks `composition_person` for the person first and blocks the delete (before `confirm()` even runs) if any compositions are still attached
