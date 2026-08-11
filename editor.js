@@ -3512,7 +3512,7 @@ async function loadUnverified() {
 
   try {
     const pdFilter = unverifiedMode === 'copyright' ? 'neq.Yes' : 'eq.Yes';
-    const comps = await get(`/composition?public_domain=${pdFilter}&or=(approved.eq.false,approved.is.null)&select=composition_id,title,year_composed,musescore_link&order=title&limit=2000`);
+    const comps = await get(`/composition?public_domain=${pdFilter}&musescore_link=not.is.null&or=(approved.eq.false,approved.is.null)&select=composition_id,title,year_composed,musescore_link&order=title&limit=2000`);
     document.getElementById('unvCount').textContent = comps.length;
 
     if (!comps.length) {
