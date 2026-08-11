@@ -1171,8 +1171,12 @@ function switchSiteMode(mode) {
   // history (and bfcache) still points at plain index.html — meaning the
   // phone's native back gesture from a subpage lands back on PD regardless
   // of what was selected here.
-  const newUrl = mode === 'copyright' ? '?mode=copyright' : window.location.pathname;
-  history.replaceState(null, '', newUrl);
+  // Only touch the mode param — preserves any other query params and the hash
+  // instead of blindly replacing the whole URL.
+  const u = new URL(window.location.href);
+  if (mode === 'copyright') u.searchParams.set('mode', 'copyright');
+  else u.searchParams.delete('mode');
+  history.replaceState(null, '', u.pathname + u.search + u.hash);
 
   document.getElementById('modeToggle').checked = (mode === 'copyright');
   document.getElementById('modeLabelPD').classList.toggle('active', mode === 'pd');
