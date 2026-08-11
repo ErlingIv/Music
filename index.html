@@ -1085,7 +1085,7 @@ function renderSection(sec) {
 
   container.innerHTML = Object.entries(groups).map(([letter, list]) => `
     <div class="letter-group" id="letter-${sec}-${letter}">
-      <div class="letter-heading">${letter}</div>
+      <div class="letter-heading">${escapeHtml(letter)}</div>
       <div class="composer-grid">
         ${list.map(c => composerCard(c, sec)).join('')}
       </div>
@@ -1102,9 +1102,9 @@ function composerCard(c, sec) {
   const tier = n >= 20 ? 'tier-4' : n >= 6 ? 'tier-3' : n >= 2 ? 'tier-2' : 'tier-1';
   return `
     <a class="composer-card ${tier}" href="${composerHref(c.person_id, '', sec)}">
-      <div class="composer-name">${[c.last_name, c.first_name].filter(Boolean).join(', ')} ${flag}</div>
+      <div class="composer-name">${escapeHtml([c.last_name, c.first_name].filter(Boolean).join(', '))} ${flag}</div>
       <div class="composer-meta">
-        ${years ? `<span>${years}</span>` : ''}
+        ${years ? `<span>${escapeHtml(years)}</span>` : ''}
         ${female}${media}
         <span class="score-count">${c.score_count} work${c.score_count !== 1 ? 's' : ''}</span>
       </div>
@@ -1319,8 +1319,8 @@ async function doSearch(query) {
     html += `<div style="padding:0.4rem 1rem;font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;background:var(--bg)">Compositions</div>`;
     titleResults.forEach(c => {
       html += `<a class="search-result-item" href="${scoreHref(c.composition_id)}">
-        <span class="search-result-title">${c.title}</span>
-        <span class="search-result-meta">${c.year_composed || ''}</span>
+        <span class="search-result-title">${escapeHtml(c.title)}</span>
+        <span class="search-result-meta">${escapeHtml(c.year_composed || '')}</span>
       </a>`;
     });
   }
@@ -1328,7 +1328,7 @@ async function doSearch(query) {
   if (personResults.length) {
     html += `<div style="padding:0.4rem 1rem;font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;background:var(--bg)">Composers / Lyricists</div>`;
     personResults.forEach(p => {
-      const name = `${p.first_name || ''} ${p.last_name || ''}`.trim();
+      const name = escapeHtml(`${p.first_name || ''} ${p.last_name || ''}`.trim());
       html += `<a class="search-result-item" href="${composerHref(p.person_id)}">
         <span class="search-result-title">${name}</span>
         <span class="search-result-meta">→ composer page</span>
@@ -1442,8 +1442,8 @@ async function loadRecentlyAdded() {
         ? new Date(c.musescore_uploaded + 'T12:00:00').toLocaleDateString('nb-NO', { year: 'numeric', month: 'short', day: 'numeric' })
         : '';
       return `<a class="recently-card" href="${scoreHref(c.composition_id)}">
-        <span class="recently-card-title">${c.title}</span>
-        ${composer ? `<span class="recently-card-composer">${composer}</span>` : ''}
+        <span class="recently-card-title">${escapeHtml(c.title)}</span>
+        ${composer ? `<span class="recently-card-composer">${escapeHtml(composer)}</span>` : ''}
         <span class="recently-card-date">${date}</span>
       </a>`;
     }).join('');
@@ -1494,10 +1494,10 @@ async function loadDedications() {
   makeSortable('ded-table-dedications', all,
     function(c) {
       return '<tr>' +
-        '<td class="ded-title"><a href="' + scoreHref(c.composition_id) + '">' + c.title + '</a></td>' +
-        '<td class="ded-composer">' + ((composerMap[c.composition_id] || []).join(', ') || '—') + '</td>' +
-        '<td class="ded-year">' + (c.year_composed || '') + '</td>' +
-        '<td class="ded-dedication">' + c.dedication + '</td>' +
+        '<td class="ded-title"><a href="' + scoreHref(c.composition_id) + '">' + escapeHtml(c.title) + '</a></td>' +
+        '<td class="ded-composer">' + escapeHtml((composerMap[c.composition_id] || []).join(', ') || '—') + '</td>' +
+        '<td class="ded-year">' + escapeHtml(c.year_composed || '') + '</td>' +
+        '<td class="ded-dedication">' + escapeHtml(c.dedication) + '</td>' +
         '</tr>';
     },
     [
@@ -1610,9 +1610,9 @@ function illustratorCard(p) {
   const female = p.gender === 'F' ? '<span class="female-badge">♀</span>' : '';
   return `
     <a class="composer-card" href="${composerHref(p.person_id, '&role=Illustrator', 'illustrators')}">
-      <div class="composer-name">${p.last_name || ''}, ${p.first_name || ''} ${flag}</div>
+      <div class="composer-name">${escapeHtml(p.last_name || '')}, ${escapeHtml(p.first_name || '')} ${flag}</div>
       <div class="composer-meta">
-        ${years ? `<span>${years}</span>` : ''}
+        ${years ? `<span>${escapeHtml(years)}</span>` : ''}
         ${female}
         <span class="score-count">${p.work_count} work${p.work_count !== 1 ? 's' : ''}</span>
       </div>
@@ -1666,7 +1666,7 @@ function renderIllustrators() {
 
   listEl.innerHTML = Object.entries(groups).map(([letter, list]) => `
     <div class="letter-group">
-      <div class="letter-heading">${letter}</div>
+      <div class="letter-heading">${escapeHtml(letter)}</div>
       <div class="composer-grid">
         ${list.map(p => illustratorCard(p)).join('')}
       </div>
