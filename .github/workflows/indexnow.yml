@@ -1,0 +1,24 @@
+name: IndexNow Daily Submission
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests --break-system-packages
+
+      - name: Run IndexNow submission (incremental)
+        run: python3 submit_indexnow.py
