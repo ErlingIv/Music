@@ -510,6 +510,7 @@ async function saveNewPerson() {
     gender:     gender || null,
     bio_url:    document.getElementById('m_bioUrl').value.trim()   || null,
     bio_url_verified: document.getElementById('m_bioUrlVerified').checked || false,
+    public_content_updated_at: nowIso(),
   };
   try {
     const p = await post('person', data);
@@ -571,6 +572,48 @@ function validateSource(inputId) {
   return confirm(`"${val}" er ikke en kjent kilde.\n\nKlikk OK for å lagre likevel, eller Avbryt for å velge en eksisterende kilde.`);
 }
 loadSources();
+
+// ── public_content_updated_at ───────────────────────────────────────────────
+// Drives IndexNow submission (submit_indexnow.py) - only fields that actually
+// show up on a public page (score.html / composer.html / bio.html) should
+// refresh this; internal workflow fields (under_arbeid, to_investigate,
+// approved) deliberately must not, so admin-only changes don't trigger a
+// resubmission. See CLAUDE.md for the full rationale.
+const PUBLIC_COMPOSITION_FIELDS = [
+  'title', 'year_composed', 'opus_number', 'musescore_link', 'musescore_notes',
+  'composition_notes', 'dedication', 'public_domain', 'display_country',
+];
+const PUBLIC_PERSON_FIELDS = [
+  'first_name', 'last_name', 'born', 'died', 'born_uncertain', 'died_uncertain',
+  'nationality', 'birth_country', 'pseudonym', 'bio_url', 'bio_text', 'photo_url',
+];
+// score fields that affect a composition's public page when changed on an
+// existing row; frontpage_url is handled separately (see uploadFrontpageImage/
+// removeFrontpageImage) since those PATCH score directly, outside saveEdit.
+const PUBLIC_SCORE_FIELDS = ['pdf_url', 'mp3_url', 'publisher_id', 'plate_number', 'year_published'];
+
+function nowIso() { return new Date().toISOString(); }
+
+// True if any of `fields` differs between `oldObj` and `newObj` - null,
+// undefined and '' are treated as equivalent so clearing a field and saving
+// it back to the same effective empty value isn't seen as a change.
+function publicFieldsChanged(oldObj, newObj, fields) {
+  const norm = v => (v === undefined || v === null || v === '') ? null : v;
+  return fields.some(f => norm(oldObj?.[f]) !== norm(newObj?.[f]));
+}
+
+// Touches composition.public_content_updated_at directly - used when a
+// change to a related table (composition_person, score) needs to refresh the
+// parent composition's public timestamp, independent of any diff on the
+// composition row's own fields.
+async function touchCompositionPublic(compId) {
+  await patch('composition', `composition_id=eq.${compId}`, { public_content_updated_at: nowIso() });
+}
+
+// Snapshot of the person as loaded, captured in loadPersonForm — savePerson
+// diffs against this to decide whether the save actually changed anything
+// public (see PUBLIC_PERSON_FIELDS above).
+let pOriginalData = null;
 
 // ── NEW ENTRY ─────────────────────────────────────────────────────────────────
 
@@ -867,6 +910,7 @@ async function performNewEntrySave(data, sourceIsNew) {
       musescore_link: data.msLink || null, dedication: data.dedication || null,
       to_investigate: data.toInvestigate || null, under_arbeid: data.underArbeid || null,
       musescore_uploaded: data.uploadedToday ? today : null,
+      public_content_updated_at: nowIso(),
     });
     compId = comp.composition_id;
     if (!compId) throw new Error('Feil ved lagring av komposisjon.');
@@ -989,6 +1033,13 @@ document.getElementById('n_title').addEventListener('input', () => {
 
 const eContributors = [];
 const ePubState  = {};
+// Snapshots of the composition/contributors/score as loaded, captured in
+// loadEditForm - saveEdit diffs against these to decide whether the save
+// actually changed anything public (see PUBLIC_COMPOSITION_FIELDS etc above).
+let eOriginalComp = null;
+let eOriginalContributors = [];
+let eOriginalScoreId = null;
+let eOriginalScore = null;
 
 // ── e (Edit tab) ─────────────────────────────────────────────────────────────
 const eRowIdxRef = { value: 0 };
@@ -1124,6 +1175,8 @@ async function loadEditForm(compId, preferredScoreId) {
   const cp = cpRaw.map(r => ({ ...r, person: personMap[r.person_id] || null }));
 
   const c = comp[0];
+  eOriginalComp = c;
+  eOriginalContributors = cp.map(r => ({ person_id: r.person_id, role: r.role, credited_as: r.credited_as || null }));
   document.getElementById('e_compId').value  = compId;
   document.getElementById('e_title').value   = c.title || '';
   document.getElementById('e_year').value    = c.year_composed || '';
@@ -1168,6 +1221,8 @@ async function loadEditForm(compId, preferredScoreId) {
   // avoid.
   const score = (preferredScoreId && scores.find(s => s.score_id === preferredScoreId))
     || pickPrimaryScore(scores);
+  eOriginalScoreId = score ? score.score_id : null;
+  eOriginalScore = score || null;
   document.getElementById('e_scoreId').value = score ? score.score_id : '';
   document.getElementById('e_scoreIdLabel').textContent = score ? `score_id ${score.score_id}` : '';
   document.getElementById('e_frontpageScoreIdLabel').textContent = score ? `score_id ${score.score_id}` : '';
@@ -1323,7 +1378,7 @@ async function saveEdit() {
     const scoreId = document.getElementById('e_scoreId').value;
     const cat = document.getElementById('e_category').value;
 
-    await patch('composition', `composition_id=eq.${compId}`, {
+    const newCompFields = {
       title:             document.getElementById('e_title').value.trim(),
       year_composed:     document.getElementById('e_year').value.trim() || null,
       opus_number:       document.getElementById('e_opus').value.trim() || null,
@@ -1332,13 +1387,23 @@ async function saveEdit() {
       composition_notes: document.getElementById('e_notes').value.trim() || null,
       musescore_notes:    document.getElementById('e_msNotes').value.trim() || null,
       dedication:        document.getElementById('e_dedication').value.trim() || null,
+      display_country:   document.getElementById('e_displayCountry').value.trim().toUpperCase() || null,
+    };
+    const compFieldsChanged = publicFieldsChanged(eOriginalComp, newCompFields, PUBLIC_COMPOSITION_FIELDS);
+
+    await patch('composition', `composition_id=eq.${compId}`, {
+      ...newCompFields,
       to_investigate:    document.getElementById('e_toInvestigate').checked,
       under_arbeid:      document.getElementById('e_underArbeid').checked,
-      display_country:   document.getElementById('e_displayCountry').value.trim().toUpperCase() || null,
       ...(document.getElementById('e_uploadedToday').checked ? { musescore_uploaded: new Date().toISOString().slice(0,10) } : {}),
+      ...(compFieldsChanged ? { public_content_updated_at: nowIso() } : {}),
     });
 
     // Update contributors
+    const oldContribKey = eOriginalContributors.map(c => `${c.person_id}|${c.role}|${c.credited_as || ''}`).sort().join(';');
+    const newContribKey = frozenContributors.filter(c => c.person_id).map(c => `${c.person_id}|${c.role}|${c.credited_as || ''}`).sort().join(';');
+    const contribChanged = oldContribKey !== newContribKey;
+
     await del('composition_person', `composition_id=eq.${compId}`);
     for (const c of frozenContributors) {
       if (!c.person_id) continue;
@@ -1357,8 +1422,12 @@ async function saveEdit() {
     const sourceId = esource ? (sourceIsNew ? await ensureSourceId(esource) : getSourceId(esource)) : null;
     const scoreData = { plate_number: plate||null, publisher_id: pubId||null, year_published: document.getElementById('e_yearPublished').value.trim()||null, pdf_url: document.getElementById('e_pdfUrl').value.trim()||null, mp3_url: document.getElementById('e_mp3Url').value.trim()||null, source_id: sourceId||null, has_frontpage: document.getElementById('e_hasFrontpage').checked, ai_frontpage: document.getElementById('e_aiFrontpage').checked };
 
+    let scoreChanged;
     if (scoreId) {
       await patch('score', `score_id=eq.${scoreId}`, scoreData);
+      // A score row already existed before this save — only the listed public
+      // fields on it matter for whether the composition's public content changed.
+      scoreChanged = publicFieldsChanged(eOriginalScore, scoreData, PUBLIC_SCORE_FIELDS);
     } else {
       // e_scoreId was empty when the form loaded, implying no score row exists yet —
       // but re-verify right before writing rather than trusting a value set whenever
@@ -1373,6 +1442,17 @@ async function saveEdit() {
       } else {
         await post('score', { composition_id: parseInt(compId), ...scoreData });
       }
+      // No score row was tracked as existing when the form loaded (eOriginalScoreId
+      // was null) — one now has data associated with it either way, which counts
+      // as new public content regardless of which branch above ran.
+      scoreChanged = true;
+    }
+
+    // composition_person/score changes are separate table writes, so if either
+    // changed something public and the composition-fields patch above didn't
+    // already refresh the timestamp, do it explicitly here.
+    if ((contribChanged || scoreChanged) && !compFieldsChanged) {
+      await touchCompositionPublic(compId);
     }
 
     showMsg('editMsg', `✓ Endringer lagret`, 'success');
@@ -1448,6 +1528,7 @@ async function deleteExtraScoreRow(scoreId, compId) {
   if (!confirm(`Slette score_id ${scoreId}? Dette kan ikke angres.`)) return;
   try {
     await del('score', `score_id=eq.${scoreId}`);
+    await touchCompositionPublic(compId);
     showMsg('editMsg', `✓ Rad score_id ${scoreId} slettet.`, 'success');
     const scores = await get(`/score?composition_id=eq.${compId}&select=*&order=score_id.desc`);
     const primary = pickPrimaryScore(scores);
@@ -1660,6 +1741,7 @@ document.getElementById('personSearch').addEventListener('input', () => {
 async function loadPersonForm(personId) {
   const rows = await get(`/person?person_id=eq.${personId}&select=*`);
   const p = rows[0];
+  pOriginalData = p;
   document.getElementById('p_personId').value   = p.person_id;
   document.getElementById('p_firstName').value  = p.first_name || '';
   document.getElementById('p_lastName').value   = p.last_name  || '';
@@ -1776,12 +1858,17 @@ async function savePerson() {
             }
           }
           await del('composition_person', `person_id=eq.${personId}`);
+          // Every affected composition had a composition_person row added
+          // and/or removed - touch each parent composition's timestamp.
+          for (const compIdMerged of new Set(cp.map(row => row.composition_id))) {
+            await touchCompositionPublic(compIdMerged);
+          }
 
           // Add old name as pseudonym on target
           const newPseudo = match.pseudonym
             ? match.pseudonym + ', ' + currentName
             : currentName;
-          await patch('person', `person_id=eq.${match.person_id}`, { pseudonym: newPseudo });
+          await patch('person', `person_id=eq.${match.person_id}`, { pseudonym: newPseudo, public_content_updated_at: nowIso() });
 
           // Delete the current (now empty) record
           await del('person', `person_id=eq.${personId}`);
@@ -1804,24 +1891,30 @@ async function savePerson() {
     const nationality    = document.getElementById('p_nationality').value.trim() || null;
     const birth_country         = document.getElementById('p_birth_country').value.trim() || null;
     const birth_country_primary = document.getElementById('p_birth_country_primary').checked;
-    await patch('person', `person_id=eq.${personId}`, {
-      first_name:           first || null,
-      last_name:            last,
-      born:                 parseInt(document.getElementById('p_born').value) || null,
-      born_uncertain:       document.getElementById('p_born_uncertain').checked,
-      died:                 parseInt(document.getElementById('p_died').value) || null,
-      died_uncertain:       document.getElementById('p_died_uncertain').checked,
+    const newPersonFields = {
+      first_name:      first || null,
+      last_name:       last,
+      born:            parseInt(document.getElementById('p_born').value) || null,
+      born_uncertain:  document.getElementById('p_born_uncertain').checked,
+      died:            parseInt(document.getElementById('p_died').value) || null,
+      died_uncertain:  document.getElementById('p_died_uncertain').checked,
       nationality,
-      nationality_uncertain: document.getElementById('p_nationality_uncertain').checked,
       birth_country,
+      pseudonym:       document.getElementById('p_pseudonym').value.trim() || null,
+      bio_url:         document.getElementById('p_bioUrl').value.trim() || null,
+      bio_text:        document.getElementById('p_bioText').value.trim() || null,
+      photo_url:       document.getElementById('p_photoUrl').value.trim() || null,
+    };
+    const personFieldsChanged = publicFieldsChanged(pOriginalData, newPersonFields, PUBLIC_PERSON_FIELDS);
+
+    await patch('person', `person_id=eq.${personId}`, {
+      ...newPersonFields,
+      nationality_uncertain: document.getElementById('p_nationality_uncertain').checked,
       birth_country_primary,
-      pseudonym:            document.getElementById('p_pseudonym').value.trim() || null,
       gender:               gender || null,
-      bio_url:              document.getElementById('p_bioUrl').value.trim() || null,
       bio_url_verified:     document.getElementById('p_bioUrlVerified').checked,
-      bio_text:             document.getElementById('p_bioText').value.trim() || null,
       bio_source:           document.getElementById('p_bioSource').value.trim() || null,
-      photo_url:            document.getElementById('p_photoUrl').value.trim() || null,
+      ...(personFieldsChanged ? { public_content_updated_at: nowIso() } : {}),
     });
     document.getElementById('p_firstName').dataset.original = first;
     document.getElementById('p_lastName').dataset.original  = last;
@@ -1932,7 +2025,10 @@ async function uploadAndSetPersonPhoto(personId, blob) {
   });
   if (!res.ok) throw new Error(`Opplasting feilet (${res.status}): ${await res.text()}`);
   const publicUrl = `${SB.replace('/rest/v1', '')}/storage/v1/object/public/${PHOTO_BUCKET}/${encodeURIComponent(filename)}`;
-  await patch('person', `person_id=eq.${personId}`, { photo_url: publicUrl });
+  // photo_url is a public trigger field; this is a shared upload chokepoint
+  // used outside savePerson's own diff/timestamp logic (illustrator-crop
+  // flows), so it always sets a fresh timestamp - it's always a real change.
+  await patch('person', `person_id=eq.${personId}`, { photo_url: publicUrl, public_content_updated_at: nowIso() });
   return publicUrl;
 }
 
@@ -2390,7 +2486,7 @@ async function saveIllustratorCropPerson() {
     const blob = await cropImageToBlob(img, icpState.cropBox);
 
     // 1. Create the person row first, so we have a person_id for the filename.
-    const person = await post('person', { first_name: firstName, last_name: lastName });
+    const person = await post('person', { first_name: firstName, last_name: lastName, public_content_updated_at: nowIso() });
     personId = person?.person_id;
     if (!personId) throw new Error('Kunne ikke opprette person.');
 
@@ -2516,6 +2612,7 @@ async function forceAddPerson(btn) {
       gender:           gender || null,
       bio_url:          document.getElementById('np_bioUrl').value.trim() || null,
       bio_url_verified: document.getElementById('np_bioUrlVerified').checked || false,
+      public_content_updated_at: nowIso(),
     });
     showMsg('personMsg', `✓ ${first} ${last} lagt til som ny person (id=${p.person_id})`, 'success');
     resetNewPersonForm();
@@ -2562,6 +2659,7 @@ async function addNewPerson() {
       gender:              gender || null,
       bio_url:             document.getElementById('np_bioUrl').value.trim() || null,
       bio_url_verified:    document.getElementById('np_bioUrlVerified').checked || false,
+      public_content_updated_at: nowIso(),
     });
     showMsg('personMsg', `✓ ${document.getElementById('np_firstName').value} ${last} lagt til (id=${p.person_id})`, 'success');
     resetNewPersonForm();
@@ -3119,6 +3217,11 @@ async function uploadFrontpageImage(input) {
     // Uploading a frontpage is itself proof the score has one, regardless of
     // what has_frontpage was set to before.
     await patch('score', `score_id=eq.${scoreId}`, { frontpage_url: publicUrl, has_frontpage: true });
+    // This PATCHes score directly, bypassing saveEdit's own diff/timestamp
+    // logic entirely — frontpage_url is a public trigger field, so the parent
+    // composition needs its own explicit touch here.
+    const compIdForFrontpage = document.getElementById('e_compId').value;
+    if (compIdForFrontpage) await touchCompositionPublic(compIdForFrontpage);
 
     document.getElementById('e_frontpageUrl').value = publicUrl;
     document.getElementById('e_hasFrontpage').checked = true;
@@ -3148,6 +3251,9 @@ async function removeFrontpageImage() {
   try {
     if (scoreId) {
       await patch('score', `score_id=eq.${scoreId}`, { frontpage_url: null });
+      // Bypasses saveEdit, same reasoning as uploadFrontpageImage above.
+      const compIdForFrontpage = document.getElementById('e_compId').value;
+      if (compIdForFrontpage) await touchCompositionPublic(compIdForFrontpage);
     }
     await deleteStorageObject(FRONTPAGE_BUCKET, extractStoragePath(currentUrl, FRONTPAGE_BUCKET));
     document.getElementById('e_frontpageUrl').value = '';
@@ -3212,7 +3318,9 @@ async function removePersonPhoto() {
   btn.disabled = true;
   try {
     if (personId) {
-      await patch('person', `person_id=eq.${personId}`, { photo_url: null });
+      // photo_url is a public trigger field, and this bypasses savePerson's
+      // own diff/timestamp logic entirely.
+      await patch('person', `person_id=eq.${personId}`, { photo_url: null, public_content_updated_at: nowIso() });
     }
     await deletePersonPhotoFromStorage(extractPhotoStoragePath(currentUrl));
     document.getElementById('p_photoUrl').value = '';
@@ -3985,6 +4093,13 @@ async function saveReassign(scoreId, oldPublisherId) {
   const newPublisherId = parseInt(sel.value, 10);
   try {
     await patch('score', `score_id=eq.${scoreId}`, { publisher_id: newPublisherId });
+    if (newPublisherId !== oldPublisherId) {
+      // publisher_id is a public trigger field, and this bypasses saveEdit
+      // entirely, so the parent composition needs an explicit touch here.
+      const scoreRows = await get(`/score?score_id=eq.${scoreId}&select=composition_id`);
+      const compIdForReassign = scoreRows[0]?.composition_id;
+      if (compIdForReassign) await touchCompositionPublic(compIdForReassign);
+    }
     const ctrl = document.getElementById(`reassign-ctrl-${scoreId}`);
     const row  = document.getElementById(`score-pub-row-${scoreId}`);
     if (ctrl) ctrl.innerHTML = `<button type="button" class="btn btn-secondary" style="font-size:0.78rem;padding:0.2rem 0.6rem"

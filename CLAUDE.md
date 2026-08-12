@@ -97,6 +97,7 @@ GRANT SELECT ON public.new_table TO anon, authenticated;
 - bio_url (memo) — Wikipedia, nb.no, nbl.snl.no etc.
 - bio_text (memo) — biography text
 - bio_source (text) — citation for bio_text (e.g. "Aftenposten, 12. mars 1938" or "Ancestry.com, kirkebok Bergen 1891"). Freeform, optional.
+- public_content_updated_at (timestamptz, nullable, added August 2026) — drives IndexNow submission; set by `editor.js`, not a DB trigger. See "public_content_updated_at (IndexNow)" under IndexNow (Bing) below for the full mechanism.
 
 **Naming conventions for unknown/folk persons:**
 - Unknown/folk composer: `first_name = 'Trad'`, `last_name = [country]`
@@ -124,6 +125,7 @@ GRANT SELECT ON public.new_table TO anon, authenticated;
 - under_arbeid (boolean, DEFAULT false) — work-in-progress flag, shown with amber badge + filter in editor
 - to_investigate (boolean, DEFAULT false)
 - approved (boolean) — protects manually curated records from MuseScore scrape overwrites
+- public_content_updated_at (timestamptz, nullable, added August 2026) — drives IndexNow submission; set by `editor.js`, not a DB trigger. See "public_content_updated_at (IndexNow)" under IndexNow (Bing) below for the full mechanism.
 
 ### score (physical item / edition)
 
@@ -345,8 +347,27 @@ Added after Bing Webmaster Tools successfully processed `sitemap.xml` (~4,000 UR
 
 - **Key file**: `ae6baf5df95338b84b437f69f53cc64a.txt` at the Music repo root, containing just that key on a single line (32 bytes, no trailing newline). This is IndexNow's ownership-verification mechanism — before accepting a submission, IndexNow fetches `keyLocation` and checks the body matches the submitted `key`. Don't delete or rename this file; if the key is ever rotated, generate a new one, add a new `<key>.txt`, and only remove the old one after confirming submissions work with the new key.
 - **`submit_indexnow.py`** (in `E:\OneDrive\database\`, not part of the Music git repo — same convention as `generate_sitemap.py`) — submits URLs to `https://api.indexnow.org/indexnow` in batches of 1,000 (IndexNow's own limit is 10,000/request; batching is just a safety margin). Currently supports **only `--full` mode**: `python submit_indexnow.py --full` rebuilds the complete URL list every run (every `composition_id` → `score.html?id=`, every `person_id` → `composer.html?id=`, plus the same static pages as the sitemap) and resubmits all of it, regardless of what actually changed. Skips records with a null/missing id rather than crashing; if the built URL list is ever empty, prints a message and exits instead of submitting.
-- **Planned, not yet built**: a default incremental mode filtering compositions/people by `public_content_updated_at` (a column to be added in a separate migration) so routine runs only resubmit what changed, instead of always doing a full push. `--full` will remain as an explicit override once that lands. Don't build the incremental filter without that column existing first.
+- **Planned, not yet built**: a default incremental mode filtering compositions/people by `public_content_updated_at` (see next section — the column now exists, `submit_indexnow.py` just doesn't query it yet) so routine runs only resubmit what changed, instead of always doing a full push. `--full` will remain as an explicit override once that lands.
 - First `--full` run (August 12, 2026): 4,024 URLs, 5 batches. The first attempt had 2 of 5 batches come back `403 SiteVerificationNotCompleted` — the key file was already live and correct, but IndexNow's own verification cache hadn't caught up yet (pushed only minutes earlier). A straight retry of the same `--full` run a short while later succeeded on all 5 batches. Not a bug in the script — if this recurs right after adding/rotating a key, wait a bit and retry rather than debugging the key file itself.
+
+#### public_content_updated_at (IndexNow)
+
+Added August 2026, specifically to feed the incremental mode planned for `submit_indexnow.py` above (not yet built — the column and its editor.js wiring came first). `public_content_updated_at` (timestamptz, nullable) exists on both `composition` and `person`.
+
+- **No DB trigger.** Deliberate — timestamps are set explicitly by `editor.js`'s own save operations, not by a general `BEFORE UPDATE` trigger, so purely administrative changes (see excluded fields below) don't cause a resubmission.
+- **Backfill**: every pre-existing row was set to a fixed `2026-08-01T00:00:00Z` on migration, specifically *older* than the (planned) two-day IndexNow lookback — so the existing rows, already covered by the manual `--full` run, don't look like "recent changes" and get resubmitted a second time once incremental mode ships.
+- **Included public composition fields** (any diff sets a fresh timestamp): `title`, `year_composed`, `opus_number`, `musescore_link`, `musescore_notes`, `composition_notes`, `dedication`, `public_domain`, `display_country`.
+- **Included public person fields**: `first_name`, `last_name`, `born`, `died`, `born_uncertain`, `died_uncertain`, `nationality`, `birth_country`, `pseudonym`, `bio_url`, `bio_text`, `photo_url`.
+- **Excluded on purpose** (never set a fresh timestamp, on either table): `under_arbeid`, `to_investigate`, `approved` — internal workflow-only fields. `toggleApproval()` deliberately patches only `{approved: newVal}`, nothing else.
+- **New records** (Ny innføring, "+ Ny person" in its three forms, and the illustrator-crop "create new person" flow) always get a fresh timestamp on creation, unconditionally — there's no "old" state to diff against.
+- **Diff-based on edit**: `saveEdit` and `savePerson` snapshot the record as loaded (`eOriginalComp`/`eOriginalContributors`/`eOriginalScoreId`/`eOriginalScore` in `loadEditForm`; `pOriginalData` in `loadPersonForm`) and only set a fresh timestamp when at least one field in the relevant list above actually changed — both functions unconditionally PATCH/write every time regardless (contributors are always deleted+reinserted, for instance), so without this diff, saving a form with zero real edits would still look like new public content.
+- **Parent-composition propagation**: `public_content_updated_at` lives on `composition`, but several related-table writes affect what a composition's public page shows without touching the composition row itself — these explicitly PATCH the parent composition's timestamp too (via a shared `touchCompositionPublic(compId)` helper):
+  - `composition_person` row added/removed, or its `role`/`credited_as` changed — covered in `saveEdit` (contributor diff) and the person-merge branch of `savePerson` (moves every affected composition's credits to the target person).
+  - `score` row added/removed — covered in `saveEdit` (new score row) and `deleteExtraScoreRow`.
+  - `score.pdf_url`/`mp3_url`/`publisher_id`/`plate_number`/`year_published` changed on an existing row — covered in `saveEdit`'s score diff, and in `saveReassign` (publisher reassignment, a single-score PATCH outside `saveEdit`).
+  - `score.frontpage_url` changed — covered in `uploadFrontpageImage`/`removeFrontpageImage`, which PATCH `score` directly, bypassing `saveEdit` entirely.
+  - A person's `photo_url` set via the illustrator-crop tools (`uploadAndSetPersonPhoto`, shared by `saveIllustratorPhotoForCreditedPerson`/`saveIllustratorCropPerson`) always sets a fresh timestamp on that *person* row — this is a person-level change, not composition-level, so no parent-composition touch applies here.
+- **Known gap, not yet covered**: the Illustratører-tab reassignment paths (`attachIllustratorToExistingPerson`, `saveIllustratorCropPerson`'s `composition_person` reassignment step, `confirmIllustratorMatch`) all PATCH an existing `composition_person` row's `person_id`/`credited_as` without a parent-composition touch — these are rare, manual illustrator-identification actions, deliberately left out of this pass rather than rushed; revisit if that turns out to matter in practice. `saveRenamePublisher` (renaming a `publisher.publisher_name`, not `score.publisher_id`) was also left out — `publisher_name` isn't in the trigger field list above, and a rename can fan out across many compositions' score rows at once, which would need its own batching design.
 
 ### Admin editor (`musikk_editor.html` + `editor.js`)
 
