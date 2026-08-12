@@ -185,10 +185,28 @@ const personId = params.get('id');
 const mode     = params.get('mode');
 const modeParam = mode ? `&mode=${encodeURIComponent(mode)}` : '';
 
+// Converts inline `[text](https://...)` markdown links to real, safe <a>
+// tags, escaping everything else — so bio_text can express a link without
+// being able to inject arbitrary HTML of its own.
+function renderInline(text) {
+  const re = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+  let out = '', lastIndex = 0, m;
+  while ((m = re.exec(text))) {
+    out += escapeHtml(text.slice(lastIndex, m.index));
+    const href = safeHref(m[2]);
+    out += href
+      ? `<a href="${href}" target="_blank" rel="noopener noreferrer">${escapeHtml(m[1])}</a>`
+      : escapeHtml(m[0]);
+    lastIndex = re.lastIndex;
+  }
+  out += escapeHtml(text.slice(lastIndex));
+  return out.replace(/\n/g, '<br>');
+}
+
 // Splits on blank lines into blocks. A block starting with "## " becomes a
 // subheading, "# " becomes a heading, otherwise it's a paragraph (single
-// line breaks within it become <br>). Escapes each block's text before
-// wrapping it in real markup, so bio_text can't inject HTML of its own.
+// line breaks within it become <br>, and inline markdown links render as
+// real links via renderInline).
 function renderArticle(text) {
   if (!text) return '';
   return text
@@ -198,7 +216,7 @@ function renderArticle(text) {
     .map(block => {
       if (block.startsWith('## ')) return `<h3 class="bio-subheading">${escapeHtml(block.slice(3).trim())}</h3>`;
       if (block.startsWith('# '))  return `<h2 class="bio-heading">${escapeHtml(block.slice(2).trim())}</h2>`;
-      return `<p>${escapeHtml(block).replace(/\n/g, '<br>')}</p>`;
+      return `<p>${renderInline(block)}</p>`;
     })
     .join('');
 }
