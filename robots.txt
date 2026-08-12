@@ -6,4 +6,4 @@ Disallow: /index-copyright.html
 Disallow: /composer-copyright.html
 Disallow: /score-copyright.html
 
-Sitemap: https://erlingiv.github.io/Music/sitemap-v2.xml
+Sitemap: https://erlingiv.github.io/Music/sitemap.xml
