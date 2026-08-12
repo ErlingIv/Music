@@ -283,6 +283,14 @@ async function load() {
     const person = (await pR.json())[0];
     if (!person) throw new Error('Person not found');
     document.title = `${fullName(person)} — ${SITE_NAME}`;
+
+    let canonicalLink = document.querySelector('link[rel="canonical"]');
+    if (!canonicalLink) {
+      canonicalLink = document.createElement('link');
+      canonicalLink.rel = 'canonical';
+      document.head.appendChild(canonicalLink);
+    }
+    canonicalLink.href = `https://erlingiv.github.io/Music/composer.html?id=${personId}`;
     {
       const years = lifespan(person.born, person.died, person.died_uncertain);
       const roleWord = roleParam === 'Lyricist' ? 'lyricist' : roleParam === 'Illustrator' ? 'illustrator' : 'composer';
