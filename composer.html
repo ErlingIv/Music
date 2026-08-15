@@ -250,7 +250,8 @@ function fullName(p) { return [p.first_name, p.last_name].filter(Boolean).join('
 
 const params    = new URLSearchParams(window.location.search);
 const personId  = params.get('id');
-const roleParam = params.get('role') || 'Composer'; // 'Composer' or 'Lyricist'
+const explicitRoleParam = params.get('role');
+let roleParam = explicitRoleParam || 'Composer'; // resolved further below once we know this person's actual roles
 const secParam  = params.get('sec'); // which index.html tab we were linked from, for the back link
 
 // ── Site mode: 'pd' (public domain) or 'copyright' — read-only here.
@@ -291,16 +292,11 @@ async function load() {
       document.head.appendChild(canonicalLink);
     }
     canonicalLink.href = `https://erlingiv.github.io/Music/composer.html?id=${personId}`;
-    {
-      const years = lifespan(person.born, person.died, person.died_uncertain);
-      const roleWord = roleParam === 'Lyricist' ? 'lyricist' : roleParam === 'Illustrator' ? 'illustrator' : 'composer';
-      setMetaDescription(
-        `${fullName(person)}${years ? ' (' + years + ')' : ''} — Norwegian/Nordic ${roleWord}. `
-        + `Browse their sheet music scores on ${SITE_NAME}.`
-      );
-    }
 
-    // 2. Check which roles this person has (to show switcher if both)
+    // 2. Check which roles this person has (to show switcher if both, and to
+    // pick a sane default below when no explicit ?role= was given — a
+    // person credited only as Lyricist, e.g. Ingeborg Næstved, must not
+    // silently resolve to the 'Composer' default and show 0 works).
     const rolesR = await fetch(
       `${SUPABASE_URL}/rest/v1/composition_person?person_id=eq.${personId}&select=role`,
       { headers: H }
@@ -309,6 +305,18 @@ async function load() {
     const roleSet = new Set(rolesData.map(r => r.role));
     const hasComposer = roleSet.has('Composer');
     const hasLyricist = roleSet.has('Lyricist');
+    if (!explicitRoleParam && !hasComposer) {
+      roleParam = hasLyricist ? 'Lyricist' : (roleSet.values().next().value || 'Composer');
+    }
+
+    {
+      const years = lifespan(person.born, person.died, person.died_uncertain);
+      const roleWord = roleParam === 'Lyricist' ? 'lyricist' : roleParam === 'Illustrator' ? 'illustrator' : 'composer';
+      setMetaDescription(
+        `${fullName(person)}${years ? ' (' + years + ')' : ''} — Norwegian/Nordic ${roleWord}. `
+        + `Browse their sheet music scores on ${SITE_NAME}.`
+      );
+    }
 
     // 3. Fetch composition_ids for this person in the active role
     const ccR = await fetch(
