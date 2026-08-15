@@ -1099,17 +1099,24 @@ async function searchCompositions(q, myToken) {
     }
 
   } else {
-    // Composer mode — find persons by last name, then their compositions
+    // Person mode — find persons by last name, then their compositions in
+    // any role (not just Composer — a lyricist-only person, e.g. Ingeborg
+    // Næstved, was previously invisible here because of a role=eq.Composer
+    // filter that openComposerScores, used to render these same results,
+    // never had).
     const persons = await get(`/person?last_name=ilike.${encodeURIComponent(q)}*&select=person_id,first_name,last_name&limit=10&order=last_name`);
     for (const p of persons) {
-      const cc = await get(`/composition_person?person_id=eq.${p.person_id}&role=eq.Composer&select=composition_id`);
+      const cc = await get(`/composition_person?person_id=eq.${p.person_id}&select=composition_id,role`);
       if (!cc.length) continue;
+      const roleById = {};
+      cc.forEach(r => { roleById[r.composition_id] = r.role; });
       const ids = cc.map(r => r.composition_id).join(',');
       const comps = await get(`/composition?composition_id=in.(${ids})&select=composition_id,title,year_composed,public_domain,approved,musescore_link,to_investigate,under_arbeid`);
       comps.forEach(c => {
         if (!results.find(r => r.composition_id === c.composition_id)) {
           c._composer = [p.first_name, p.last_name].filter(Boolean).join(' ');
           c._composer_id = p.person_id;
+          c._role = roleById[c.composition_id];
           results.push(c);
         }
       });
@@ -1132,8 +1139,9 @@ async function searchCompositions(q, myToken) {
     const approvedBadge    = c.approved      ? ' <span class="approved-badge">✓</span>' : '';
     const investigateBadge = c.to_investigate ? ' <span style="font-size:0.75rem;background:#fff3cd;border:1px solid #f0c040;border-radius:2px;padding:0.1rem 0.4rem;color:#7a5c00;font-weight:500;vertical-align:middle">🔍 Undersøke</span>' : '';
     const underArbeidBadge = c.under_arbeid   ? ' <span style="font-size:0.75rem;background:#fff0d6;border:1px solid #e8a000;border-radius:2px;padding:0.1rem 0.4rem;color:#7a4500;font-weight:500;vertical-align:middle">⚙ Under arbeid</span>' : '';
+    const roleIcon = { Composer:'🎵', Lyricist:'✍', Arranger:'🎼', Illustrator:'🖼', Translator:'🌐' }[c._role] || '🎵';
     const composerMeta = c._composer
-      ? ` · <span style="cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();openComposerScores(${c._composer_id||'null'},'${escapeJsAttr(c._composer||'')}')">🎵 ${escapeHtml(c._composer)}</span>`
+      ? ` · <span style="cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();openComposerScores(${c._composer_id||'null'},'${escapeJsAttr(c._composer||'')}')">${roleIcon} ${escapeHtml(c._composer)}</span>`
       : '';
     d.innerHTML = `<div class="result-title">${escapeHtml(c.title)}${approvedBadge}${investigateBadge}${underArbeidBadge}</div>
                    <div class="result-meta">${escapeHtml(c.year_composed || '—')} · ${c.public_domain === 'Yes' ? 'PD' : c.public_domain === 'No' ? 'Opphavsrett' : 'Ikke vurdert'}${composerMeta}</div>`;
