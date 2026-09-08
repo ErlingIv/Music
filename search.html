@@ -62,11 +62,8 @@
     background: var(--paper);
     border: 1px solid var(--border);
     border-radius: 6px;
-    padding: 0.8rem 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
+    padding: 0.6rem 1rem;
+    display: block;
     text-decoration: none;
     transition: border-color 0.15s, box-shadow 0.15s;
   }
@@ -84,22 +81,12 @@
     font-size: 0.78rem;
     color: var(--muted);
     margin-top: 2px;
-  }
-  .result-meta a { color: var(--muted); text-decoration: underline; }
-  .result-meta a:hover { color: var(--accent); }
-  .result-year {
-    font-size: 0.85rem;
-    color: var(--muted);
-    white-space: nowrap;
-    flex-shrink: 0;
+    display: flex;
+    gap: 0.75rem;
   }
 
   .loading-state { letter-spacing: 0.05em; color: var(--muted); padding: 1rem 0; }
   .empty-state { color: var(--muted); padding: 1rem 0; }
-
-  @media (max-width: 640px) {
-    .result-row { flex-wrap: wrap; row-gap: 0.4rem; }
-  }
 </style>
 </head>
 <body>
@@ -150,10 +137,13 @@ function submitSearch(e) {
   return false;
 }
 
+// Plain text, not links — this sits inside the row's own <a>, and a nested
+// <a> inside <a> is invalid HTML that browsers silently fix up by splitting
+// the outer link apart (breaks the row's layout/border).
 function composerNames(composers) {
   if (!composers || !composers.length) return '';
   return composers
-    .map(p => `<a href="${composerHref(p.person_id)}">${escapeHtml([p.first_name, p.last_name].filter(Boolean).join(' '))}</a>`)
+    .map(p => escapeHtml([p.first_name, p.last_name].filter(Boolean).join(' ')))
     .join(', ');
 }
 
@@ -197,11 +187,11 @@ async function runSearch() {
     compositions.forEach(c => {
       const composers = composerNames(c.composers);
       html += `<a class="result-row" href="${scoreHref(c.composition_id)}">
-        <div>
-          <div class="result-title">${escapeHtml(c.title)}</div>
-          ${composers ? `<div class="result-meta">${composers}</div>` : ''}
+        <div class="result-title">${escapeHtml(c.title)}</div>
+        <div class="result-meta">
+          ${c.year_composed ? `<span>${escapeHtml(c.year_composed)}</span>` : ''}
+          ${composers ? `<span>${composers}</span>` : ''}
         </div>
-        <div class="result-year">${escapeHtml(c.year_composed || '')}</div>
       </a>`;
     });
     html += `</div></div>`;
