@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Search — Norske Musikknoter</title>
+<meta name="description" content="Search results for historical Norwegian/Nordic sheet music by title or composer.">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=Source+Serif+4:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  main { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  .search-bar { margin-bottom: 2rem; }
+  .search-wrap { position: relative; }
+  .search-input {
+    width: 100%;
+    padding: 0.6rem 1rem 0.6rem 2.5rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--paper);
+    font-family: var(--body);
+    font-size: 0.95rem;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 1rem;
+    pointer-events: none;
+  }
+
+  .results-heading {
+    font-family: var(--serif);
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 1rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+  .results-heading-count {
+    font-family: var(--body);
+    font-size: 0.82rem;
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .results-section { margin-bottom: 2.5rem; }
+  .results-section:last-child { margin-bottom: 0; }
+
+  .result-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .result-row {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.8rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    text-decoration: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .result-row:hover {
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(139,58,30,0.08);
+  }
+  .result-title {
+    font-family: var(--serif);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .result-meta {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .result-meta a { color: var(--muted); text-decoration: underline; }
+  .result-meta a:hover { color: var(--accent); }
+  .result-year {
+    font-size: 0.85rem;
+    color: var(--muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .loading-state { letter-spacing: 0.05em; color: var(--muted); padding: 1rem 0; }
+  .empty-state { color: var(--muted); padding: 1rem 0; }
+
+  @media (max-width: 640px) {
+    .result-row { flex-wrap: wrap; row-gap: 0.4rem; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a class="back-link" href="index.html" id="backLink">← Back</a>
+  <a class="site-name" href="index.html" id="siteNameLink">Norske Musikknoter</a>
+</header>
+
+<main>
+  <div class="search-bar">
+    <form class="search-wrap" id="searchForm" onsubmit="return submitSearch(event)">
+      <span class="search-icon" aria-hidden="true">🔍</span>
+      <input class="search-input" id="searchBox" type="text" placeholder="Search by title or composer…" aria-label="Search by title or composer" autocomplete="off">
+    </form>
+  </div>
+
+  <div id="content"><div class="loading-state">Searching…</div></div>
+</main>
+
+<script src="config.js"></script>
+<script src="shared.js"></script>
+<script>
+const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
+const params = new URLSearchParams(window.location.search);
+const query = (params.get('q') || '').trim();
+
+// ── Site mode: 'pd' (public domain) or 'copyright' — read-only here, same as
+// composer.html/tags.html; only index.html's toggle can change it.
+const siteMode = params.get('mode') === 'copyright' ? 'copyright' : 'pd';
+function composerHref(id) {
+  return 'composer.html?id=' + id + (siteMode === 'copyright' ? '&mode=copyright' : '');
+}
+const backHref = 'index.html' + (siteMode === 'copyright' ? '?mode=copyright' : '');
+document.getElementById('backLink').href = backHref;
+document.getElementById('siteNameLink').href = backHref;
+document.getElementById('siteNameLink').textContent = SITE_NAME;
+
+document.getElementById('searchBox').value = query;
+
+function submitSearch(e) {
+  e.preventDefault();
+  const q = document.getElementById('searchBox').value.trim();
+  if (!q) return false;
+  const p = new URLSearchParams({ q });
+  if (siteMode === 'copyright') p.set('mode', 'copyright');
+  window.location.href = 'search.html?' + p.toString();
+  return false;
+}
+
+function composerNames(composers) {
+  if (!composers || !composers.length) return '';
+  return composers
+    .map(p => `<a href="${composerHref(p.person_id)}">${escapeHtml([p.first_name, p.last_name].filter(Boolean).join(' '))}</a>`)
+    .join(', ');
+}
+
+async function runSearch() {
+  const el = document.getElementById('content');
+  if (!query) {
+    el.innerHTML = '<div class="empty-state">Type a title or composer name above to search.</div>';
+    return;
+  }
+  document.title = `"${query}" — Search — ${SITE_NAME}`;
+
+  const pdFilter  = modePdFilter(siteMode);
+  const linkParam = modeLinkParam(siteMode);
+
+  // Compositions matching the title, with composer(s) attached (grid_composition
+  // view already joins composition_person+person, no separate fetch/join needed).
+  const compR = await fetch(
+    `${SUPABASE_URL}/rest/v1/grid_composition?title=ilike.*${encodeURIComponent(query)}*&public_domain=${pdFilter}${linkParam}&select=composition_id,title,year_composed,composers&order=title.asc&limit=200`,
+    { headers: H }
+  );
+  const compositions = compR.ok ? await compR.json() : [];
+
+  // Composers/lyricists matching the name, same as before.
+  const personR = await fetch(
+    `${SUPABASE_URL}/rest/v1/person?or=(last_name.ilike.*${encodeURIComponent(query)}*,first_name.ilike.*${encodeURIComponent(query)}*)&select=person_id,first_name,last_name&order=last_name.asc&limit=100`,
+    { headers: H }
+  );
+  const persons = personR.ok ? await personR.json() : [];
+
+  if (!compositions.length && !persons.length) {
+    el.innerHTML = `<div class="empty-state">No results found for "${escapeHtml(query)}".</div>`;
+    return;
+  }
+
+  let html = '';
+
+  if (compositions.length) {
+    html += `<div class="results-section">
+      <div class="results-heading">Scores <span class="results-heading-count">${compositions.length}</span></div>
+      <div class="result-list">`;
+    compositions.forEach(c => {
+      const composers = composerNames(c.composers);
+      html += `<a class="result-row" href="${scoreHref(c.composition_id)}">
+        <div>
+          <div class="result-title">${escapeHtml(c.title)}</div>
+          ${composers ? `<div class="result-meta">${composers}</div>` : ''}
+        </div>
+        <div class="result-year">${escapeHtml(c.year_composed || '')}</div>
+      </a>`;
+    });
+    html += `</div></div>`;
+  }
+
+  if (persons.length) {
+    html += `<div class="results-section">
+      <div class="results-heading">Composers / Lyricists <span class="results-heading-count">${persons.length}</span></div>
+      <div class="result-list">`;
+    persons.forEach(p => {
+      const name = escapeHtml([p.first_name, p.last_name].filter(Boolean).join(' '));
+      html += `<a class="result-row" href="${composerHref(p.person_id)}">
+        <div class="result-title">${name}</div>
+      </a>`;
+    });
+    html += `</div></div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+runSearch();
+</script>
+</body>
+</html>
