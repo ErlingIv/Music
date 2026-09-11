@@ -188,12 +188,42 @@ async function runSearch() {
         || (a.title || '').localeCompare(b.title || '', 'no');
   });
 
-  // Composers/lyricists matching the name, same as before.
+  // Composers/lyricists matching the name, filtered down to only those with
+  // at least one composition matching the current PD/copyright mode. Without
+  // this, a person credited only on the *other* mode's compositions (e.g.
+  // Astrid Lindgren, copyright-only, showing up in a PD-mode search) is a
+  // dead end -- composer.html applies the same mode filter and shows nothing,
+  // so they must be filtered out here too, not just on the target page.
   const personR = await fetch(
     `${SUPABASE_URL}/rest/v1/person?or=(last_name.ilike.*${encodeURIComponent(query)}*,first_name.ilike.*${encodeURIComponent(query)}*)&select=person_id,first_name,last_name&order=last_name.asc&limit=100`,
     { headers: H }
   );
-  const persons = personR.ok ? await personR.json() : [];
+  let persons = personR.ok ? await personR.json() : [];
+
+  if (persons.length) {
+    const personIds = persons.map(p => p.person_id).join(',');
+    const cpR = await fetch(
+      `${SUPABASE_URL}/rest/v1/composition_person?person_id=in.(${personIds})&role=in.(Composer,Lyricist)&select=person_id,composition_id`,
+      { headers: H }
+    );
+    const cpRows = cpR.ok ? await cpR.json() : [];
+    const candidateCompIds = [...new Set(cpRows.map(r => r.composition_id))];
+
+    let qualifyingCompIds = new Set();
+    if (candidateCompIds.length) {
+      const compR2 = await fetch(
+        `${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${candidateCompIds.join(',')})&public_domain=${pdFilter}&select=composition_id`,
+        { headers: H }
+      );
+      const compRows2 = compR2.ok ? await compR2.json() : [];
+      qualifyingCompIds = new Set(compRows2.map(r => r.composition_id));
+    }
+
+    const qualifyingPersonIds = new Set(
+      cpRows.filter(r => qualifyingCompIds.has(r.composition_id)).map(r => r.person_id)
+    );
+    persons = persons.filter(p => qualifyingPersonIds.has(p.person_id));
+  }
 
   if (!compositions.length && !persons.length) {
     el.innerHTML = `<div class="empty-state">No results found for "${escapeHtml(query)}".</div>`;
