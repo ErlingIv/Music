@@ -180,14 +180,75 @@
   <div id="app"><div class="loading-state">Scanning database…</div></div>
 </main>
 
+<div id="keyOverlay" style="
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55);
+  z-index:999; align-items:center; justify-content:center;">
+  <div style="
+    background:var(--paper); border:1px solid var(--border); border-radius:6px;
+    padding:2rem 2.5rem; max-width:420px; width:90%; text-align:center;
+    box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+    <div style="font-family:var(--serif); font-size:1.4rem; margin-bottom:0.4rem;">Link Label Tool</div>
+    <div style="color:var(--muted); font-size:0.9rem; margin-bottom:1.5rem;">Skriv inn Supabase service role key</div>
+    <input id="keyInput" type="password" autocomplete="off" spellcheck="false"
+      placeholder="eyJ…"
+      style="width:100%; padding:0.6rem 0.8rem; font-family:monospace; font-size:0.85rem;
+        border:1px solid var(--border); border-radius:4px; background:white;
+        margin-bottom:1rem; outline:none;" />
+    <div id="keyError" style="color:#a32d2d; font-size:0.85rem; margin-bottom:0.8rem; display:none;">
+      Feil nøkkel — prøv igjen
+    </div>
+    <button id="keyBtn" class="btn btn-save" style="width:100%;">Logg inn</button>
+  </div>
+</div>
+
 <script src="config.js"></script>
 <script src="shared.js"></script>
 <script>
-const H = {
-  apikey: SUPABASE_KEY,
-  Authorization: `Bearer ${SUPABASE_KEY}`,
-  'Content-Type': 'application/json'
-};
+// This tool writes to `composition`, which RLS only grants to the service-role
+// key (see editor.js / musikk_editor.html's login overlay) -- the publishable
+// key from config.js can only SELECT. Reuses the same localStorage key
+// ('sb_service_key') musikk_editor.html sets, so logging in once there covers
+// this page too in the same browser.
+let SERVICE_KEY = null;
+let H = null;
+
+function setKeyAndInit(key) {
+  SERVICE_KEY = key;
+  H = {
+    apikey: SERVICE_KEY,
+    Authorization: `Bearer ${SERVICE_KEY}`,
+    'Content-Type': 'application/json'
+  };
+  init();
+}
+
+(function() {
+  const saved = localStorage.getItem('sb_service_key');
+  if (saved) { setKeyAndInit(saved); return; }
+
+  const overlay = document.getElementById('keyOverlay');
+  const input   = document.getElementById('keyInput');
+  const btn     = document.getElementById('keyBtn');
+  const err     = document.getElementById('keyError');
+  overlay.style.display = 'flex';
+
+  function tryKey() {
+    const key = input.value.trim();
+    if (!key) return;
+    if (!key.startsWith('eyJ')) {
+      err.style.display = 'block';
+      input.focus();
+      return;
+    }
+    localStorage.setItem('sb_service_key', key);
+    overlay.style.display = 'none';
+    setKeyAndInit(key);
+  }
+
+  btn.addEventListener('click', tryKey);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') tryKey(); });
+  input.focus();
+})();
 
 let queue = [];
 let current = null;
@@ -351,9 +412,12 @@ async function saveUrl() {
 
     const upR = await fetch(
       `${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${current.composition_id}`,
-      { method: 'PATCH', headers: H, body: JSON.stringify({ musescore_notes: updated }) }
+      { method: 'PATCH', headers: { ...H, Prefer: 'return=representation' },
+        body: JSON.stringify({ musescore_notes: updated }) }
     );
     if (!upR.ok) throw new Error(`HTTP ${upR.status}`);
+    const upRows = await upR.json();
+    if (!upRows.length) throw new Error('Save returned no rows — check the service-role key (RLS may be silently blocking the write)');
 
     // Update notes in all remaining queue items for this score
     queue.forEach(item => {
@@ -433,9 +497,12 @@ async function saveEdit(compositionId) {
   try {
     const upR = await fetch(
       `${SUPABASE_URL}/rest/v1/composition?composition_id=eq.${compositionId}`,
-      { method: 'PATCH', headers: H, body: JSON.stringify({ musescore_notes: text }) }
+      { method: 'PATCH', headers: { ...H, Prefer: 'return=representation' },
+        body: JSON.stringify({ musescore_notes: text }) }
     );
     if (!upR.ok) throw new Error(`HTTP ${upR.status}`);
+    const upRows = await upR.json();
+    if (!upRows.length) throw new Error('Save returned no rows — check the service-role key (RLS may be silently blocking the write)');
     advance();
   } catch(e) {
     document.getElementById('editErrMsg').innerHTML =
@@ -445,6 +512,7 @@ async function saveEdit(compositionId) {
   }
 }
 
+// init() is triggered by setKeyAndInit() above, once the service-role key is available
 function showDone(wasClean) {
   document.getElementById('app').innerHTML = `
     <div class="done-state">
@@ -459,8 +527,6 @@ function showDone(wasClean) {
     </div>`;
   document.getElementById('headerCount').textContent = wasClean ? 'Nothing to do' : `${savedCount} saved`;
 }
-
-init();
 </script>
 </body>
 </html>
