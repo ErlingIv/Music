@@ -849,7 +849,7 @@ async function fetchAllComposers(copyrightMode = false) {
   let offset = 0;
   while (true) {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition?select=composition_id,public_domain,musescore_link&limit=1000&offset=${offset}`,
+      `${SUPABASE_URL}/rest/v1/composition_public?select=composition_id,public_domain,musescore_link&limit=1000&offset=${offset}`,
       { headers: H }
     );
     const rows = await r.json();
@@ -931,7 +931,7 @@ async function fetchAllComposers(copyrightMode = false) {
   offset = 0;
   while (true) {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition?select=composition_id&public_domain=${modePdFilter(copyrightMode ? 'copyright' : 'pd')}${modeLinkParam(copyrightMode ? 'copyright' : 'pd')}&limit=1000&offset=${offset}`,
+      `${SUPABASE_URL}/rest/v1/composition_public?select=composition_id&public_domain=${modePdFilter(copyrightMode ? 'copyright' : 'pd')}${modeLinkParam(copyrightMode ? 'copyright' : 'pd')}&limit=1000&offset=${offset}`,
       { headers: H }
     );
     const rows = await r.json();
@@ -1293,7 +1293,7 @@ async function loadRecentlyAdded() {
   const el = document.getElementById('recentlyScroll');
   try {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition?musescore_uploaded=not.is.null&musescore_link=not.is.null&public_domain=${modePdFilter(siteMode)}&select=composition_id,title,musescore_link,musescore_uploaded&order=musescore_uploaded.desc&limit=12`,
+      `${SUPABASE_URL}/rest/v1/composition_public?musescore_uploaded=not.is.null&musescore_link=not.is.null&public_domain=${modePdFilter(siteMode)}&select=composition_id,title,musescore_link,musescore_uploaded&order=musescore_uploaded.desc&limit=12`,
       { headers: H }
     );
     const comps = await r.json();
@@ -1355,7 +1355,7 @@ async function loadDedications() {
   let all = [], offset = 0;
   while (true) {
     const r = await fetch(
-      SUPABASE_URL + '/rest/v1/composition?public_domain=' + (siteMode === 'copyright' ? 'neq.Yes' : 'eq.Yes') + '&dedication=not.is.null&dedication=neq.&select=composition_id,title,year_composed,dedication&limit=1000&offset=' + offset,
+      SUPABASE_URL + '/rest/v1/composition_public?public_domain=' + (siteMode === 'copyright' ? 'neq.Yes' : 'eq.Yes') + '&dedication=not.is.null&dedication=neq.&select=composition_id,title,year_composed,dedication&limit=1000&offset=' + offset,
       { headers: H }
     );
     const batch = await r.json();
@@ -1435,7 +1435,7 @@ async function loadIllustrators() {
     const chunk = allCompIds.slice(i, i + 200).join(',');
     const pdFilter = modePdFilter(siteMode);
     const r = await fetch(
-      SUPABASE_URL + '/rest/v1/composition?composition_id=in.(' + chunk + ')&public_domain=' + pdFilter + modeLinkParam(siteMode) + '&select=composition_id',
+      SUPABASE_URL + '/rest/v1/composition_public?composition_id=in.(' + chunk + ')&public_domain=' + pdFilter + modeLinkParam(siteMode) + '&select=composition_id',
       { headers: H }
     );
     (await r.json()).forEach(c => pdIds.add(c.composition_id));

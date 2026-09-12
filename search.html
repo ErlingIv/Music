@@ -212,7 +212,7 @@ async function runSearch() {
     let qualifyingCompIds = new Set();
     if (candidateCompIds.length) {
       const compR2 = await fetch(
-        `${SUPABASE_URL}/rest/v1/composition?composition_id=in.(${candidateCompIds.join(',')})&public_domain=${pdFilter}&select=composition_id`,
+        `${SUPABASE_URL}/rest/v1/composition_public?composition_id=in.(${candidateCompIds.join(',')})&public_domain=${pdFilter}&select=composition_id`,
         { headers: H }
       );
       const compRows2 = compR2.ok ? await compR2.json() : [];

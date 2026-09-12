@@ -581,7 +581,7 @@ loadSources();
 // resubmission. See CLAUDE.md for the full rationale.
 const PUBLIC_COMPOSITION_FIELDS = [
   'title', 'year_composed', 'opus_number', 'musescore_link', 'musescore_notes',
-  'composition_notes', 'dedication', 'public_domain', 'display_country',
+  'composition_notes', 'dedication', 'public_domain', 'display_country', 'musescore_private',
 ];
 const PUBLIC_PERSON_FIELDS = [
   'first_name', 'last_name', 'born', 'died', 'born_uncertain', 'died_uncertain',
@@ -784,6 +784,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
       opus:          document.getElementById('n_opus').value.trim(),
       toInvestigate: document.getElementById('n_toInvestigate').checked,
       underArbeid:   document.getElementById('n_underArbeid').checked,
+      msPrivate:     document.getElementById('n_msPrivate').checked,
       uploadedToday: document.getElementById('n_uploadedToday').checked,
       plate:         document.getElementById('n_plateNumber').value.trim(),
       publisherName: document.getElementById('n_publisherSearch').value.trim(),
@@ -909,6 +910,7 @@ async function performNewEntrySave(data, sourceIsNew) {
       opus_number: data.opus || null, composition_notes: data.notes || null,
       musescore_link: data.msLink || null, dedication: data.dedication || null,
       to_investigate: data.toInvestigate || null, under_arbeid: data.underArbeid || null,
+      musescore_private: data.msPrivate || false,
       musescore_uploaded: data.uploadedToday ? today : null,
       public_content_updated_at: nowIso(),
     });
@@ -1080,7 +1082,7 @@ async function searchCompositions(q, myToken) {
   let results = [];
 
   if (mode === 'title') {
-    results = await get(`/composition?title=ilike.*${encodeURIComponent(q)}*&select=composition_id,title,year_composed,public_domain,approved,musescore_link,to_investigate,under_arbeid&limit=30&order=title`);
+    results = await get(`/composition?title=ilike.*${encodeURIComponent(q)}*&select=composition_id,title,year_composed,public_domain,approved,musescore_link,to_investigate,under_arbeid,musescore_private&limit=30&order=title`);
 
   } else if (mode === 'scoreid') {
     // Direct score_id -> composition lookup — for matching a staged
@@ -1090,7 +1092,7 @@ async function searchCompositions(q, myToken) {
     if (!isNaN(scoreId)) {
       const scores = await get(`/score?score_id=eq.${scoreId}&select=composition_id`);
       if (scores.length) {
-        results = await get(`/composition?composition_id=eq.${scores[0].composition_id}&select=composition_id,title,year_composed,public_domain,approved,musescore_link,to_investigate,under_arbeid`);
+        results = await get(`/composition?composition_id=eq.${scores[0].composition_id}&select=composition_id,title,year_composed,public_domain,approved,musescore_link,to_investigate,under_arbeid,musescore_private`);
         // Carried through to the click handler below, so loadEditForm loads
         // this exact score row rather than whichever one it would otherwise
         // guess is "most complete" for the composition.
@@ -1111,7 +1113,7 @@ async function searchCompositions(q, myToken) {
       const roleById = {};
       cc.forEach(r => { roleById[r.composition_id] = r.role; });
       const ids = cc.map(r => r.composition_id).join(',');
-      const comps = await get(`/composition?composition_id=in.(${ids})&select=composition_id,title,year_composed,public_domain,approved,musescore_link,to_investigate,under_arbeid`);
+      const comps = await get(`/composition?composition_id=in.(${ids})&select=composition_id,title,year_composed,public_domain,approved,musescore_link,to_investigate,under_arbeid,musescore_private`);
       comps.forEach(c => {
         if (!results.find(r => r.composition_id === c.composition_id)) {
           c._composer = [p.first_name, p.last_name].filter(Boolean).join(' ');
@@ -1139,11 +1141,12 @@ async function searchCompositions(q, myToken) {
     const approvedBadge    = c.approved      ? ' <span class="approved-badge">✓</span>' : '';
     const investigateBadge = c.to_investigate ? ' <span style="font-size:0.75rem;background:#fff3cd;border:1px solid #f0c040;border-radius:2px;padding:0.1rem 0.4rem;color:#7a5c00;font-weight:500;vertical-align:middle">🔍 Undersøke</span>' : '';
     const underArbeidBadge = c.under_arbeid   ? ' <span style="font-size:0.75rem;background:#fff0d6;border:1px solid #e8a000;border-radius:2px;padding:0.1rem 0.4rem;color:#7a4500;font-weight:500;vertical-align:middle">⚙ Under arbeid</span>' : '';
+    const msPrivateBadge = c.musescore_private ? ' <span style="font-size:0.75rem;background:#fde0e0;border:1px solid #c02020;border-radius:2px;padding:0.1rem 0.4rem;color:#7a1010;font-weight:500;vertical-align:middle">🔒 Privat</span>' : '';
     const roleIcon = { Composer:'🎵', Lyricist:'✍', Arranger:'🎼', Illustrator:'🖼', Translator:'🌐' }[c._role] || '🎵';
     const composerMeta = c._composer
       ? ` · <span style="cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();openComposerScores(${c._composer_id||'null'},'${escapeJsAttr(c._composer||'')}')">${roleIcon} ${escapeHtml(c._composer)}</span>`
       : '';
-    d.innerHTML = `<div class="result-title">${escapeHtml(c.title)}${approvedBadge}${investigateBadge}${underArbeidBadge}</div>
+    d.innerHTML = `<div class="result-title">${escapeHtml(c.title)}${approvedBadge}${investigateBadge}${underArbeidBadge}${msPrivateBadge}</div>
                    <div class="result-meta">${escapeHtml(c.year_composed || '—')} · ${c.public_domain === 'Yes' ? 'PD' : c.public_domain === 'No' ? 'Opphavsrett' : 'Ikke vurdert'}${composerMeta}</div>`;
     if (c.approved) d.classList.add('is-approved');
     d.onclick = () => loadEditForm(c.composition_id, c._preferredScoreId);
@@ -1197,6 +1200,7 @@ async function loadEditForm(compId, preferredScoreId) {
   document.getElementById('e_msNotes').value = c.musescore_notes || '';
   document.getElementById('e_toInvestigate').checked = c.to_investigate || false;
   document.getElementById('e_underArbeid').checked   = c.under_arbeid   || false;
+  document.getElementById('e_msPrivate').checked     = c.musescore_private || false;
   const dcEl = document.getElementById('e_displayCountry');
   dcEl.value = c.display_country || '';
   document.getElementById('e_displayCountryFlag').textContent = c.display_country ? countryCodeToFlag(c.display_country) : '';
@@ -1403,6 +1407,7 @@ async function saveEdit() {
       ...newCompFields,
       to_investigate:    document.getElementById('e_toInvestigate').checked,
       under_arbeid:      document.getElementById('e_underArbeid').checked,
+      musescore_private: document.getElementById('e_msPrivate').checked,
       ...(document.getElementById('e_uploadedToday').checked ? { musescore_uploaded: new Date().toISOString().slice(0,10) } : {}),
       ...(compFieldsChanged ? { public_content_updated_at: nowIso() } : {}),
     });
