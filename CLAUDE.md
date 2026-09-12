@@ -98,8 +98,10 @@ A `supabase` MCP server is registered locally (`claude mcp add supabase --scope 
 - born (text/date-ish), born_uncertain (**boolean**)
 - died, died_uncertain (**boolean**)
 - gender (text) — "M" / "F"
-- nationality (text, ISO code, stored **lowercase**) — many non-Norwegian composers not yet filled in
+- nationality (text, ISO code, stored **uppercase** — corrected September 2026, this doc previously wrongly claimed lowercase) — FK to `country.code` (see below); many non-Norwegian composers not yet filled in
+- bio_url_verified (boolean, DEFAULT false) — powers the admin editor's **Bio-lenker** tab (see Admin editor below): a person with `bio_url` set but `bio_url_verified = false` shows up in that tab's "unverified" queue for manual review
 - nationality_uncertain (boolean, DEFAULT false) — flags cases where `nationality` was inferred from the person's name pattern rather than confirmed via `bio_url`/`bio_source`
+- is_female_norwegian (boolean, DEFAULT false) — column exists live but is **unused/legacy**: no code in this repo reads or writes it (confirmed September 2026)
 - birth_country (text)
 - birth_country_primary (boolean, DEFAULT false) — supports dual-nationality display
 - photo_url (text)
@@ -136,6 +138,7 @@ A `supabase` MCP server is registered locally (`claude mcp add supabase --scope 
 - to_investigate (boolean, DEFAULT false)
 - musescore_private (boolean, DEFAULT false, added September 2026) — set when a composition's `musescore_link` points to a score that's genuinely private on MuseScore (not shared even with the "Eldre populærmusikk" group), so the frontend has nothing working to show. Toggled via a checkbox in both "Ny innføring" and "Rediger" in `musikk_editor.html` (`n_msPrivate`/`e_msPrivate`). Enforced at the DB layer, not per-page JS — see `composition_public` view below. Included in `PUBLIC_COMPOSITION_FIELDS`/IndexNow diffing (toggling it changes what a public page actually shows).
 - approved (boolean) — protects manually curated records from MuseScore scrape overwrites
+- transcription_status (text, DEFAULT 'Not started') — column exists live but is **unused/legacy**: no code in this repo reads or writes it (confirmed September 2026). Don't assume it reflects anything real.
 - public_content_updated_at (timestamptz, nullable, added August 2026) — drives IndexNow submission; set by `editor.js`, not a DB trigger. See "public_content_updated_at (IndexNow)" under IndexNow (Bing) below for the full mechanism.
 
 ### score (physical item / edition)
@@ -201,8 +204,13 @@ Replaces the old `composition_composer` / `composition_lyricist` / `composition_
 
 ### tag / composition_tag
 
-- tag: tag_id (PK), tag_name
+- tag: tag_id (PK), tag_name (unique), image_url (nullable — hero image shown on `tags.html`'s tag cloud, added but not previously documented here)
 - composition_tag: id, composition_id (FK), tag_id (FK)
+
+### country (lookup table, not previously documented here)
+
+- code (PK, text, 2-char uppercase ISO — enforced by a `CHECK (code ~ '^[A-Z]{2}$')` constraint), name (text)
+- `person.nationality` has an FK to `country.code` — confirmed live data is **uppercase** (e.g. `NO`, `DE`, `US`), contradicting an earlier (wrong) claim in this doc that it was stored lowercase; corrected September 2026.
 
 ### grid_composition (view, added August 2026)
 
