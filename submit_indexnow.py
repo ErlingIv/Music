@@ -77,7 +77,9 @@ def get_all(path, select, extra_params=None):
 def build_full_url_list():
     urls = list(STATIC_PAGES)
 
-    comps = get_all("composition", "composition_id")
+    # PD only - copyright/unrated compositions shouldn't be actively
+    # promoted for indexing, see CLAUDE.md
+    comps = get_all("composition", "composition_id", {"public_domain": "eq.Yes"})
     for c in comps:
         cid = c.get("composition_id")
         if cid is None:
@@ -99,7 +101,9 @@ def build_incremental_url_list():
     filt = {"public_content_updated_at": f"gte.{cutoff}"}
     urls = []
 
-    comps = get_all("composition", "composition_id", extra_params=filt)
+    # PD only - copyright/unrated compositions shouldn't be actively
+    # promoted for indexing, see CLAUDE.md
+    comps = get_all("composition", "composition_id", extra_params={**filt, "public_domain": "eq.Yes"})
     for c in comps:
         cid = c.get("composition_id")
         if cid is None:
