@@ -123,7 +123,7 @@ A `supabase` MCP server is registered locally (`claude mcp add supabase --scope 
 - musescore_uploaded (date), musescore_modified (date)
 - year_composed (text 50) — word-based uncertainty only: `ca. YYYY`, `before YYYY`, `after YYYY`, `YYYY–YYYY`, `YYYY?`. **Never** use `<`/`>` symbols (HTML-unsafe, inconsistent with `lifespan()` which uses the word "after")
 - opus_number (text) — normalized format: `Opus N no. N` (full word "Opus", lowercase "no.", no trailing periods)
-- public_domain (text) — "Yes" / "No" / "Unknown"
+- public_domain (text) — "Yes" / "No" / "Unknown". **"Unknown" is legacy-only as of September 2026** — it produced no distinct frontend behavior from "No" (same mode bucketing, same no-embed treatment, and since the sitemap/IndexNow PD-only filter added this month, same exclusion from indexing too), so it functioned as an undecided placeholder with no mechanism prompting a follow-up. "Ny innføring"'s category dropdown (`n_category` in `musikk_editor.html`) no longer offers it — new entries must be categorized PD or Copyright immediately; anything not yet finished (e.g. no score uploaded yet) should use `under_arbeid` instead, which already has a real Arbeidsliste queue. "Rediger"'s dropdown (`e_category`) still includes it, needed only to display/reclassify the pre-existing backlog (34 records as of September 2026, backfilled with `under_arbeid = true` so they show up in Arbeidsliste) — remove it there too once that backlog is cleared.
 - public_domain_notes (memo)
 - composition_notes (memo)
 - dedication (text)
