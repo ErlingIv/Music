@@ -1066,12 +1066,16 @@ let editSearchToken = 0;
 
 document.getElementById('editSearch').addEventListener('input', () => {
   clearTimeout(editSearchTimeout);
-  const q = document.getElementById('editSearch').value.trim();
+  const raw = document.getElementById('editSearch').value;
   document.getElementById('editSearchResults').innerHTML = '';
   editSearchToken++; // invalidate any in-flight search from a previous keystroke
-  if (q.length < 2) return;
+  // Only trimmed length gates whether a search runs at all (so pure whitespace
+  // doesn't count as a real query) — the raw value itself is what gets searched,
+  // untrimmed, so a deliberate trailing space (e.g. "Sang ") narrows an ILIKE
+  // title match to exclude "Sange"/"Sanger" instead of being silently discarded.
+  if (raw.trim().length < 2) return;
   const myToken = editSearchToken;
-  editSearchTimeout = setTimeout(() => searchCompositions(q, myToken), 300);
+  editSearchTimeout = setTimeout(() => searchCompositions(raw, myToken), 300);
 });
 
 async function searchCompositions(q, myToken) {
