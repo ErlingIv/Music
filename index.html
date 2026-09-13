@@ -1302,7 +1302,7 @@ async function loadRecentlyAdded() {
     // Fetch composers for these compositions
     const ids = comps.map(c => c.composition_id).join(',');
     const cpR = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition_person?composition_id=in.(${ids})&role=eq.Composer&select=composition_id,person_id`,
+      `${SUPABASE_URL}/rest/v1/composition_person?composition_id=in.(${ids})&role=eq.Composer&select=composition_id,person_id&order=id.asc`,
       { headers: H }
     );
     const cpRows = await cpR.json();
@@ -1315,14 +1315,19 @@ async function loadRecentlyAdded() {
       );
       (await pR.json()).forEach(p => { personMap[p.person_id] = p; });
     }
+    // A composition can have more than one Composer credit (e.g. "Sang" by
+    // Sødal & Klepp) — collect every name instead of letting the last row
+    // silently overwrite the others.
     const composerMap = {};
     cpRows.forEach(row => {
       const p = personMap[row.person_id];
-      if (p) composerMap[row.composition_id] = ((p.first_name || '') + ' ' + (p.last_name || '')).trim();
+      if (!p) return;
+      const name = ((p.first_name || '') + ' ' + (p.last_name || '')).trim();
+      (composerMap[row.composition_id] || (composerMap[row.composition_id] = [])).push(name);
     });
 
     el.innerHTML = comps.map(c => {
-      const composer = composerMap[c.composition_id] || '';
+      const composer = (composerMap[c.composition_id] || []).join(', ');
       const date = c.musescore_uploaded
         ? new Date(c.musescore_uploaded + 'T12:00:00').toLocaleDateString('nb-NO', { year: 'numeric', month: 'short', day: 'numeric' })
         : '';
