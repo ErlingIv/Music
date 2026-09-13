@@ -65,6 +65,10 @@ async function translateNotes(btn) {
     // Uses «L0», «L1» etc — unusual chars the translation API won't touch.
     const linkStore = [];
     const tokenised = originalText
+      .replace(/<a\s+[^>]*href\s*=\s*(["']).*?\1[^>]*>[\s\S]*?<\/a>/gi, (match) => {
+        linkStore.push(match);
+        return `\u00abL${linkStore.length - 1}\u00bb`;
+      })
       .replace(/\[url=(https?:\/\/[^\]]+)\]([^\[]*)\[\/url\]/gi, (match) => {
         linkStore.push(match);
         return `\u00abL${linkStore.length - 1}\u00bb`;
