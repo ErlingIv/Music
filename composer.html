@@ -346,10 +346,8 @@ async function load() {
         { headers: H }
       );
       compositions = await cR.json();
-      // Sort with Norwegian collation client-side: Postgres's default collation
-      // treats å/æ/ø as accented a/e/o, sorting them next to the base letter.
-      // Norwegian alphabetical order puts æ, ø, å after z.
-      compositions.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'nb'));
+      // Final display order (opus number first, title as tiebreak/fallback) is
+      // computed by groupByOpus() below — no need to pre-sort here.
 
       // 5. Fetch scores (pdf_url, mp3_url) and tags for these compositions
       const allCompIds = cc.map(r => r.composition_id).join(',');
@@ -484,6 +482,26 @@ function opusBaseKey(opus) {
   return (m ? m[1] : trimmed).trim();
 }
 
+// Leading numeric portion of an opus base, e.g. "Opus 35" -> 35, "Opus 2b" -> 2,
+// "op. 16" -> 16, "WoO 14" -> 14. Null when there are no digits at all, so
+// opus-less/unparseable items can sort after every real opus number.
+function opusSortNumber(base) {
+  if (!base) return null;
+  const m = base.match(/\d+/);
+  return m ? parseInt(m[0], 10) : null;
+}
+
+// Movement number from a "no. X" / "nr. X" suffix, e.g. "Opus 35 no. 2" -> 2.
+// Null when there's no such suffix, so callers fall back to sorting by title.
+function movementSortNumber(opus) {
+  if (!opus) return null;
+  const m = opus.trim().match(/(?:no|nr)\.?\s*(\d+)/i);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+// All title comparisons below use 'nb' (Norwegian) collation: JS/Postgres's
+// default collation treats å/æ/ø as accented a/e/o and sorts them next to the
+// base letter, but Norwegian alphabetical order puts æ, ø, å after z.
 function groupByOpus(compositions) {
   // Only group compositions that share a non-empty base opus, 2+ works.
   const byOpus = {}; // normalized key → { label, list }
@@ -496,6 +514,20 @@ function groupByOpus(compositions) {
   });
   Object.keys(byOpus).forEach(k => { if (byOpus[k].list.length < 2) delete byOpus[k]; });
 
+  // Within a group, order by movement number (no. 1, no. 2, ...) rather than
+  // title — a work missing a movement number falls back to title, and sorts
+  // after any sibling that does have one.
+  Object.values(byOpus).forEach(g => {
+    g.list.sort((a, b) => {
+      const na = movementSortNumber(a.opus_number);
+      const nb = movementSortNumber(b.opus_number);
+      if (na !== null && nb !== null) return na - nb;
+      if (na !== null) return -1;
+      if (nb !== null) return 1;
+      return (a.title || '').localeCompare(b.title || '', 'nb');
+    });
+  });
+
   const rendered = new Set();
   const items = [];
   compositions.forEach(c => {
@@ -504,12 +536,28 @@ function groupByOpus(compositions) {
     if (key && byOpus[key]) {
       if (!rendered.has(key)) {
         rendered.add(key);
-        items.push({ type: 'group', opus: byOpus[key].label, list: byOpus[key].list });
+        items.push({ type: 'group', opus: byOpus[key].label, list: byOpus[key].list,
+                     _num: opusSortNumber(base), _title: byOpus[key].label });
       }
     } else {
-      items.push({ type: 'single', c });
+      items.push({ type: 'single', c, _num: opusSortNumber(base), _title: c.title || '' });
     }
   });
+
+  // Top-level order: ascending opus number where one exists (Opus 11 before
+  // Opus 35, whether rendered as a group or a single work) — not the title
+  // of whichever work happened to come first alphabetically. Anything with
+  // no parseable opus number sorts after every numbered item, by title.
+  items.sort((a, b) => {
+    if (a._num !== null && b._num !== null) {
+      if (a._num !== b._num) return a._num - b._num;
+      return a._title.localeCompare(b._title, 'nb');
+    }
+    if (a._num !== null) return -1;
+    if (b._num !== null) return 1;
+    return a._title.localeCompare(b._title, 'nb');
+  });
+
   return items;
 }
 
