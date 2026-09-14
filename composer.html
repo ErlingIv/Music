@@ -127,6 +127,22 @@
      so let multiple cards sit side by side instead of stretching one
      card edge-to-edge with a canyon of blank space in the middle. */
   .score-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 0.6rem; align-items: start; }
+
+  /* Opus-group accordions get their own section, after the individual
+     works — a separate grid so the two tile types don't visually alternate
+     row by row. */
+  .opus-groups-heading {
+    font-family: var(--body);
+    font-size: 0.76rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 1.75rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border);
+  }
+  .opus-group-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 0.6rem; align-items: start; margin-top: 0.75rem; }
   .score-row {
     background: var(--paper);
     border: 1px solid var(--border);
@@ -231,6 +247,7 @@
     .score-row { flex-wrap: wrap; row-gap: 0.5rem; }
     .score-icons { flex-wrap: wrap; }
     .score-list { grid-template-columns: 1fr; }
+    .opus-group-list { grid-template-columns: 1fr; }
   }
 
 </style>
@@ -435,7 +452,7 @@ async function load() {
 
       ${compositions.length === 0
         ? `<div class="loading-state">No ${siteMode === 'copyright' ? 'copyright' : 'public domain'} scores found${roleParam === 'Lyricist' ? ' as lyricist' : ''}.</div>`
-        : `<div class="score-list" id="scoreList">
+        : `<div id="scoreList">
             ${renderScoreItems(compositions, scoreMap, tagMap, creditedAsMap)}
           </div>`
       }
@@ -563,10 +580,15 @@ function groupByOpus(compositions) {
 
 function renderScoreItems(compositions, scoreMap, tagMap, creditedAsMap) {
   const items = groupByOpus(compositions);
-  return items.map(item => {
-    if (item.type === 'single') {
-      return scoreRowHtml(item.c, scoreMap, tagMap, creditedAsMap);
-    }
+  // Individual works first, opus groups (collapsed accordions) last, in their
+  // own section — mixing full-detail cards with collapsed group tiles in one
+  // grid reads as visually random even once both are in the right order.
+  const singles = items.filter(i => i.type === 'single');
+  const groups  = items.filter(i => i.type === 'group');
+
+  const singlesHtml = singles.map(item => scoreRowHtml(item.c, scoreMap, tagMap, creditedAsMap)).join('');
+
+  const groupsHtml = groups.map(item => {
     const rowsHtml = item.list.map(c => scoreRowHtml(c, scoreMap, tagMap, creditedAsMap)).join('');
     return `
       <div class="opus-group">
@@ -579,6 +601,14 @@ function renderScoreItems(compositions, scoreMap, tagMap, creditedAsMap) {
         <div class="opus-group-body">${rowsHtml}</div>
       </div>`;
   }).join('');
+
+  return `
+    <div class="score-list">${singlesHtml}</div>
+    ${groups.length ? `
+      <div class="opus-groups-heading">Opus groups</div>
+      <div class="opus-group-list">${groupsHtml}</div>
+    ` : ''}
+  `;
 }
 
 function filterScores() {
