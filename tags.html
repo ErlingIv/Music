@@ -150,7 +150,19 @@
     border-color: var(--accent);
     box-shadow: 0 2px 8px rgba(139,58,30,0.08);
   }
-  .comp-title { font-family: var(--serif); font-size: 0.95rem; font-weight: 500; color: var(--ink); }
+  /* A composition with several credited composers (long comma-joined name
+     string) would otherwise wrap to a second line and make just that one
+     card taller than its grid neighbors — same problem as a long tag chip
+     on composer.html's score cards, fixed the same way: truncate to one
+     line instead of growing the card. Needs min-width: 0 on the flex item
+     itself (comp-info) so it can actually shrink below its text's natural
+     width — a flex item's default min-width is auto, which would otherwise
+     block ellipsis and just overflow the row instead. */
+  .comp-info { min-width: 0; overflow: hidden; }
+  .comp-title {
+    font-family: var(--serif); font-size: 0.95rem; font-weight: 500; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
 
   /* Discrete Godkjent (approved) mark — small muted dot, no visible label */
   .godkjent-mark {
@@ -164,7 +176,10 @@
     vertical-align: middle;
     flex-shrink: 0;
   }
-  .comp-meta  { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+  .comp-meta {
+    font-size: 0.78rem; color: var(--muted); margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   .comp-icons { display: flex; gap: 0.35rem; flex-shrink: 0; align-items: center; }
   .icon-badge.pdf { color: var(--accent);  border-color: var(--accent); }
   .icon-badge.mp3 { color: var(--accent2); border-color: var(--accent2); }
@@ -387,9 +402,9 @@ async function selectTag(tagId, tagName, imageUrl) {
         const composers = escapeHtml((ccMap[comp.composition_id] || []).join(', ') || '—');
         return `
           <a class="comp-row" href="${scoreHref(comp.composition_id)}">
-            <div>
-              <div class="comp-title">${escapeHtml(comp.title)}${comp.approved ? '<span class="godkjent-mark" role="img" aria-label="Curator approved" title="Curator approved"></span>' : ''}</div>
-              <div class="comp-meta">${composers}${comp.year_composed ? ' · ' + escapeHtml(comp.year_composed) : ''}</div>
+            <div class="comp-info">
+              <div class="comp-title" title="${escapeHtml(comp.title)}">${escapeHtml(comp.title)}${comp.approved ? '<span class="godkjent-mark" role="img" aria-label="Curator approved" title="Curator approved"></span>' : ''}</div>
+              <div class="comp-meta" title="${escapeHtml((ccMap[comp.composition_id] || []).join(', '))}">${composers}${comp.year_composed ? ' · ' + escapeHtml(comp.year_composed) : ''}</div>
             </div>
             <div class="comp-icons">
               ${s?.pdf_url ? '<span class="icon-badge pdf">PDF</span>' : ''}
