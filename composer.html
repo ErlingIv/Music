@@ -359,7 +359,6 @@ async function load() {
     // 4. Fetch public domain compositions that have a MuseScore link
     let compositions = [];
     const scoreMap = {};
-    const tagMap   = {};
     if (cc.length) {
       const compIds = cc.map(r => r.composition_id).join(',');
       const pdFilter  = modePdFilter(siteMode);
@@ -372,24 +371,13 @@ async function load() {
       // Final display order (opus number first, title as tiebreak/fallback) is
       // computed by groupByOpus() below — no need to pre-sort here.
 
-      // 5. Fetch scores (pdf_url, mp3_url) and tags for these compositions
+      // 5. Fetch scores (pdf_url, mp3_url) for these compositions. Tags aren't
+      // shown on this compact card (a long tag name broke the grid's uniform
+      // row height) — browse by tag on tags.html instead.
       const allCompIds = cc.map(r => r.composition_id).join(',');
-      const [scoreR, ctR, tagR] = await Promise.all([
-        fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=in.(${allCompIds})&select=composition_id,pdf_url,mp3_url,plate_number,publisher:publisher_id(publisher_name)`, { headers: H }),
-        fetch(`${SUPABASE_URL}/rest/v1/composition_tag?composition_id=in.(${allCompIds})&select=composition_id,tag_id`, { headers: H }),
-        fetch(`${SUPABASE_URL}/rest/v1/tag?select=tag_id,tag_name`, { headers: H }),
-      ]);
+      const scoreR = await fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=in.(${allCompIds})&select=composition_id,pdf_url,mp3_url,plate_number,publisher:publisher_id(publisher_name)`, { headers: H });
       const scores = await scoreR.json();
       scores.forEach(s => { scoreMap[s.composition_id] = s; });
-
-      const ctRows  = await ctR.json();
-      const allTags = await tagR.json();
-      const tagNameMap = Object.fromEntries(allTags.map(t => [t.tag_id, t.tag_name]));
-      ctRows.forEach(row => {
-        if (!tagMap[row.composition_id]) tagMap[row.composition_id] = [];
-        const name = tagNameMap[row.tag_id];
-        if (name) tagMap[row.composition_id].push(name);
-      });
     }
 
     // ── Render ──────────────────────────────────────────────────────────────
@@ -459,7 +447,7 @@ async function load() {
       ${compositions.length === 0
         ? `<div class="loading-state">No ${siteMode === 'copyright' ? 'copyright' : 'public domain'} scores found${roleParam === 'Lyricist' ? ' as lyricist' : ''}.</div>`
         : `<div id="scoreList">
-            ${renderScoreItems(compositions, scoreMap, tagMap, creditedAsMap)}
+            ${renderScoreItems(compositions, scoreMap, creditedAsMap)}
           </div>`
       }
     `;
@@ -469,7 +457,7 @@ async function load() {
   }
 }
 
-function scoreRowHtml(c, scoreMap, tagMap, creditedAsMap) {
+function scoreRowHtml(c, scoreMap, creditedAsMap) {
   const s = scoreMap[c.composition_id];
   const hasMedia = !!(s?.pdf_url || s?.mp3_url);
   return `
@@ -481,7 +469,6 @@ function scoreRowHtml(c, scoreMap, tagMap, creditedAsMap) {
           ${s?.publisher?.publisher_name ? `<span>${escapeHtml(s.publisher.publisher_name)}</span>` : ''}
           ${s?.plate_number ? `<span style="font-family:monospace;font-size:0.72rem;opacity:0.85">${escapeHtml(s.plate_number)}</span>` : ''}
           ${creditedAsMap[c.composition_id] ? `<span style="font-style:italic;color:var(--muted)">as ${escapeHtml(creditedAsMap[c.composition_id])}</span>` : ''}
-          ${(tagMap[c.composition_id]||[]).map(t => `<span style="background:#eaf3ee;color:var(--accent2);border:1px solid #b8d4c0;border-radius:3px;padding:1px 6px;font-size:0.7rem;">${escapeHtml(t)}</span>`).join('')}
         </div>
       </div>
       <div class="score-icons">
@@ -584,7 +571,7 @@ function groupByOpus(compositions) {
   return items;
 }
 
-function renderScoreItems(compositions, scoreMap, tagMap, creditedAsMap) {
+function renderScoreItems(compositions, scoreMap, creditedAsMap) {
   const items = groupByOpus(compositions);
   // Individual works first, opus groups (collapsed accordions) last, in their
   // own section — mixing full-detail cards with collapsed group tiles in one
@@ -592,10 +579,10 @@ function renderScoreItems(compositions, scoreMap, tagMap, creditedAsMap) {
   const singles = items.filter(i => i.type === 'single');
   const groups  = items.filter(i => i.type === 'group');
 
-  const singlesHtml = singles.map(item => scoreRowHtml(item.c, scoreMap, tagMap, creditedAsMap)).join('');
+  const singlesHtml = singles.map(item => scoreRowHtml(item.c, scoreMap, creditedAsMap)).join('');
 
   const groupsHtml = groups.map(item => {
-    const rowsHtml = item.list.map(c => scoreRowHtml(c, scoreMap, tagMap, creditedAsMap)).join('');
+    const rowsHtml = item.list.map(c => scoreRowHtml(c, scoreMap, creditedAsMap)).join('');
     return `
       <div class="opus-group">
         <button type="button" class="opus-group-header" aria-expanded="false"
