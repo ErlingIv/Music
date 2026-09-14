@@ -171,8 +171,14 @@
     color: var(--muted);
     margin-top: 2px;
     display: flex;
-    gap: 0.75rem;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.75rem;
   }
+  /* A tag chip (e.g. a long album/collection name) would otherwise shrink to
+     fit the row and word-wrap internally across several lines, ballooning
+     just that one card's height in the grid — keep every meta item, chip
+     included, on a single line and let the whole item wrap down instead. */
+  .score-meta > span { white-space: nowrap; }
   .score-icons { display: flex; gap: 0.4rem; flex-shrink: 0; align-items: center; }
   .icon-badge.has-pdf { color: var(--accent); border-color: var(--accent); }
   .icon-badge.has-mp3 { color: var(--accent2); border-color: var(--accent2); }
