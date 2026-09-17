@@ -831,11 +831,16 @@
             <input type="text" id="p_lastName">
           </div>
         </div>
+        <!-- min-width:0 on the year inputs below: an empty <input flex:1> still
+             won't shrink past its UA-default intrinsic width without this, so on
+             a narrow screen the "usikker / etter" checkbox label (longer than
+             "usikker" alone) gets pushed off the edge instead of the input
+             shrinking to make room. -->
         <div class="row2">
           <div class="field">
             <label>Født</label>
             <div style="display:flex;align-items:center;gap:0.6rem">
-              <input type="text" id="p_born" placeholder="årstall" style="flex:1">
+              <input type="text" id="p_born" placeholder="årstall" style="flex:1;min-width:0">
               <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.78rem;color:var(--muted);font-weight:400;white-space:nowrap;cursor:pointer">
                 <input type="checkbox" id="p_born_uncertain" style="width:auto;margin:0;accent-color:var(--accent)"> usikker
               </label>
@@ -844,7 +849,7 @@
           <div class="field">
             <label>Død</label>
             <div style="display:flex;align-items:center;gap:0.6rem">
-              <input type="text" id="p_died" placeholder="årstall" style="flex:1">
+              <input type="text" id="p_died" placeholder="årstall" style="flex:1;min-width:0">
               <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.78rem;color:var(--muted);font-weight:400;white-space:nowrap;cursor:pointer">
                 <input type="checkbox" id="p_died_uncertain" style="width:auto;margin:0;accent-color:var(--accent)"> usikker / etter
               </label>
