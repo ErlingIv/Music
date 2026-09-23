@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Liebich Family — Norske Musikknoter</title>
+<meta name="description" content="Three musicians, one extraordinary story: Immanuel Liebich, his son Rudolph, and Rudolph's first wife, the Norwegian composer Inga Lærum Liebich.">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=Source+Serif+4:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #f7f4ee;
+    --paper:   #fffef9;
+    --ink:     #1a1814;
+    --muted:   #7a7060;
+    --faint:   #e8e2d4;
+    --accent:  #8b3a1e;
+    --accent2: #2a5c45;
+    --border:  #d4cdc0;
+    --serif:   'Playfair Display', Georgia, serif;
+    --body:    'Source Serif 4', Georgia, serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--body); background: var(--bg); color: var(--ink); min-height: 100vh; }
+
+  .site-header {
+    background: var(--paper);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .back-link {
+    font-size: 0.82rem;
+    color: var(--muted);
+    text-decoration: none;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .back-link:hover { color: var(--accent); }
+  .site-name {
+    font-family: var(--serif);
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  main { max-width: 720px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  .bio-header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .bio-eyebrow {
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.4rem;
+  }
+  .bio-name {
+    font-family: var(--serif);
+    font-size: clamp(1.6rem, 3.2vw, 2.3rem);
+    font-weight: 700;
+    line-height: 1.15;
+    margin-bottom: 0.4rem;
+  }
+  .bio-dates {
+    font-size: 0.98rem;
+    color: var(--muted);
+    font-weight: 300;
+    margin-bottom: 1rem;
+  }
+  .related-links { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+  .related-links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    color: var(--accent);
+    text-decoration: none;
+    border: 1px solid var(--accent);
+    border-radius: 5px;
+    padding: 4px 11px;
+  }
+  .related-links a:hover { background: var(--accent); color: #fff; }
+
+  .bio-article { font-size: 1.02rem; line-height: 1.85; color: var(--ink); }
+  .bio-article p { margin-bottom: 1.1em; }
+  .bio-heading {
+    font-family: var(--serif);
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin: 1.6em 0 0.6em;
+    line-height: 1.25;
+  }
+  .bio-heading::first-letter { color: var(--accent); font-size: 1.35em; }
+  .bio-subheading {
+    font-family: var(--serif);
+    font-size: 1.08rem;
+    font-weight: 600;
+    font-style: italic;
+    color: var(--accent2);
+    margin: 1.3em 0 0.5em;
+    line-height: 1.3;
+  }
+  .bio-article > p:first-of-type::first-letter {
+    font-family: var(--serif);
+    font-size: 4.6em;
+    font-weight: 700;
+    float: left;
+    line-height: 0.78;
+    padding: 0 0.09em 0 0;
+    margin: 0 0 -0.15em 0;
+    color: var(--accent);
+  }
+  .bio-article a { color: var(--accent2); }
+
+  .lede {
+    font-style: italic;
+    color: var(--muted);
+    border-left: 3px solid var(--border);
+    padding-left: 1rem;
+    margin-bottom: 1.8rem;
+  }
+
+  .work-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.8rem 0 1.8rem;
+    font-size: 0.92rem;
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .work-table th, .work-table td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--faint);
+  }
+  .work-table th {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--faint);
+  }
+  .work-table tr:last-child td { border-bottom: none; }
+  .work-table td:nth-child(2) { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .work-table .no-link { color: var(--muted); font-style: italic; font-size: 0.88em; }
+
+  .source-list, .further-list {
+    margin: 0.5rem 0 1.5rem 1.2rem;
+    font-size: 0.95rem;
+    line-height: 1.8;
+  }
+  .source-list li, .further-list li { margin-bottom: 0.2em; }
+
+  .loading-state { text-align: center; padding: 3rem; color: var(--muted); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a class="back-link" href="index.html">← Back</a>
+  <a class="site-name" href="index.html">Norske Musikknoter</a>
+</header>
+
+<main>
+  <div class="bio-header">
+    <div class="bio-eyebrow">Biography</div>
+    <h1 class="bio-name">The Liebich Family</h1>
+    <p class="bio-dates">Three musicians, one extraordinary story — Immanuel Liebich (1823–1901), Rudolph Liebich (1867–1933), Inga Lærum Liebich (1864–1936)</p>
+    <div class="related-links">
+      <a href="composer.html?id=1000">Immanuel Liebich →</a>
+      <a href="composer.html?id=789">Inga Lærum Liebich →</a>
+      <a href="composer.html?id=1007">Rudolph Liebich →</a>
+    </div>
+  </div>
+
+  <article class="bio-article">
+    <p class="lede">This is the combined story of three musicians from one family whose lives crossed Germany, England, Norway, Canada and the United States: the pianist and composer Immanuel Liebich (1823–1901); his son Rudolph Liebich (1867–1933), a self-styled &ldquo;Baron&rdquo; whose career took in a bigamy scandal and a late turn to radical politics; and Rudolph&rsquo;s first wife, the Norwegian composer Inga Lærum Liebich (1864–1936). The narrative below is drawn from the background notes accompanying Erling&rsquo;s MuseScore transcriptions of the family&rsquo;s surviving compositions, together with the contemporary newspaper and magazine accounts quoted in those notes. A full list of the transcribed scores, with links, follows the narrative; sources are listed at the end.</p>
+
+    <h2 class="bio-heading">Immanuel Liebich (1823–1901) — The Patriarch</h2>
+    <p>Immanuel Liebich was born in Germany and settled in England in 1863, where he became a respected and prolific composer and pianist, publishing widely for the piano. He married Agnes Julie, n&eacute;e Melhorn (1836–1910); their son Rudolph later claimed she was related to the German Chancellor Otto von Bismarck, though no proof of this has been found. The couple raised a large and musical family. Their son Frank (Franz Thorvaldsen) Liebich (1858–1922) was already performing successfully at the age of eight or nine, and later, as a keen student of Debussy, gave concerts of the composer&rsquo;s music after discussing its artistic content with Debussy himself. Their daughter Maud also performed at public concerts, and Agnes herself performed and lectured on music in London.</p>
+    <p>Immanuel&rsquo;s best-known work was &ldquo;The Music Box&rdquo; (Opus 19), published in 1865 as &ldquo;an imitation of a music box&rdquo; and performed by the composer at a concert on 7 June 1866 &ldquo;with wonderful effect.&rdquo; Contemporary reviewers called it &ldquo;an extraordinary piano-forte gem, quite sensational, and easy for ladies to play from memory,&rdquo; and it remained widely popular, being republished repeatedly over the following years. Two years later he tried to repeat the success with a similar piece, &ldquo;Snuffbox,&rdquo; but it never achieved the same lasting popularity. Another surviving work, the salon piece &ldquo;Ballade&rdquo; (1866), was described at the time as &ldquo;not perfectly original&rdquo; but &ldquo;very sweet.&rdquo; Of his many published compositions, only a handful are known to survive today.</p>
+    <p>Immanuel died in England in 1901. That same year his son Rudolph, then establishing himself as a musician in the United States, began claiming the title &ldquo;Baron,&rdquo; which he said he had inherited from his father — a claim both his sister and his first wife Inga later denied.</p>
+
+    <h2 class="bio-heading">Inga Lærum Liebich (1864–1936) — The Norwegian Composer</h2>
+    <p>Inga Lærum&rsquo;s mother was German, a heritage reflected in her earliest surviving songs: &ldquo;St&auml;ndchen&rdquo; and &ldquo;Am leuchtenden Sommermorgen,&rdquo; nos. 1 and 2 of &ldquo;Zwei Ges&auml;nge mit Klavierbegleitung&rdquo; (1889), both with German texts. The second sets a poem by Heinrich Heine that was also famously set by Robert Schumann, in his song cycle Dichterliebe (Op. 48, no. 12), and by more than thirty other composers besides. She was still publishing under her maiden name, L&aelig;rum, in 1889.</p>
+    <p>She studied in London, where on 15 December 1889 she married the English pianist and composer Rudolph Liebich — a marriage later confirmed only through a parish record found at Somerset House in London, and separately reported in the Norwegian newspaper Aftenposten on 13 January 1890. The couple&rsquo;s son, &Oslash;rnulf, was born in England in March 1891 (he died in March 1917). Later that year the family moved to Christiania (Oslo); Rudolph stayed only about six months before leaving for Montreal, Canada, and did not return.</p>
+    <p>In 1901 Inga travelled to the United States to rejoin her husband in Burlington, Vermont — and, falling ill on the journey, found him in the middle of a second life. The two wives met for the first time at a hospital: &ldquo;Please leave the room, I want to speak to my husband,&rdquo; Inga said. &ldquo;Your husband?&rdquo; came the reply. &ldquo;He is MY husband!&rdquo; Rudolph was arrested for bigamy, but the case was never brought to trial, reportedly for lack of funds to bring witnesses over from England. Inga remained in Burlington until 1905, giving voice and piano lessons and serving as directress of the choir at St. Mary&rsquo;s; a local newspaper described her at the time as &ldquo;the alleged deserted wife of &lsquo;Baron&rsquo; von Liebich.&rdquo; She returned to Norway in 1905, but kept the surname Liebich for the rest of her life.</p>
+    <p>In later years Inga converted to Catholicism, a shift visible in several of her compositions, including three separate settings of &ldquo;Ave Maria&rdquo;: one from 1909, dedicated to the composer and pianist Mary Wurm; one from 1922, sung at concerts with a Norwegian text; and one from 1924, which received poor reviews. She remained musically active and versatile throughout: in 1896 she composed a march for &ldquo;Nansen-Festskrift,&rdquo; a magazine marking Fridtjof Nansen&rsquo;s return from his Arctic expedition; in 1914 she wrote a two-step for Bokken Lasson&rsquo;s Chat Noir cabaret in Kristiania; and in 1915 she published the French-language song &ldquo;Les Jardins de Atahualpa,&rdquo; reviewed (unfavourably) in the English journal The Musical Times, and later played more than once on Norwegian radio before the Second World War. In 1927, in the only instance on record of her writing lyrics rather than music, she wrote the words for &ldquo;Isle of My Dreams,&rdquo; composed by Anna Louise Egeberg.</p>
+    <p>Despite the circumstances of their meeting, Inga went on to form an unlikely friendship with Rudolph&rsquo;s second wife, Sarah Sophrona &ldquo;Frona&rdquo; Hale (1869–1935). In January 1919 Frona wrote to her: &ldquo;My Darling Inga, thank you for your letter&hellip;&rdquo; By then both women had lost a son in 1917 — Inga&rsquo;s &Oslash;rnulf, and a son of Frona&rsquo;s — both fathered by Rudolph. Inga sent Frona a song of her own, noting that &ldquo;Madam Mariska Aldrich, one of our wonderful singers, is going to use it in concert work,&rdquo; a reference to the prominent contemporary singer Mariska Aldrich (1881–1965). Neither woman seemed to know where Rudolph was at the time. Inga L&aelig;rum Liebich died in Oslo in 1936. Asked once who had impressed her most in her life, she answered: her meeting with Oscar Wilde.</p>
+
+    <h2 class="bio-heading">Rudolph Liebich (1867–1933) — &ldquo;Baron&rdquo; of Dubious Titles</h2>
+    <p>Born in Brighton, England, on 1 June 1867, Rudolph Liebich later claimed to have studied under Franz Liszt, among other teachers, and to have directed a college in Heidelberg, giving concerts at Heidelberg Castle. By his own account, his father summoned him to London to help stage a comic opera, &ldquo;Magic Ring&rdquo; (1886), and there he was taken up by the Countess of Warwick and introduced into society, including to Princess Helene, a granddaughter of Queen Victoria. He also said he became friends with the singer David Bispham and composed music for several of his songs. In spring 1894 he travelled to Canada to write the music for another comic opera, &ldquo;Bonnie Prince Charlie,&rdquo; with a libretto likely by Arthur George Doughty of Montreal.</p>
+    <p>His own retelling of these years — repeated to a Buffalo newspaper after his bigamy scandal broke — made no mention of the wife and son he had left behind in Norway. In September 1901, weeks before his exposure, he appeared on the front page of the magazine Musical Record &amp; Review, pictured and warmly praised, explaining his presence in America only as having come &ldquo;for rest.&rdquo; In reality he had fled Canada to avoid arrest, shaving his beard and cutting his hair to avoid recognition. He married again in Burlington that June — the same year his father died in England, after which he began styling himself &ldquo;Baron.&rdquo; When Inga arrived from Norway and identified herself as his first wife, he was arrested for bigamy; released after three months when the case was dropped for lack of funds to bring witnesses from England, he went to live with his second wife, Frona, in Buffalo. He later dropped the &ldquo;Baron&rdquo; title in favour of &ldquo;Rudolph Bismarck von Liebich,&rdquo; repeating his claim of a family connection to Otto von Bismarck. By 1920 he had divorced Frona as well; the last confirmed trace of him is in Los Angeles in 1930, working as a piano and composition teacher. He is known to have had at least one more son, by a third woman, whose descendants are likely alive today.</p>
+    <p>His dedications place him among genuinely well-connected musicians of the day: both &ldquo;A Farewell&rdquo; (an intermezzo from his five-part &ldquo;Norwegian Suite,&rdquo; alongside &ldquo;Legend of the Fjord,&rdquo; &ldquo;Carnival in Christiania,&rdquo; &ldquo;The Voice of the Autumn&rdquo; and &ldquo;Norwegian Gipsy Dance&rdquo;) and &ldquo;Sonnet without Words&rdquo; (1900) are dedicated to the celebrated pianist Emil Sauer (1862–1942). His 1898 lullaby &ldquo;Baby&rsquo;s Fairyland&rdquo; won a $25 prize from the Ladies&rsquo; Home Journal for the best submitted lullaby. &ldquo;Herzensblume&rdquo; (1892) — the only work of his ever published in Norway — was well received and frequently performed in Christiania through 1892–93, with English lyrics by (Frederic) Edward Weatherly, later famous for writing the words to &ldquo;Danny Boy,&rdquo; and was first sung by the Norwegian tenor Wilhelm Kloed.</p>
+    <p>By the mid-1910s Liebich had become music editor of the Chicago magazine Woman&rsquo;s World, where his song &ldquo;Love&rsquo;s Springtime&rdquo; (1913) was published, dedicated to the celebrated opera singer Ernestine Schumann-Heink. His politics then shifted sharply leftward: he went on to compose songs and songbooks for labour and anarchist organisations, including &ldquo;We&rsquo;ve Fed You All a Thousand Years&rdquo; and the songbook &ldquo;The March of the Workers,&rdquo; and played Chopin&rsquo;s Funeral March at the funeral of the labour activist and songwriter Joe Hill in 1915. Associated with the Industrial Workers of the World (IWW), he was arrested in Chicago in 1918 in connection with a bombing at a federal building, though never imprisoned; a police report from the investigation referred to him simply as &ldquo;the composer of Love&rsquo;s Springtime,&rdquo; suggesting the song was still recognised years after its publication. Rudolph Liebich died in Los Angeles on 12 June 1933.</p>
+
+    <h2 class="bio-heading">List of Works</h2>
+    <p>Every score the family is known to have published, as transcribed and made available by Erling on MuseScore. Where a score has not yet been published there, no link is given.</p>
+
+    <h3 class="bio-subheading">Immanuel Liebich</h3>
+    <table class="work-table">
+      <thead><tr><th>Title</th><th>Year</th><th>Link</th></tr></thead>
+      <tbody>
+        <tr><td>Ballade</td><td>1866</td><td><a href="https://musescore.com/user/26911315/scores/7579196" target="_blank" rel="noreferrer">MuseScore</a></td></tr>
+        <tr><td>The Brighton Quadrilles</td><td>—</td><td><span class="no-link">not on MuseScore</span></td></tr>
+        <tr><td>The Music Box (Opus 19)</td><td>1865</td><td><a href="https://musescore.com/user/26911315/scores/7547021" target="_blank" rel="noreferrer">MuseScore</a></td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="bio-subheading">Inga Lærum Liebich — Composer</h3>
+    <table class="work-table">
+      <thead><tr><th>Title</th><th>Year</th><th>Link</th></tr></thead>
+      <tbody>
+        <tr><td>Am leuchtende Sommermorgen</td><td>1889</td><td><a href="https://musescore.com/user/26911315/scores/6398778" target="_blank" rel="noreferrer">MuseScore</a></td></tr>
+        <tr><td>Andante fun&egrave;bre</td><td>1907</td><td><a href="https://musescore.com/user/26911315/scores/21927199" target="_blank" rel="noreferrer">MuseScore</a></td></tr>
+        <tr><td>Ave Maria</td><td>1909</td><td><a href="https://musescore.com/user/26911315/scores/6661832" target="_blank" rel="noreferrer">MuseScore</a></td></tr>
+        <tr><td>Chat Noir</td><td>1914</td><td><a href="https://musescore.com/user/26911315/scores/7009744" target="_blank" rel="noreferrer">MuseScore</a></td></tr>
+        <tr><td>Evighetstanker (Opus 53)</td><td>1928</td><td><span class="no-link">not on MuseScore</span></td></tr>
+        <tr><td>Les Jardins de Atahualpa</td><td>1915</td><td><a href="https://musescore.com/user/26911315/scores/6610010" target="_blank" rel="noreferrer">MuseScore</a></td></tr>
+        <tr><td>Lyse n&aelig;tter</td><td>1896</td><td><a href="https://musescore.com/user/26911315/scores/6402795" target="_blank" rel="noreferrer">MuseScore</a></td></tr>
+        <tr><td>Mignonette-vals</td><td>1887</td><td><a href="https://musescore.com/user/26911315/scores/6106575" target="_blank" rel="noreferrer">MuseScore</a></td></tr>
+        <tr><td>Min Sommerfugl</td><td>1892</td><td><a href="https://musescore.com/user/26911315/scores/6188781" target="_blank" rel="noreferrer">MuseScore</a></td></tr>
+        <tr><td>Morgen</td><td>1894</td><td><span class="no-link">not on MuseScore</span></td></tr>
+        <tr><td>Nansen Fest-Marsch</td><td>1896</td><td><a href="https://musescore.com/user/26911315/scores/19669735" target="_blank" rel="noreferrer">MuseScore</a></td></tr>
+        <tr><td>St&auml;ndchen</td><td>1889</td><td><a href="https://musescore.com/user/26911315/scores/6174625" target="_blank" rel="noreferrer">MuseScore</a></td></tr>
+        <tr><td>Taterdans</td><td>1892</td><td><a href="https://musescore.com/user/26911315/scores/6391503" target="_blank" rel="noreferrer">MuseScore</a></td></tr>
+        <tr><td>To legender</td><td>1889</td><td><span class="no-link">not on MuseScore</span></td></tr>
+        <tr><td>Valce Caprice (Opus 51)</td><td>—</td><td><span class="no-link">not on MuseScore</span></td></tr>
+        <tr><td>Vuggesang (Opus 49)</td><td>1926</td><td><a href="https://musescore.com/user/26911315/scores/6227526" target="_blank" rel="noreferrer">MuseScore</a></td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="bio-subheading">Inga Lærum Liebich — Lyricist</h3>
+    <table class="work-table">
+      <thead><tr><th>Title</th><th>Year</th><th>Link</th></tr></thead>
+      <tbody>
+        <tr><td>Isle of my dreams (music by Anna Louise Egeberg)</td><td>1927</td><td><a href="https://musescore.com/user/26911315/scores/25447150" target="_blank" rel="noreferrer">MuseScore</a></td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="bio-subheading">Rudolph Liebich</h3>
+    <table class="work-table">
+      <thead><tr><th>Title</th><th>Year</th><th>Link</th></tr></thead>
+      <tbody>
+        <tr><td>A Farewell &ndash; Intermezzo</td><td>1900</td><td><a href="https://musescore.com/user/26911315/scores/21861175" target="_blank" rel="noreferrer">MuseScore</a></td></tr>
+        <tr><td>Baby&rsquo;s Fairyland</td><td>1898</td><td><a href="https://musescore.com/user/26911315/scores/6408008" target="_blank" rel="noreferrer">MuseScore</a></td></tr>
+        <tr><td>Herzensblume</td><td>1892</td><td><a href="https://musescore.com/user/26911315/scores/6570872" target="_blank" rel="noreferrer">MuseScore</a></td></tr>
+        <tr><td>Love&rsquo;s springtime</td><td>1913</td><td><a href="https://musescore.com/user/26911315/scores/6992694" target="_blank" rel="noreferrer">MuseScore</a></td></tr>
+        <tr><td>Sonnet without words</td><td>1900</td><td><a href="https://musescore.com/user/26911315/scores/21897598" target="_blank" rel="noreferrer">MuseScore</a></td></tr>
+      </tbody>
+    </table>
+
+    <h2 class="bio-heading">Sources</h2>
+    <p>This account is compiled from the background research notes Erling wrote to accompany each MuseScore transcription listed above (musescore.com/user/26911315), which in turn draw on a number of contemporary and archival sources quoted or cited within those notes:</p>
+    <ul class="source-list">
+      <li>Aftenposten, 13 January 1890 (marriage announcement)</li>
+      <li>The Musical Times (London), 1926</li>
+      <li>Musical Record &amp; Review, September 1901</li>
+      <li>Ladies&rsquo; Home Journal, 1898</li>
+      <li>Woman&rsquo;s World magazine, Chicago, 1913 and mid-1910s</li>
+      <li>Marriage record, Somerset House registry, London</li>
+      <li>Contemporary Norwegian and English newspaper reviews quoted (unnamed) in the score notes</li>
+      <li>American contemporary newspapers</li>
+      <li>The Etude magazine</li>
+      <li>Physical scores held by the site owner and the National Library of Norway (Nasjonalbiblioteket)</li>
+      <li>A letter between Frona and Inga</li>
+    </ul>
+
+    <h3 class="bio-subheading">Further reading</h3>
+    <ul class="further-list">
+      <li><a href="https://imslp.org/wiki/Category:Liebich,_Immanuel" target="_blank" rel="noreferrer">IMSLP — Immanuel Liebich</a></li>
+      <li><a href="https://musescore.com/artist/rudolph_liebich-278118" target="_blank" rel="noreferrer">MuseScore artist page — Rudolph Liebich</a></li>
+      <li><a href="https://musescore.com/artist/laerum_liebich_inga-13762" target="_blank" rel="noreferrer">MuseScore artist page — Inga Lærum Liebich</a></li>
+      <li><a href="https://no.wikipedia.org/wiki/Inga_L%C3%A6rum_Liebich" target="_blank" rel="noreferrer">Wikipedia (Norwegian) — Inga Lærum Liebich</a></li>
+    </ul>
+  </article>
+</main>
+
+</body>
+</html>
