@@ -568,17 +568,17 @@
       <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem">
         <button type="button" id="searchModeComposer" class="btn btn-secondary"
           onclick="setSearchMode('composer')"
-          style="font-size:0.82rem;padding:0.3rem 0.9rem;font-weight:700">Komponist</button>
+          style="font-size:0.82rem;padding:0.3rem 0.9rem">Komponist</button>
         <button type="button" id="searchModeTitle" class="btn btn-secondary"
           onclick="setSearchMode('title')"
-          style="font-size:0.82rem;padding:0.3rem 0.9rem">Tittel</button>
+          style="font-size:0.82rem;padding:0.3rem 0.9rem;font-weight:700">Tittel</button>
         <button type="button" id="searchModeScoreId" class="btn btn-secondary"
           onclick="setSearchMode('scoreid')"
           style="font-size:0.82rem;padding:0.3rem 0.9rem">Score-ID</button>
       </div>
-      <input type="hidden" id="editSearchMode" value="composer">
+      <input type="hidden" id="editSearchMode" value="title">
       <div class="field">
-        <input type="text" id="editSearch" placeholder="Søk på komponist…" autocomplete="off">
+        <input type="text" id="editSearch" placeholder="Søk på tittel…" autocomplete="off">
       </div>
       <div id="editSearchResults" class="search-results"></div>
     </div>

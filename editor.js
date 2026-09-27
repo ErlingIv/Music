@@ -1597,7 +1597,7 @@ function closeEditPanel() {
   // result) — restore the previous search state.
   if (window._savedSearch) {
     const s = window._savedSearch;
-    setSearchMode(s.mode || 'composer');
+    setSearchMode(s.mode || 'title');
     document.getElementById('editSearch').value = s.query;
     if (s.query.length >= 2) {
       searchCompositions(s.query);
