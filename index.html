@@ -1496,7 +1496,12 @@ function illustratorAlphaKeydown(event, letter) {
 
 function illustratorCard(p) {
   const years  = lifespan(p.born, p.died, p.died_uncertain);
-  const flag   = p.nationality !== 'NO' ? renderFlags(p.nationality, p.birth_country, p.birth_country_primary, p.nationality_uncertain) : '';
+  // Unlike composer cards (nationality-split into separate tabs, so a flag
+  // is redundant within the Norwegian tab), this is a single unified list
+  // mixing all nationalities together — a Norwegian illustrator needs its
+  // own flag here too, or it looks inconsistent next to a flagged Swedish
+  // or German one in the same list.
+  const flag   = renderFlags(p.nationality, p.birth_country, p.birth_country_primary, p.nationality_uncertain);
   const female = p.gender === 'F' ? '<span class="female-badge">♀</span>' : '';
   return `
     <a class="composer-card" href="${composerHref(p.person_id, '&role=Illustrator', 'illustrators')}">
