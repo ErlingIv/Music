@@ -404,6 +404,7 @@
     <button type="button" class="tab" onclick="switchTab('person')">Person</button>
     <button type="button" class="tab" onclick="switchTab('biolinks')">Bio-lenker</button>
     <button type="button" class="tab" onclick="switchTab('arbeidsliste')">Arbeidsliste</button>
+    <button type="button" class="tab" onclick="switchTab('checkoriginal')">Sjekk original</button>
     <button type="button" class="tab" onclick="switchTab('unverified')">Ikke godkjent</button>
     <button type="button" class="tab" onclick="switchTab('siste')">Siste</button>
     <button type="button" class="tab" onclick="switchTab('publisher')">Forlag</button>
@@ -655,6 +656,14 @@
         <div class="field" style="display:flex;align-items:center;gap:0.6rem;margin-top:0.25rem">
           <input type="checkbox" id="e_msPrivate" style="width:auto;margin:0;accent-color:#c02020">
           <label for="e_msPrivate" style="margin:0;text-transform:none;font-size:0.88rem;letter-spacing:0;font-weight:500;color:#4a4035;cursor:pointer">🔒 MuseScore-partitur privat (skjul lenke/embed på frontend)</label>
+        </div>
+        <div class="field" style="display:flex;align-items:center;gap:0.6rem;margin-top:0.25rem">
+          <input type="checkbox" id="e_checkOriginal" style="width:auto;margin:0;accent-color:#c02020">
+          <label for="e_checkOriginal" style="margin:0;text-transform:none;font-size:0.88rem;letter-spacing:0;font-weight:500;color:#4a4035;cursor:pointer">📋 Sjekk original (avvik mellom database og fysisk/originalt noteeksemplar)</label>
+        </div>
+        <div class="field" style="margin-top:0.25rem">
+          <label>Merknad — sjekk original</label>
+          <input type="text" id="e_checkOriginalNote" placeholder="F.eks. «Platenr. 1234 i DB, noteark sier 1243»">
         </div>
         <div class="field" style="margin-bottom:0.5rem">
           <label style="margin-bottom:0.25rem">Tagger</label>
@@ -1059,6 +1068,15 @@
       </div>
     </div>
     <div id="arbeidsListArea"></div>
+  </div>
+
+  <!-- ═══════════════════════ SJEKK ORIGINAL TAB ═══════════════════════ -->
+  <div id="tab-checkoriginal" class="tab-content">
+    <div class="card">
+      <div class="card-title">Sjekk original <span id="countCheckOriginal" style="background:#c02020;color:white;border-radius:3px;padding:1px 6px;font-size:0.75rem;margin-left:8px">…</span></div>
+      <div style="font-size:0.8rem;color:var(--muted);margin-top:0.25rem">Komposisjoner merket «Sjekk original» — avvik mellom database og fysisk/originalt noteeksemplar som må verifiseres. Én rad per noteeksemplar (score-rad).</div>
+    </div>
+    <div id="checkOriginalListArea"></div>
   </div>
 
   <!-- ═══════════════════════ UNVERIFIED (IKKE GODKJENT) TAB ═══════════════════════ -->

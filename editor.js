@@ -66,6 +66,7 @@ let publisherLoaded    = false;
 let unknownPersonsLoaded = false;
 let illustratorsLoaded = false;
 let unverifiedLoaded   = false;
+let checkOriginalLoaded = false;
 
 // Which tab was active right before switching into 'edit' (Rediger) — e.g.
 // 'arbeidsliste', 'unverified', 'person'. Lets closeEditPanel()'s "Tilbake"
@@ -81,6 +82,7 @@ function switchTab(name) {
   if (name === 'edit' && currentName && currentName !== 'edit') editEntryTab = currentName;
   if (name === 'biolinks' && !bioLoaded) loadBioPersons();
   if (name === 'arbeidsliste' && !arbeidslisteLoaded) loadArbeidsliste();
+  if (name === 'checkoriginal' && !checkOriginalLoaded) loadCheckOriginal();
   if (name === 'siste' && !sisteLoaded) loadSiste();
   if (name === 'publisher' && !publisherLoaded) loadPublishers();
   if (name === 'unknown' && !unknownPersonsLoaded) loadUnknownPersons();
@@ -1205,6 +1207,8 @@ async function loadEditForm(compId, preferredScoreId) {
   document.getElementById('e_toInvestigate').checked = c.to_investigate || false;
   document.getElementById('e_underArbeid').checked   = c.under_arbeid   || false;
   document.getElementById('e_msPrivate').checked     = c.musescore_private || false;
+  document.getElementById('e_checkOriginal').checked = c.check_original || false;
+  document.getElementById('e_checkOriginalNote').value = c.check_original_note || '';
   const dcEl = document.getElementById('e_displayCountry');
   dcEl.value = c.display_country || '';
   document.getElementById('e_displayCountryFlag').textContent = c.display_country ? countryCodeToFlag(c.display_country) : '';
@@ -1412,6 +1416,8 @@ async function saveEdit() {
       to_investigate:    document.getElementById('e_toInvestigate').checked,
       under_arbeid:      document.getElementById('e_underArbeid').checked,
       musescore_private: document.getElementById('e_msPrivate').checked,
+      check_original:      document.getElementById('e_checkOriginal').checked,
+      check_original_note: document.getElementById('e_checkOriginalNote').value.trim() || null,
       ...(document.getElementById('e_uploadedToday').checked ? { musescore_uploaded: new Date().toISOString().slice(0,10) } : {}),
       ...(compFieldsChanged ? { public_content_updated_at: nowIso() } : {}),
     });
@@ -3617,6 +3623,144 @@ async function toggleUnderArbeid(checkbox, compositionId) {
     checkbox.checked  = false;
     showStatus('Kunne ikke lagre: ' + e.message, 'error');
   }
+}
+
+// ── Sjekk original ───────────────────────────────────────────────────────────
+// composition.check_original = true — flags a mismatch between the DB and the
+// physical/original score that needs verifying. One row per score_id (not per
+// composition), since the mismatch is usually specific to one edition's
+// publisher/plate_number, and a composition can have more than one score row.
+
+let checkOriginalData = []; // [{ composition_id, score_id, title, year_composed, _composer, _publisher, _plate }]
+let checkOriginalSort = { key: null, dir: 1 };
+
+async function loadCheckOriginal() {
+  if (checkOriginalLoaded) return;
+  checkOriginalLoaded = true;
+
+  const area = document.getElementById('checkOriginalListArea');
+  area.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:1rem 0">Laster…</div>';
+
+  const comps = await get('/composition?check_original=eq.true&select=composition_id,title,year_composed&order=title&limit=500');
+  const compIds = comps.map(c => c.composition_id);
+
+  if (!compIds.length) {
+    checkOriginalData = [];
+    document.getElementById('countCheckOriginal').textContent = '0';
+    renderCheckOriginal();
+    return;
+  }
+
+  const compMap = Object.fromEntries(comps.map(c => [c.composition_id, c]));
+
+  const [cpRows, scores] = await Promise.all([
+    get(`/composition_person?composition_id=in.(${compIds.join(',')})&role=eq.Composer&select=composition_id,person_id,credited_as&limit=1000`),
+    get(`/score?composition_id=in.(${compIds.join(',')})&select=score_id,composition_id,publisher_id,plate_number&limit=1000`),
+  ]);
+
+  const personIds = [...new Set(cpRows.map(r => r.person_id))];
+  const persons = personIds.length
+    ? await get(`/person?person_id=in.(${personIds.join(',')})&select=person_id,first_name,last_name`)
+    : [];
+  const personMap = Object.fromEntries(persons.map(p => [p.person_id, ((p.first_name||'') + ' ' + (p.last_name||'')).trim()]));
+
+  const composerMap = {};
+  for (const row of cpRows) {
+    const name = row.credited_as || personMap[row.person_id] || '';
+    if (!name) continue;
+    composerMap[row.composition_id] = composerMap[row.composition_id]
+      ? composerMap[row.composition_id] + ', ' + name
+      : name;
+  }
+
+  const publisherIds = [...new Set(scores.map(s => s.publisher_id).filter(Boolean))];
+  const publishers = publisherIds.length
+    ? await get(`/publisher?publisher_id=in.(${publisherIds.join(',')})&select=publisher_id,publisher_name`)
+    : [];
+  const publisherMap = Object.fromEntries(publishers.map(p => [p.publisher_id, p.publisher_name]));
+
+  const scoresByComp = {};
+  scores.forEach(s => { (scoresByComp[s.composition_id] ||= []).push(s); });
+
+  checkOriginalData = [];
+  for (const compId of compIds) {
+    const c = compMap[compId];
+    const compScores = scoresByComp[compId] || [null]; // no score row — still list the composition once
+    for (const s of compScores) {
+      checkOriginalData.push({
+        composition_id: compId,
+        score_id:       s ? s.score_id : null,
+        title:          c.title,
+        year_composed:  c.year_composed,
+        _composer:      composerMap[compId] || '',
+        _publisher:     s && s.publisher_id ? (publisherMap[s.publisher_id] || '') : '',
+        _plate:         s ? (s.plate_number || '') : '',
+      });
+    }
+  }
+
+  document.getElementById('countCheckOriginal').textContent = checkOriginalData.length;
+  renderCheckOriginal();
+}
+
+function renderCheckOriginal() {
+  const area = document.getElementById('checkOriginalListArea');
+  let items = checkOriginalData;
+
+  if (!items.length) {
+    area.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:1rem 0">Ingen komposisjoner merket «Sjekk original».</div>';
+    return;
+  }
+
+  if (checkOriginalSort.key) {
+    const key = checkOriginalSort.key;
+    const getVal = c => ({
+      title:     c.title,
+      composer:  c._composer,
+      year:      c.year_composed,
+      publisher: c._publisher,
+      plate:     c._plate,
+    })[key] || '';
+    items = [...items].sort((a, b) => getVal(a).localeCompare(getVal(b), 'no', { numeric: true, sensitivity: 'base' }) * checkOriginalSort.dir);
+  }
+
+  const sortArrow = key => checkOriginalSort.key === key ? (checkOriginalSort.dir === 1 ? ' ▲' : ' ▼') : '';
+  const sortHeader = (key, label) =>
+    `<th style="padding:0.35rem 0.6rem;font-weight:600;text-align:left;cursor:pointer;user-select:none"
+        onclick="sortCheckOriginalBy('${key}')">${label}${sortArrow(key)}</th>`;
+
+  const rows = items.map(c => `
+    <tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:0.35rem 0.6rem">
+        <a href="#" onclick="event.preventDefault();switchTab('edit');loadEditForm(${c.composition_id}${c.score_id ? ', ' + c.score_id : ''})"
+           style="color:var(--ink);text-decoration:none;border-bottom:1px solid var(--border)">${escapeHtml(c.title)}</a>
+      </td>
+      <td style="padding:0.35rem 0.6rem;color:var(--muted);font-size:0.85rem">${escapeHtml(c._composer || '—')}</td>
+      <td style="padding:0.35rem 0.6rem;color:var(--muted);font-size:0.85rem">${escapeHtml(c.year_composed || '—')}</td>
+      <td style="padding:0.35rem 0.6rem;color:var(--muted);font-size:0.85rem">${escapeHtml(c._publisher || '—')}</td>
+      <td style="padding:0.35rem 0.6rem;color:var(--muted);font-size:0.85rem">${escapeHtml(c._plate || '—')}</td>
+    </tr>`).join('');
+
+  area.innerHTML = `
+    <div style="font-size:0.82rem;color:var(--muted);margin-bottom:0.75rem">${items.length} rad(er)</div>
+    <table style="width:100%;border-collapse:collapse;font-size:0.88rem">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border);background:var(--surface)">
+          ${sortHeader('title', 'Tittel')}
+          ${sortHeader('composer', 'Komponist')}
+          ${sortHeader('year', 'År')}
+          ${sortHeader('publisher', 'Forlag')}
+          ${sortHeader('plate', 'Forlags-ID')}
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function sortCheckOriginalBy(key) {
+  checkOriginalSort.dir = (checkOriginalSort.key === key) ? -checkOriginalSort.dir : 1;
+  checkOriginalSort.key = key;
+  renderCheckOriginal();
 }
 
 // ── Ikke godkjent (unverified, by composer) ────────────────────────────────────
