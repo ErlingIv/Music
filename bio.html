@@ -255,7 +255,7 @@ async function load() {
           ${years ? `<p class="bio-dates">${escapeHtml(years)}</p>` : ''}
         </div>
       </div>
-      ${person.bio_source ? `<p class="bio-source"><span>Kilde:</span> ${escapeHtml(person.bio_source)}</p>` : ''}
+      ${person.bio_source ? `<p class="bio-source"><span>Source:</span> ${escapeHtml(person.bio_source)}</p>` : ''}
 
       <article class="bio-article">${renderArticle(person.bio_text)}</article>
 
