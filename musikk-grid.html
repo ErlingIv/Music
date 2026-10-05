@@ -328,6 +328,14 @@ function buildTabs() {
   tabs.push({ id: 'other', label: 'Other', rows: otherSorted });
 }
 
+// First letter for tab labels/grouping. Norwegian collation ('nb') sorts a
+// leading "Aa" as Å (e.g. "Aas" lands after "Ø"), so the label must say Å too —
+// otherwise the last tab reads "U–A" instead of "U–Å".
+function sortLetter(s) {
+  s = (s || '?').toUpperCase();
+  return s.slice(0, 2) === 'AA' ? 'Å' : s[0];
+}
+
 function calcAlphaSplits(sortedRows, n) {
   if (sortedRows.length === 0) return [];
   var total = sortedRows.length;
@@ -338,13 +346,13 @@ function calcAlphaSplits(sortedRows, n) {
     var end = Math.min(i + perGroup, total);
     // Extend end to include all rows with same starting letter
     while (end < total) {
-      var curLetter = (sortedRows[end].sort_last || '?')[0].toUpperCase();
-      var prevLetter = (sortedRows[end-1].sort_last || '?')[0].toUpperCase();
+      var curLetter = sortLetter(sortedRows[end].sort_last);
+      var prevLetter = sortLetter(sortedRows[end-1].sort_last);
       if (curLetter === prevLetter) end++;
       else break;
     }
-    var startLetter = (sortedRows[i].sort_last || '?')[0].toUpperCase();
-    var endLetter   = (sortedRows[end-1].sort_last || '?')[0].toUpperCase();
+    var startLetter = sortLetter(sortedRows[i].sort_last);
+    var endLetter   = sortLetter(sortedRows[end-1].sort_last);
     var label = startLetter === endLetter ? startLetter : startLetter + '–' + endLetter;
     groups.push({ label: label, rows: sortedRows.slice(i, end) });
     i = end;
