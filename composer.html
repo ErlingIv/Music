@@ -37,6 +37,39 @@
     border: 1px solid var(--border);
     flex-shrink: 0;
   }
+  /* An illustrator's mark stands in for a missing portrait: shown whole
+     (contain, on white) rather than circle-cropped like a face. */
+  .composer-photo.signature-photo {
+    border-radius: 8px;
+    object-fit: contain;
+    background: #fff;
+    padding: 4px;
+    box-sizing: border-box;
+  }
+  .signatures {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+  .signatures-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+  .signature-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .signature-list img {
+    height: 72px;
+    max-width: 160px;
+    object-fit: contain;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px;
+    box-sizing: border-box;
+    display: block;
+  }
   .composer-name {
     font-family: var(--serif);
     font-size: clamp(1.6rem, 3vw, 2.2rem);
@@ -331,6 +364,17 @@ async function load() {
       { headers: H }
     );
     const rolesData = await rolesR.json();
+
+    // Illustrator marks/signatures (any number per person). Non-fatal: the
+    // page renders fine without them.
+    let signatures = [];
+    try {
+      const sR = await fetch(
+        `${SUPABASE_URL}/rest/v1/person_signature?person_id=eq.${personId}&select=image_url&order=created_at`,
+        { headers: H }
+      );
+      if (sR.ok) signatures = (await sR.json()).map(s => s.image_url).filter(u => safeHref(u));
+    } catch { /* ignore */ }
     const roleSet = new Set(rolesData.map(r => r.role));
     const hasComposer = roleSet.has('Composer');
     const hasLyricist = roleSet.has('Lyricist');
@@ -405,7 +449,11 @@ async function load() {
       <div class="composer-hero">
         <div class="hero-top">
           <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
-            ${person.photo_url ? `<a href="${safeHref(person.photo_url)}" target="_blank" rel="noopener noreferrer" title="View full photo" style="display:contents"><img src="${safeHref(person.photo_url)}" alt="Photo of ${escapeHtml(fullName(person))}" class="composer-photo"></a>` : ''}
+            ${person.photo_url
+              ? `<a href="${safeHref(person.photo_url)}" target="_blank" rel="noopener noreferrer" title="View full photo" style="display:contents"><img src="${safeHref(person.photo_url)}" alt="Photo of ${escapeHtml(fullName(person))}" class="composer-photo"></a>`
+              : signatures.length
+                ? `<a href="${safeHref(signatures[0])}" target="_blank" rel="noopener noreferrer" title="View full signature" style="display:contents"><img src="${safeHref(signatures[0])}" alt="Signature of ${escapeHtml(fullName(person))}" class="composer-photo signature-photo"></a>`
+                : ''}
             <div>
             <h1 class="composer-name">${escapeHtml(fullName(person))} ${flag}</h1>
             ${years ? `<p class="composer-dates">${escapeHtml(years)}</p>` : ''}
@@ -432,6 +480,13 @@ async function load() {
             </a>` : ''}
           </div>` : ''}
         </div>
+        ${signatures.length ? `
+        <div class="signatures">
+          <div class="signatures-label">Signature${signatures.length !== 1 ? 's' : ''}</div>
+          <div class="signature-list">
+            ${signatures.map((u, i) => `<a href="${safeHref(u)}" target="_blank" rel="noopener noreferrer" title="View full size"><img src="${safeHref(u)}" alt="Signature ${i + 1} of ${escapeHtml(fullName(person))}" loading="lazy"></a>`).join('')}
+          </div>
+        </div>` : ''}
       </div>
 
       ${switcherHtml}
