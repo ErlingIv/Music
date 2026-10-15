@@ -116,7 +116,7 @@
     margin: 1.3em 0 0.5em;
     line-height: 1.3;
   }
-  .bio-article p:first-of-type::first-letter {
+  .bio-article p.dropcap::first-letter {
     font-family: var(--serif);
     font-size: 4.6em;
     font-weight: 700;
@@ -206,9 +206,12 @@ function renderInline(text) {
 // Splits on blank lines into blocks. A block starting with "## " becomes a
 // subheading, "# " becomes a heading, otherwise it's a paragraph (single
 // line breaks within it become <br>, and inline markdown links render as
-// real links via renderInline).
+// real links via renderInline). The drop cap goes on the first real prose
+// paragraph — a short fact block like "Name / Født: … / Død: …" split by
+// line breaks is too short for a 3-line drop cap to wrap around.
 function renderArticle(text) {
   if (!text) return '';
+  let dropcapUsed = false;
   return text
     .split(/\n\s*\n/)
     .map(p => p.trim())
@@ -216,7 +219,10 @@ function renderArticle(text) {
     .map(block => {
       if (block.startsWith('## ')) return `<h3 class="bio-subheading">${escapeHtml(block.slice(3).trim())}</h3>`;
       if (block.startsWith('# '))  return `<h2 class="bio-heading">${escapeHtml(block.slice(2).trim())}</h2>`;
-      return `<p>${renderInline(block)}</p>`;
+      const isProse = !block.includes('\n') && block.length >= 120;
+      const cls = !dropcapUsed && isProse ? ' class="dropcap"' : '';
+      if (cls) dropcapUsed = true;
+      return `<p${cls}>${renderInline(block)}</p>`;
     })
     .join('');
 }
