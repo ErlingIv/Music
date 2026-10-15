@@ -1787,6 +1787,7 @@ async function loadPersonForm(personId) {
   document.getElementById('p_bioSource').value        = p.bio_source    || '';
   document.getElementById('p_photoUrl').value        = p.photo_url     || '';
   updatePersonPhotoPreview();
+  loadPersonSignatures(p.person_id);
   document.getElementById('p_flag').textContent      = countryCodeToFlag(p.nationality || '');
   document.getElementById('p_birth_flag').textContent = (p.birth_country && p.birth_country !== p.nationality)
     ? countryCodeToFlag(p.birth_country) : '';
@@ -1980,11 +1981,11 @@ async function loadPersonCompositions(personId) {
   const rows = await fetchPersonCompositionRows(personId);
   if (!rows.length) { container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:0.5rem 0">Ingen komposisjoner funnet.</div>'; return; }
   const ids = rows.map(c => c.composition_id).join(',');
-  const scores = await get(`/score?composition_id=in.(${ids})&select=composition_id,frontpage_url`);
+  const scores = await get(`/score?composition_id=in.(${ids})&select=score_id,composition_id,frontpage_url`);
   const frontpageMap = {};
-  scores.forEach(s => { if (s.frontpage_url && !frontpageMap[s.composition_id]) frontpageMap[s.composition_id] = s.frontpage_url; });
+  scores.forEach(s => { if (s.frontpage_url && !frontpageMap[s.composition_id]) frontpageMap[s.composition_id] = s; });
   const comps = rows
-    .map(c => ({ ...c, frontpageUrl: frontpageMap[c.composition_id] || null }))
+    .map(c => ({ ...c, frontpageUrl: frontpageMap[c.composition_id]?.frontpage_url || null, frontpageScoreId: frontpageMap[c.composition_id]?.score_id || null }))
     .sort((a,b) => (a.title||'').localeCompare(b.title||''));
   container.innerHTML = `
     <div class="card">
@@ -2009,7 +2010,7 @@ async function loadPersonCompositions(personId) {
           <td style="text-align:center;padding:0.3rem" title="${c.approved?'Godkjent':'Ikke godkjent'}">${c.approved?'<span style="color:#2d6b27;font-weight:700">✓</span>':''}</td>
           <td style="text-align:center;padding:0.3rem"><button type="button" onclick="switchTab('edit');loadEditForm(${c.composition_id})" style="background:none;border:1px solid var(--border);border-radius:3px;padding:0.1rem 0.4rem;cursor:pointer;font-size:0.8rem">✏️</button></td>
           <td style="text-align:center;padding:0.3rem">${c.role === 'Illustrator' && c.frontpageUrl
-            ? `<button type="button" title="Merk illustratørbilde fra dette forsidebildet" onclick="openIllustratorPhotoCropper(${c.cpId}, '${escapeJsAttr(c.frontpageUrl)}', ${personId}, ${isPlaceholder})" style="background:none;border:1px solid var(--border);border-radius:3px;padding:0.1rem 0.4rem;cursor:pointer;font-size:0.8rem">📷</button>`
+            ? `<button type="button" title="Merk illustratørsignatur fra dette forsidebildet" onclick="openIllustratorPhotoCropper(${c.cpId}, '${escapeJsAttr(c.frontpageUrl)}', ${personId}, ${isPlaceholder}, ${c.frontpageScoreId || 'null'})" style="background:none;border:1px solid var(--border);border-radius:3px;padding:0.1rem 0.4rem;cursor:pointer;font-size:0.8rem">📷</button>`
             : ''}</td>
         </tr>`).join('')}
       </table>
@@ -2037,9 +2038,13 @@ async function cropImageToBlob(imgEl, box) {
   return blob;
 }
 
-// Uploads `blob` as `personId`'s photo and PATCHes person.photo_url to match.
-async function uploadAndSetPersonPhoto(personId, blob) {
-  const filename = `${personId}_${Date.now()}_illustrator.jpg`;
+// Uploads `blob` as a new signature/mark image for `personId` and inserts a
+// person_signature row for it. A person can have any number of these (an
+// illustrator's mark often varies between prints), unlike person.photo_url,
+// which is reserved for a real portrait. Signatures aren't shown on public
+// pages, so no public_content_updated_at touch. Returns the inserted row.
+async function uploadPersonSignature(personId, blob, sourceScoreId) {
+  const filename = `${personId}_${Date.now()}_signature.jpg`;
   const uploadUrl = `${SB.replace('/rest/v1', '')}/storage/v1/object/${PHOTO_BUCKET}/${encodeURIComponent(filename)}`;
   const res = await fetch(uploadUrl, {
     method: 'POST',
@@ -2048,11 +2053,56 @@ async function uploadAndSetPersonPhoto(personId, blob) {
   });
   if (!res.ok) throw new Error(`Opplasting feilet (${res.status}): ${await res.text()}`);
   const publicUrl = `${SB.replace('/rest/v1', '')}/storage/v1/object/public/${PHOTO_BUCKET}/${encodeURIComponent(filename)}`;
-  // photo_url is a public trigger field; this is a shared upload chokepoint
-  // used outside savePerson's own diff/timestamp logic (illustrator-crop
-  // flows), so it always sets a fresh timestamp - it's always a real change.
-  await patch('person', `person_id=eq.${personId}`, { photo_url: publicUrl, public_content_updated_at: nowIso() });
-  return publicUrl;
+  try {
+    return await post('person_signature', { person_id: personId, image_url: publicUrl, source_score_id: sourceScoreId || null });
+  } catch (err) {
+    // Don't leave an orphaned file behind if the row insert fails.
+    await deletePersonPhotoFromStorage(filename);
+    throw err;
+  }
+}
+
+// person_id → array of signature image URLs (oldest first).
+async function fetchSignatureMap(personIds) {
+  const map = {};
+  if (!personIds.length) return map;
+  const rows = await get(`/person_signature?person_id=in.(${personIds.join(',')})&select=person_id,image_url&order=created_at`);
+  rows.forEach(r => (map[r.person_id] ||= []).push(r.image_url));
+  return map;
+}
+
+// Person tab: gallery of the loaded person's signatures, each deletable.
+async function loadPersonSignatures(personId) {
+  const el = document.getElementById('p_signatures');
+  el.innerHTML = '<span style="color:var(--muted);font-size:0.8rem">Laster…</span>';
+  try {
+    const rows = await get(`/person_signature?person_id=eq.${personId}&select=id,image_url,source_score_id,note&order=created_at`);
+    if (!rows.length) {
+      el.innerHTML = '<span style="color:var(--muted);font-size:0.8rem">Ingen. Legg til via 📷 på en illustratørkreditering under.</span>';
+      return;
+    }
+    el.innerHTML = rows.map(s => `
+      <div style="position:relative;width:84px">
+        <a href="${escapeHtml(s.image_url)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(s.image_url)}" style="width:84px;height:84px;object-fit:contain;background:#fff;border:1px solid var(--border);border-radius:4px;display:block"></a>
+        <div style="font-size:0.7rem;color:var(--muted);text-align:center">${s.source_score_id ? 'score ' + s.source_score_id : '&nbsp;'}</div>
+        <button type="button" title="Slett signatur" onclick="deletePersonSignature(${s.id}, '${escapeJsAttr(s.image_url)}')" style="position:absolute;top:2px;right:2px;background:rgba(255,255,255,0.9);border:1px solid var(--border);border-radius:3px;cursor:pointer;font-size:0.7rem;padding:0 0.25rem">🗑</button>
+      </div>`).join('');
+  } catch (err) {
+    el.innerHTML = `<span style="color:#a03030;font-size:0.8rem">Feil: ${escapeHtml(err.message)}</span>`;
+  }
+}
+
+async function deletePersonSignature(signatureId, imageUrl) {
+  if (!confirm('Slette denne signaturen? Filen slettes fra lagring, og dette kan ikke angres.')) return;
+  try {
+    await del('person_signature', `id=eq.${signatureId}`);
+    await deletePersonPhotoFromStorage(extractPhotoStoragePath(imageUrl));
+    showMsg('personMsg', '✓ Signatur slettet.', 'success');
+  } catch (err) {
+    showMsg('personMsg', 'Feil: ' + err.message, 'error');
+  }
+  const personId = document.getElementById('p_personId').value;
+  if (personId) await loadPersonSignatures(personId);
 }
 
 // Mounts a croppable image inside `area` and returns { wrap, img }. `wrap`
@@ -2272,7 +2322,7 @@ function buildCropBox(wrapEl, imgEl, getBox, setBox) {
   return { el: cropBox, reset, sync: applyStyle };
 }
 
-function openIllustratorPhotoCropper(compositionPersonId, frontpageUrl, creditedPersonId, isPlaceholder) {
+function openIllustratorPhotoCropper(compositionPersonId, frontpageUrl, creditedPersonId, isPlaceholder, sourceScoreId) {
   // creditedPersonId is whoever this composition is *already* credited to —
   // loadPersonCompositions only ever lists compositions already credited to
   // the person you're viewing, so this is always that same person. It's only
@@ -2287,7 +2337,7 @@ function openIllustratorPhotoCropper(compositionPersonId, frontpageUrl, credited
   // isn't meaningful. Hide that mode entirely there and default to
   // reassigning instead, since that's what's actually being done in this
   // context nearly 100% of the time.
-  icpState = { compositionPersonId, creditedPersonId, cropBox: null };
+  icpState = { compositionPersonId, creditedPersonId, sourceScoreId: sourceScoreId || null, cropBox: null };
 
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
@@ -2307,15 +2357,15 @@ function openIllustratorPhotoCropper(compositionPersonId, frontpageUrl, credited
     </div>
     <div id="icpCropperArea" style="margin-bottom:1rem;flex:1;min-height:0;overflow:hidden"></div>
     <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap">
-      <button type="button" id="icpModeUseBtn" class="btn btn-primary" style="font-size:0.85rem" onclick="icpSetMode('use')">Bruk som bilde</button>
+      <button type="button" id="icpModeUseBtn" class="btn btn-primary" style="font-size:0.85rem" onclick="icpSetMode('use')">Legg til signatur</button>
       <button type="button" id="icpModeNewBtn" class="btn btn-secondary" style="font-size:0.85rem" onclick="icpSetMode('new')">+ Ny person</button>
       <button type="button" id="icpModeExistingBtn" class="btn btn-secondary" style="font-size:0.85rem" onclick="icpSetMode('existing')">Match mot eksisterende</button>
     </div>
 
     <div id="icpUsePanel">
-      <p style="font-size:0.85rem;color:var(--muted);margin:0 0 0.75rem">Setter dette utsnittet som bilde for personen som allerede er kreditert her — kobling mellom komposisjon og person endres ikke.</p>
+      <p style="font-size:0.85rem;color:var(--muted);margin:0 0 0.75rem">Legger til dette utsnittet som en ny signatur for personen som allerede er kreditert her (eksisterende signaturer beholdes) — kobling mellom komposisjon og person endres ikke.</p>
       <div class="actions" style="margin-bottom:0">
-        <button type="button" class="btn btn-primary" id="icpUseSaveBtn" onclick="saveIllustratorPhotoForCreditedPerson()">Lagre som bilde</button>
+        <button type="button" class="btn btn-primary" id="icpUseSaveBtn" onclick="saveIllustratorPhotoForCreditedPerson()">Lagre signatur</button>
       </div>
     </div>
 
@@ -2410,11 +2460,21 @@ function icpWireExistingSearch() {
         throw err;
       }
       if (!rows.length) { results.innerHTML = '<div style="color:var(--muted);font-size:0.82rem">Ingen treff.</div>'; return; }
+      // Show every known signature variant side by side (the whole point of
+      // having several), falling back to the portrait photo if none exist.
+      let sigMap = {};
+      const myController = controller;
+      try { sigMap = await fetchSignatureMap(rows.map(p => p.person_id)); } catch { /* thumbnails only */ }
+      if (controller !== myController) return; // a newer search started meanwhile
+      const thumbImg = url => `<img src="${escapeHtml(url)}" style="width:34px;height:34px;object-fit:contain;background:#fff;border-radius:4px;border:1px solid var(--border);flex-shrink:0">`;
       results.innerHTML = rows.map(p => {
         const name = [p.first_name, p.last_name].filter(Boolean).join(' ');
-        const thumb = p.photo_url
-          ? `<img src="${escapeHtml(p.photo_url)}" style="width:34px;height:34px;object-fit:cover;border-radius:4px;border:1px solid var(--border);flex-shrink:0">`
-          : `<div style="width:34px;height:34px;border-radius:4px;border:1px dashed var(--border);flex-shrink:0"></div>`;
+        const sigs = sigMap[p.person_id] || [];
+        const thumb = sigs.length
+          ? sigs.slice(0, 6).map(thumbImg).join('') + (sigs.length > 6 ? `<span style="font-size:0.75rem;color:var(--muted)">+${sigs.length - 6}</span>` : '')
+          : p.photo_url
+            ? thumbImg(p.photo_url)
+            : `<div style="width:34px;height:34px;border-radius:4px;border:1px dashed var(--border);flex-shrink:0"></div>`;
         return `<div class="icp-existing-item" data-pid="${p.person_id}" data-name="${escapeJsAttr(name)}"
           style="display:flex;align-items:center;gap:0.6rem;padding:0.35rem 0.5rem;border:1px solid var(--border);border-radius:5px;cursor:pointer">
           ${thumb}<span style="font-size:0.85rem">${escapeHtml(name)}</span>
@@ -2463,17 +2523,16 @@ async function saveIllustratorPhotoForCreditedPerson() {
   msgEl.className = 'msg';
   try {
     const blob = await cropImageToBlob(img, icpState.cropBox);
-    const publicUrl = await uploadAndSetPersonPhoto(icpState.creditedPersonId, blob);
+    await uploadPersonSignature(icpState.creditedPersonId, blob, icpState.sourceScoreId);
 
     // If this is the person currently open in the Person tab (the normal
     // case — you opened this from their own composition list), refresh the
-    // visible photo field/preview immediately rather than requiring a reload.
+    // visible signature gallery immediately rather than requiring a reload.
     if (parseInt(document.getElementById('p_personId').value, 10) === icpState.creditedPersonId) {
-      document.getElementById('p_photoUrl').value = publicUrl;
-      updatePersonPhotoPreview();
+      await loadPersonSignatures(icpState.creditedPersonId);
     }
 
-    showMsg('personMsg', '✓ Bilde lagret.', 'success');
+    showMsg('personMsg', '✓ Signatur lagret.', 'success');
     document.querySelector('.modal-overlay')?.remove();
     document.getElementById('personMsg').scrollIntoView({ behavior: 'smooth', block: 'center' });
   } catch (err) {
@@ -2513,8 +2572,10 @@ async function saveIllustratorCropPerson() {
     personId = person?.person_id;
     if (!personId) throw new Error('Kunne ikke opprette person.');
 
-    // 2. Upload the crop as that person's photo.
-    photoUrl = await uploadAndSetPersonPhoto(personId, blob);
+    // 2. Upload the crop as that person's first signature (the
+    // person_signature row itself goes with the person on rollback, via
+    // ON DELETE CASCADE).
+    photoUrl = (await uploadPersonSignature(personId, blob, icpState.sourceScoreId))?.image_url;
 
     // 3. Reassign this specific illustrator credit to the new person.
     await patch('composition_person', `id=eq.${icpState.compositionPersonId}`, { person_id: personId, credited_as: null });
@@ -4364,7 +4425,8 @@ function renderUnkCards() {
 // from an unknown score and searches for a person; this one starts from a
 // person and walks the unknowns.
 
-let illSelectedPerson = null; // { id, name, photoUrl }
+let illSelectedPerson = null; // { id, name, photoUrl, signatures: [url] }
+let illSignatureMap = {};     // person_id → [signature url], filled by loadIllustratorsTab
 
 async function loadIllustratorsTab() {
   illustratorsLoaded = true;
@@ -4390,14 +4452,18 @@ async function loadIllustratorsTab() {
       grid.innerHTML = '<p style="color:var(--muted);font-size:.85rem">Ingen identifiserte illustratører ennå.</p>';
       return;
     }
+    illSignatureMap = await fetchSignatureMap(persons.map(p => p.person_id));
     grid.innerHTML = persons.map(p => {
       const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || '(uten navn)';
-      const thumb = p.photo_url
-        ? `<img src="${escapeHtml(p.photo_url)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:4px;margin-bottom:0.4rem">`
+      const sigs = illSignatureMap[p.person_id] || [];
+      const thumbUrl = sigs[0] || p.photo_url;
+      const thumb = thumbUrl
+        ? `<img src="${escapeHtml(thumbUrl)}" style="width:100%;aspect-ratio:1;object-fit:${sigs.length ? 'contain;background:#fff' : 'cover'};border-radius:4px;margin-bottom:0.4rem">`
         : `<div style="width:100%;aspect-ratio:1;border-radius:4px;border:1px dashed var(--border);margin-bottom:0.4rem;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:1.5rem">?</div>`;
+      const sigCount = sigs.length > 1 ? ` <span style="color:var(--muted);font-size:0.75rem">(${sigs.length} sign.)</span>` : '';
       return `<div class="pub-card" id="ill-card-${p.person_id}" onclick="selectIllustratorForMatching(${p.person_id}, '${escapeJsAttr(name)}', '${escapeJsAttr(p.photo_url || '')}')">
         ${thumb}
-        <div class="pub-card-name">${escapeHtml(name)}</div>
+        <div class="pub-card-name">${escapeHtml(name)}${sigCount}</div>
       </div>`;
     }).join('');
   } catch (e) {
@@ -4406,7 +4472,7 @@ async function loadIllustratorsTab() {
 }
 
 async function selectIllustratorForMatching(personId, name, photoUrl) {
-  illSelectedPerson = { id: personId, name, photoUrl: photoUrl || null };
+  illSelectedPerson = { id: personId, name, photoUrl: photoUrl || null, signatures: [...(illSignatureMap[personId] || [])] };
   document.querySelectorAll('#illCardGrid .pub-card').forEach(c => {
     const isSelected = c.id === `ill-card-${personId}`;
     c.style.borderColor = isSelected ? 'var(--accent)' : '';
@@ -4437,15 +4503,15 @@ async function selectIllustratorForMatching(personId, name, photoUrl) {
     const compIds = cp.map(r => r.composition_id).join(',');
     const [comps, scores] = await Promise.all([
       get(`/composition?composition_id=in.(${compIds})&select=composition_id,title`),
-      get(`/score?composition_id=in.(${compIds})&select=composition_id,frontpage_url`),
+      get(`/score?composition_id=in.(${compIds})&select=score_id,composition_id,frontpage_url`),
     ]);
     const titleMap = Object.fromEntries(comps.map(c => [c.composition_id, c.title]));
     const frontpageMap = {};
-    scores.forEach(s => { if (s.frontpage_url && !frontpageMap[s.composition_id]) frontpageMap[s.composition_id] = s.frontpage_url; });
+    scores.forEach(s => { if (s.frontpage_url && !frontpageMap[s.composition_id]) frontpageMap[s.composition_id] = s; });
 
     const candidates = cp
       .filter(r => frontpageMap[r.composition_id])
-      .map(r => ({ cpId: r.id, title: titleMap[r.composition_id] || '', frontpageUrl: frontpageMap[r.composition_id] }))
+      .map(r => ({ cpId: r.id, title: titleMap[r.composition_id] || '', frontpageUrl: frontpageMap[r.composition_id].frontpage_url, scoreId: frontpageMap[r.composition_id].score_id }))
       .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
     if (!candidates.length) {
@@ -4454,7 +4520,7 @@ async function selectIllustratorForMatching(personId, name, photoUrl) {
     }
     document.getElementById('illMatchTitle').textContent = `Sammenlign mot: ${name} (${candidates.length} kandidater)`;
     candidateGrid.innerHTML = candidates.map(c => `
-      <div class="pub-card" onclick="openIllustratorCompareModal(${c.cpId}, '${escapeJsAttr(c.title)}', '${escapeJsAttr(c.frontpageUrl)}')">
+      <div class="pub-card" onclick="openIllustratorCompareModal(${c.cpId}, '${escapeJsAttr(c.title)}', '${escapeJsAttr(c.frontpageUrl)}', ${c.scoreId || 'null'})">
         <img src="${escapeHtml(c.frontpageUrl)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:4px;margin-bottom:0.4rem">
         <div class="pub-card-name" style="font-size:0.8rem">${escapeHtml(c.title)}</div>
       </div>`).join('');
@@ -4463,15 +4529,25 @@ async function selectIllustratorForMatching(personId, name, photoUrl) {
   }
 }
 
-// null when the selected illustrator already has a photo (plain compare);
-// otherwise { box: {x,y,w,h}|null } and the candidate image becomes an
-// interactive crop, since confirming the match is also the best moment to
-// capture their photo — this candidate image *is* their mark, now identified.
+// null when the selected illustrator already has at least one signature
+// (plain compare against all of them); otherwise { box: {x,y,w,h}|null,
+// scoreId } and the candidate image becomes an interactive crop, since
+// confirming the match is also the best moment to capture their first
+// signature — this candidate image *is* their mark, now identified. Further
+// variants can be added later via the Person tab's 📷 button.
 let illCompareCropState = null;
 
-function openIllustratorCompareModal(compositionPersonId, title, candidateUrl) {
-  const needsPhoto = !illSelectedPerson?.photoUrl;
-  illCompareCropState = needsPhoto ? { box: null } : null;
+function openIllustratorCompareModal(compositionPersonId, title, candidateUrl, scoreId) {
+  const sigs = illSelectedPerson?.signatures || [];
+  const needsPhoto = !sigs.length;
+  illCompareCropState = needsPhoto ? { box: null, scoreId: scoreId || null } : null;
+  // Left side: every known signature variant, or the portrait if none yet.
+  const knownHtml = sigs.length
+    ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:0.4rem">${sigs.map(u =>
+        `<img src="${escapeHtml(u)}" style="width:100%;object-fit:contain;background:#fff;border-radius:6px;border:1px solid var(--border)">`).join('')}</div>`
+    : illSelectedPerson?.photoUrl
+      ? `<img src="${escapeHtml(illSelectedPerson.photoUrl)}" style="width:100%;border-radius:6px;border:1px solid var(--border)">`
+      : '<div style="color:var(--muted);font-size:0.8rem;padding:2rem 0">Ingen signatur ennå</div>';
 
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
@@ -4485,13 +4561,11 @@ function openIllustratorCompareModal(compositionPersonId, title, candidateUrl) {
       <h3 style="margin:0;font-size:1rem">Er dette samme illustratør?</h3>
       <button type="button" onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:1.2rem;cursor:pointer">✕</button>
     </div>
-    ${needsPhoto ? `<p style="font-size:0.82rem;color:var(--muted);margin:0 0 0.75rem">${escapeHtml(illSelectedPerson?.name || '')} har ikke bilde ennå — merk et utsnitt under. Bekrefter du treffet, brukes det som personens bilde.</p>` : ''}
+    ${needsPhoto ? `<p style="font-size:0.82rem;color:var(--muted);margin:0 0 0.75rem">${escapeHtml(illSelectedPerson?.name || '')} har ingen signatur ennå — merk et utsnitt under. Bekrefter du treffet, lagres det som personens første signatur.</p>` : ''}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;${needsPhoto ? 'flex:1;min-height:0' : ''}">
       <div style="text-align:center;${needsPhoto ? 'display:flex;flex-direction:column;min-height:0' : ''}">
         <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.3rem">Valgt illustratør</div>
-        ${illSelectedPerson?.photoUrl
-          ? `<img src="${escapeHtml(illSelectedPerson.photoUrl)}" style="width:100%;border-radius:6px;border:1px solid var(--border)">`
-          : '<div style="color:var(--muted);font-size:0.8rem;padding:2rem 0">Ingen bilde ennå</div>'}
+        ${knownHtml}
         <div style="font-size:0.85rem;margin-top:0.3rem">${escapeHtml(illSelectedPerson?.name || '')}</div>
       </div>
       <div style="text-align:center;${needsPhoto ? 'display:flex;flex-direction:column;min-height:0' : ''}">
@@ -4535,8 +4609,11 @@ async function confirmIllustratorMatch(compositionPersonId) {
     if (illCompareCropState?.box) {
       const img = document.getElementById('illCompareCandidateImg');
       const blob = await cropImageToBlob(img, illCompareCropState.box);
-      const publicUrl = await uploadAndSetPersonPhoto(illSelectedPerson.id, blob);
-      illSelectedPerson.photoUrl = publicUrl; // so later candidates in this session show the photo, not another crop prompt
+      const sig = await uploadPersonSignature(illSelectedPerson.id, blob, illCompareCropState.scoreId);
+      // So later candidates in this session compare against it instead of
+      // prompting for another crop.
+      illSelectedPerson.signatures.push(sig.image_url);
+      (illSignatureMap[illSelectedPerson.id] ||= []).push(sig.image_url);
     }
     await patch('composition_person', `id=eq.${compositionPersonId}`, { person_id: illSelectedPerson.id, credited_as: null });
     document.querySelector('.modal-overlay')?.remove();
