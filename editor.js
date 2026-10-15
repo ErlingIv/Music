@@ -2043,12 +2043,12 @@ async function cropImageToBlob(imgEl, box) {
 // illustrator's mark often varies between prints), unlike person.photo_url,
 // which is reserved for a real portrait. Signatures aren't shown on public
 // pages, so no public_content_updated_at touch. Returns the inserted row.
-async function uploadPersonSignature(personId, blob, sourceScoreId) {
-  const filename = `${personId}_${Date.now()}_signature.jpg`;
+async function uploadPersonSignature(personId, blob, sourceScoreId, ext = 'jpg') {
+  const filename = `${personId}_${Date.now()}_signature.${ext}`;
   const uploadUrl = `${SB.replace('/rest/v1', '')}/storage/v1/object/${PHOTO_BUCKET}/${encodeURIComponent(filename)}`;
   const res = await fetch(uploadUrl, {
     method: 'POST',
-    headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'image/jpeg', 'x-upsert': 'true' },
+    headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': blob.type || 'image/jpeg', 'x-upsert': 'true' },
     body: blob,
   });
   if (!res.ok) throw new Error(`Opplasting feilet (${res.status}): ${await res.text()}`);
@@ -2078,7 +2078,7 @@ async function loadPersonSignatures(personId) {
   try {
     const rows = await get(`/person_signature?person_id=eq.${personId}&select=id,image_url,source_score_id,note&order=created_at`);
     if (!rows.length) {
-      el.innerHTML = '<span style="color:var(--muted);font-size:0.8rem">Ingen. Legg til via 📷 på en illustratørkreditering under.</span>';
+      el.innerHTML = '<span style="color:var(--muted);font-size:0.8rem">Ingen. Last opp under, eller merk fra et forsidebilde via 📷 i komposisjonslisten.</span>';
       return;
     }
     el.innerHTML = rows.map(s => `
@@ -2089,6 +2089,33 @@ async function loadPersonSignatures(personId) {
       </div>`).join('');
   } catch (err) {
     el.innerHTML = `<span style="color:#a03030;font-size:0.8rem">Feil: ${escapeHtml(err.message)}</span>`;
+  }
+}
+
+// Person tab "Last opp signatur…": uploads a ready-made image file (no crop)
+// as a new signature. Saved immediately, like the portrait remove button —
+// it doesn't wait for "Lagre endringer".
+async function uploadPersonSignatureFile(input) {
+  const file = input.files[0];
+  input.value = ''; // so picking the same file again still fires onchange
+  if (!file) return;
+  const personId = parseInt(document.getElementById('p_personId').value, 10);
+  if (!personId) {
+    showMsg('personMsg', 'Lagre personen først, så kan du legge til signatur.', 'error');
+    return;
+  }
+  const progress = document.getElementById('p_signatureProgress');
+  progress.textContent = 'Laster opp…';
+  progress.style.display = 'inline';
+  try {
+    const ext = (file.name.match(/\.([a-z0-9]+)$/i)?.[1] || 'jpg').toLowerCase();
+    await uploadPersonSignature(personId, file, null, ext);
+    await loadPersonSignatures(personId);
+    progress.textContent = '✓ Signatur lagret';
+    setTimeout(() => { progress.style.display = 'none'; }, 3000);
+  } catch (err) {
+    progress.textContent = '✗ Feil: ' + err.message;
+    console.error('Signature upload error:', err);
   }
 }
 
