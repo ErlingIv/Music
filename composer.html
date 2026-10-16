@@ -214,8 +214,6 @@
      included, on a single line and let the whole item wrap down instead. */
   .score-meta > span { white-space: nowrap; }
   .score-icons { display: flex; gap: 0.4rem; flex-shrink: 0; align-items: center; }
-  .icon-badge.has-pdf { color: var(--accent); border-color: var(--accent); }
-  .icon-badge.has-mp3 { color: var(--accent2); border-color: var(--accent2); }
 
   /* Discrete Godkjent (approved) mark — small muted dot, no visible label */
   .godkjent-mark {
@@ -416,11 +414,11 @@ async function load() {
       // Final display order (opus number first, title as tiebreak/fallback) is
       // computed by groupByOpus() below — no need to pre-sort here.
 
-      // 5. Fetch scores (pdf_url, mp3_url) for these compositions. Tags aren't
+      // 5. Fetch scores (publisher, plate number) for these compositions. Tags aren't
       // shown on this compact card (a long tag name broke the grid's uniform
       // row height) — browse by tag on tags.html instead.
       const allCompIds = cc.map(r => r.composition_id).join(',');
-      const scoreR = await fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=in.(${allCompIds})&select=composition_id,pdf_url,mp3_url,plate_number,publisher:publisher_id(publisher_name)`, { headers: H });
+      const scoreR = await fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=in.(${allCompIds})&select=composition_id,plate_number,publisher:publisher_id(publisher_name)`, { headers: H });
       const scores = await scoreR.json();
       scores.forEach(s => { scoreMap[s.composition_id] = s; });
     }
@@ -494,10 +492,6 @@ async function load() {
       <div class="scores-heading">
         ${scoresHeading}
         <span class="scores-heading-count">${compositions.length} work${compositions.length !== 1 ? 's' : ''}</span>
-        <label style="margin-left:auto;font-size:0.78rem;color:var(--muted);display:flex;align-items:center;gap:0.4rem;font-weight:400;cursor:pointer;">
-          <input type="checkbox" id="filterMedia" onchange="filterScores()" style="width:auto;margin:0;accent-color:var(--accent);">
-          With PDF / MP3 only
-        </label>
       </div>
 
       ${compositions.length === 0
@@ -515,9 +509,8 @@ async function load() {
 
 function scoreRowHtml(c, scoreMap, creditedAsMap) {
   const s = scoreMap[c.composition_id];
-  const hasMedia = !!(s?.pdf_url || s?.mp3_url);
   return `
-    <a class="score-row" href="${scoreHref(c.composition_id)}" data-has-media="${hasMedia}">
+    <a class="score-row" href="${scoreHref(c.composition_id)}">
       <div>
         <div class="score-title">${escapeHtml(c.title)}${c.approved ? '<span class="godkjent-mark" role="img" aria-label="Curator approved" title="Curator approved"></span>' : ''}</div>
         <div class="score-meta">
@@ -528,8 +521,6 @@ function scoreRowHtml(c, scoreMap, creditedAsMap) {
         </div>
       </div>
       <div class="score-icons">
-        ${s?.pdf_url ? '<span class="icon-badge has-pdf">PDF</span>' : ''}
-        ${s?.mp3_url ? '<span class="icon-badge has-mp3">MP3</span>' : ''}
         ${c.musescore_link ? '<span class="icon-badge" title="Available on MuseScore" aria-label="Available on MuseScore">♪</span>' : ''}
         ${c.public_domain === 'Yes' ? '<span class="icon-badge" style="color:var(--accent2);border-color:var(--accent2)">PD</span>' : ''}
         ${msInfoBadge(c.musescore_notes)}
@@ -658,18 +649,6 @@ function renderScoreItems(compositions, scoreMap, creditedAsMap) {
       <div class="opus-group-list">${groupsHtml}</div>
     ` : ''}
   `;
-}
-
-function filterScores() {
-  const checked = document.getElementById('filterMedia').checked;
-  document.querySelectorAll('#scoreList .score-row').forEach(row => {
-    row.style.display = (!checked || row.dataset.hasMedia === 'true') ? '' : 'none';
-  });
-  document.querySelectorAll('#scoreList .opus-group').forEach(group => {
-    const anyVisible = [...group.querySelectorAll('.score-row')].some(r => r.style.display !== 'none');
-    group.style.display = anyVisible ? '' : 'none';
-    if (checked && anyVisible) group.classList.add('open');
-  });
 }
 
 load();

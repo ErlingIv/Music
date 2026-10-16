@@ -181,8 +181,6 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .comp-icons { display: flex; gap: 0.35rem; flex-shrink: 0; align-items: center; }
-  .icon-badge.pdf { color: var(--accent);  border-color: var(--accent); }
-  .icon-badge.mp3 { color: var(--accent2); border-color: var(--accent2); }
 
   .loading-state { padding: 2rem; }
   .empty-state   { color: var(--muted); font-size: 0.9rem; padding: 1.5rem; text-align: center; }
@@ -361,15 +359,13 @@ async function selectTag(tagId, tagName, imageUrl) {
   const compIds = ctRows.map(r => r.composition_id).join(',');
   const pdFilter = modePdFilter(siteMode);
 
-  const [compR, scoreR, ccR] = await Promise.all([
+  const [compR, ccR] = await Promise.all([
     fetch(`${SUPABASE_URL}/rest/v1/composition_public?composition_id=in.(${compIds})&public_domain=${pdFilter}${modeLinkParam(siteMode)}&select=composition_id,title,year_composed,musescore_link,public_domain,musescore_notes,approved`, { headers: H }),
-    fetch(`${SUPABASE_URL}/rest/v1/score?composition_id=in.(${compIds})&select=composition_id,pdf_url,mp3_url`, { headers: H }),
     fetch(`${SUPABASE_URL}/rest/v1/composition_person?composition_id=in.(${compIds})&role=eq.Composer&select=composition_id,person_id`, { headers: H }),
   ]);
 
   const comps  = await compR.json();
   comps.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'no'));
-  const scores = await scoreR.json();
   const ccRows = await ccR.json();
 
   const personIds = [...new Set(ccRows.map(r => r.person_id))];
@@ -391,14 +387,10 @@ async function selectTag(tagId, tagName, imageUrl) {
     if (p) ccMap[row.composition_id].push(`${p.first_name || ''} ${p.last_name || ''}`.trim());
   });
 
-  const scoreMap = {};
-  scores.forEach(s => { scoreMap[s.composition_id] = s; });
-
   document.getElementById('panelCount').textContent = comps.length;
 
   document.getElementById('compList').innerHTML = comps.length
     ? comps.map(comp => {
-        const s = scoreMap[comp.composition_id];
         const composers = escapeHtml((ccMap[comp.composition_id] || []).join(', ') || '—');
         return `
           <a class="comp-row" href="${scoreHref(comp.composition_id)}">
@@ -407,8 +399,6 @@ async function selectTag(tagId, tagName, imageUrl) {
               <div class="comp-meta" title="${escapeHtml((ccMap[comp.composition_id] || []).join(', '))}">${composers}${comp.year_composed ? ' · ' + escapeHtml(comp.year_composed) : ''}</div>
             </div>
             <div class="comp-icons">
-              ${s?.pdf_url ? '<span class="icon-badge pdf">PDF</span>' : ''}
-              ${s?.mp3_url ? '<span class="icon-badge mp3">MP3</span>' : ''}
               ${comp.musescore_link ? '<span class="icon-badge" title="Available on MuseScore" aria-label="Available on MuseScore">♪</span>' : ''}
               ${comp.public_domain === 'Yes' ? '<span class="icon-badge" style="color:var(--accent2);border-color:var(--accent2)">PD</span>' : ''}
               ${msInfoBadge(comp.musescore_notes)}

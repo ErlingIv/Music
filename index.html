@@ -431,8 +431,6 @@
     letter-spacing: 0.04em;
     display: inline-block;
   }
-  .about-icon-badge.has-pdf { color: var(--accent); border-color: var(--accent); }
-  .about-icon-badge.has-mp3 { color: var(--accent2); border-color: var(--accent2); }
   .about-icon-badge.pd { color: var(--accent2); border-color: var(--accent2); }
   .about-tag-badge {
     background:#eaf3ee; color: var(--accent2); border:1px solid #b8d4c0;
@@ -577,7 +575,6 @@
       <span class="section-count" id="count-no"></span>
     </div>
     <div class="filter-bar">
-      <button class="toggle-btn" id="toggle-media-no" aria-pressed="false" onclick="toggleFilter('no','media')">🎵 With PDF / MP3</button>
       <button class="toggle-btn" id="toggle-female-no" aria-pressed="false" onclick="toggleFilter('no','female')">♀ Female composers</button>
     </div>
     <div class="alpha-bar" id="alpha-no"></div>
@@ -592,7 +589,6 @@
       <span class="section-count" id="count-nordic"></span>
     </div>
     <div class="filter-bar">
-      <button class="toggle-btn" id="toggle-media-nordic" aria-pressed="false" onclick="toggleFilter('nordic','media')">🎵 With PDF / MP3</button>
       <button class="toggle-btn" id="toggle-female-nordic" aria-pressed="false" onclick="toggleFilter('nordic','female')">♀ Female composers</button>
     </div>
     <div class="alpha-bar" id="alpha-nordic"></div>
@@ -607,7 +603,6 @@
       <span class="section-count" id="count-others"></span>
     </div>
     <div class="filter-bar">
-      <button class="toggle-btn" id="toggle-media-others" aria-pressed="false" onclick="toggleFilter('others','media')">🎵 With PDF / MP3</button>
       <button class="toggle-btn" id="toggle-female-others" aria-pressed="false" onclick="toggleFilter('others','female')">♀ Female composers</button>
     </div>
     <div class="alpha-bar" id="alpha-others"></div>
@@ -707,14 +702,6 @@
             <div class="legend-text">Marks composers and lyricists identified as women.</div>
           </div>
           <div class="legend-row">
-            <div class="legend-mark"><span class="about-icon-badge has-pdf">PDF</span></div>
-            <div class="legend-text">A scanned score is available to view or download directly from this site — a backup copy in case MuseScore is ever unavailable. Currently only implemented for a small test set of examples.</div>
-          </div>
-          <div class="legend-row">
-            <div class="legend-mark"><span class="about-icon-badge has-mp3">MP3</span></div>
-            <div class="legend-text">An audio recording is available directly from this site — likewise a backup in case MuseScore is down, and currently only present for a few test examples.</div>
-          </div>
-          <div class="legend-row">
             <div class="legend-mark"><span class="about-icon-badge">♪</span></div>
             <div class="legend-text">Linked to a MuseScore transcription.</div>
           </div>
@@ -787,8 +774,8 @@
           <div class="about-swatch"><span class="about-swatch-dot" style="background:#fffef9;"></span>Card / paper surface</div>
           <div class="about-swatch"><span class="about-swatch-dot" style="background:#1a1814;"></span>Main text (ink)</div>
           <div class="about-swatch"><span class="about-swatch-dot" style="background:#7a7060;"></span>Secondary text (muted)</div>
-          <div class="about-swatch"><span class="about-swatch-dot" style="background:#8b3a1e;"></span>Accent — active tabs, PDF links, hover states</div>
-          <div class="about-swatch"><span class="about-swatch-dot" style="background:#2a5c45;"></span>Accent 2 — MP3 links, public domain mark, tags</div>
+          <div class="about-swatch"><span class="about-swatch-dot" style="background:#8b3a1e;"></span>Accent — active tabs, links, hover states</div>
+          <div class="about-swatch"><span class="about-swatch-dot" style="background:#2a5c45;"></span>Accent 2 — public domain mark, tags</div>
         </div>
         <p style="margin-top:1rem">Beyond the interface accents above, a few colours carry specific meaning: pink tones mark female composers and lyricists, blue marks nationality, and the red/gold/blue/grey stripes and dots described above encode catalogue size and how much background text exists for a piece — not aesthetic choices, but shorthand for information the full record would otherwise take a paragraph to say.</p>
       </div>
@@ -825,10 +812,10 @@ let allComposers = { no: [], nordic: [], others: [], unknown: [] };
 let activeSection = 'no';
 let activeLetters = { no: 'ALL', nordic: 'ALL', others: 'ALL', unknown: 'ALL' };
 let activeFilters = {
-  no:      { media: false, female: false },
-  nordic:  { media: false, female: false },
-  others:  { media: false, female: false },
-  unknown: { media: false, female: false },
+  no:      { female: false },
+  nordic:  { female: false },
+  others:  { female: false },
+  unknown: { female: false },
 };
 
 // Bumped once per fetchAllComposers() call. Lets a call detect, right before
@@ -906,65 +893,9 @@ async function fetchAllComposers(copyrightMode = false) {
     persons = persons.concat(rows);
   }
 
-  // 4. Build a set of composition_ids that have pdf or mp3
-  const mediaCompIds = new Set();
-  let mOffset = 0;
-  while (true) {
-    const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/score?select=composition_id,pdf_url,mp3_url&limit=1000&offset=${mOffset}`,
-      { headers: H }
-    );
-    const rows = await r.json();
-    if (!rows.length) break;
-    rows.forEach(s => {
-      if (s.pdf_url || s.mp3_url) mediaCompIds.add(s.composition_id);
-    });
-    if (rows.length < 1000) break;
-    mOffset += 1000;
-  }
-
-  // 5. Build set of person_ids who have at least one media composition
-  //    Also add media-only compositions (PDF/MP3 but no musescore link) to countMap
-  const mediaPersonIds = new Set();
-  // Need composition→musescore_link to avoid double-counting
-  const msLinkCompIds = new Set();
-  offset = 0;
-  while (true) {
-    const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition_public?select=composition_id&public_domain=${modePdFilter(copyrightMode ? 'copyright' : 'pd')}${modeLinkParam(copyrightMode ? 'copyright' : 'pd')}&limit=1000&offset=${offset}`,
-      { headers: H }
-    );
-    const rows = await r.json();
-    if (!rows.length) break;
-    rows.forEach(r => msLinkCompIds.add(r.composition_id));
-    if (rows.length < 1000) break;
-    offset += 1000;
-  }
-  let ccOffset = 0;
-  while (true) {
-    const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/composition_person?role=eq.Composer&select=person_id,composition_id&limit=1000&offset=${ccOffset}`,
-      { headers: H }
-    );
-    const rows = await r.json();
-    if (!rows.length) break;
-    rows.forEach(row => {
-      if (mediaCompIds.has(row.composition_id)) {
-        mediaPersonIds.add(row.person_id);
-        // Count this composition if it wasn't already counted via musescore_link
-        if (!msLinkCompIds.has(row.composition_id)) {
-          countMap[row.person_id] = (countMap[row.person_id] || 0) + 1;
-        }
-      }
-    });
-    if (rows.length < 1000) break;
-    ccOffset += 1000;
-  }
-
-  // 6. Sort into sections
+  // 4. Sort into sections
   persons.forEach(p => {
     p.score_count = countMap[p.person_id] || 0;
-    p.has_media   = mediaPersonIds.has(p.person_id);
     p.is_female   = p.gender === 'F';
     var tabNat = (p.birth_country_primary === true && p.birth_country) ? p.birth_country : (p.nationality || p.birth_country);
     if (!tabNat) {
@@ -1035,7 +966,6 @@ function renderSection(sec) {
     : composers.filter(c => c.last_name[0].toUpperCase() === activeLetter);
 
   // Apply toggles
-  if (activeFilters[sec].media)  filtered = filtered.filter(c => c.has_media);
   if (activeFilters[sec].female) filtered = filtered.filter(c => c.is_female);
 
   // Update count (reflects active letter + toggle filters)
@@ -1070,7 +1000,6 @@ function composerCard(c, sec) {
   const years  = lifespan(c.born, c.died, c.died_uncertain);
   const flag   = c.nationality !== 'NO' ? renderFlags(c.nationality, c.birth_country, c.birth_country_primary, c.nationality_uncertain) : '';
   const female = c.is_female ? '<span class="female-badge">♀</span>' : '';
-  const media  = c.has_media ? '<span class="female-badge" style="background:#e6f0ea;color:#2a5c45;border-color:#b8d4c0;">🎵</span>' : '';
   const n = c.score_count;
   const tier = n >= 20 ? 'tier-4' : n >= 6 ? 'tier-3' : n >= 2 ? 'tier-2' : 'tier-1';
   return `
@@ -1078,7 +1007,7 @@ function composerCard(c, sec) {
       <div class="composer-name">${escapeHtml([c.last_name, c.first_name].filter(Boolean).join(', '))} ${flag}</div>
       <div class="composer-meta">
         ${years ? `<span>${escapeHtml(years)}</span>` : ''}
-        ${female}${media}
+        ${female}
         <span class="score-count">${c.score_count} work${c.score_count !== 1 ? 's' : ''}</span>
       </div>
     </a>
@@ -1170,10 +1099,10 @@ function switchSiteMode(mode) {
   // Reset per-section letter/filter state
   activeLetters = { no: 'ALL', nordic: 'ALL', others: 'ALL', unknown: 'ALL' };
   activeFilters = {
-    no:      { media: false, female: false },
-    nordic:  { media: false, female: false },
-    others:  { media: false, female: false },
-    unknown: { media: false, female: false },
+    no:      { female: false },
+    nordic:  { female: false },
+    others:  { female: false },
+    unknown: { female: false },
   };
 
   fetchAllComposers(mode === 'copyright');
