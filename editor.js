@@ -1973,11 +1973,13 @@ async function fetchPersonCompositionRows(personId) {
 async function loadPersonCompositions(personId) {
   const container = document.getElementById('personCompositions');
   container.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Laster komposisjoner…</div>';
-  // This list is always the person currently loaded in the Person tab form,
-  // so its own last_name tells us whether it's a shared not-yet-identified
-  // placeholder ("Only Initials", "H.G. Illustrator", etc. — see naming
-  // convention) rather than a distinct, already-identified individual.
-  const isPlaceholder = document.getElementById('p_lastName').value.trim() === 'Illustrator';
+  // This list is always the person currently loaded in the Person tab form.
+  // Only the shared catch-all "Only Initials" counts as a placeholder here —
+  // a named mark like "Ojo Illustrator" or "H.G. Illustrator" is one distinct
+  // (if unidentified) illustrator, so the 📷 crop must default to adding a
+  // signature to that same person, not to creating a new one.
+  const isPlaceholder = document.getElementById('p_firstName').value.trim() === 'Only'
+    && document.getElementById('p_lastName').value.trim() === 'Initials';
   const rows = await fetchPersonCompositionRows(personId);
   if (!rows.length) { container.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:0.5rem 0">Ingen komposisjoner funnet.</div>'; return; }
   const ids = rows.map(c => c.composition_id).join(',');
@@ -2356,8 +2358,8 @@ function openIllustratorPhotoCropper(compositionPersonId, frontpageUrl, credited
   // actually useful in "Bruk som bilde" mode (see below); the other two modes
   // ignore it.
   //
-  // isPlaceholder means that person is a shared not-yet-identified bucket
-  // (last_name === "Illustrator", e.g. "Only Initials"). "Bruk som bilde"
+  // isPlaceholder means that person is the shared not-yet-identified bucket
+  // "Only Initials". "Legg til signatur"
   // doesn't reassign the credit, so on a placeholder's own composition list,
   // using it leaves the row exactly where it was — no-op-looking, but really
   // it set the *shared placeholder's* photo to one arbitrary crop, which
