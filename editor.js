@@ -1719,7 +1719,15 @@ let personSearchTimeout, personSearchController;
 document.getElementById('personSearch').addEventListener('input', () => {
   clearTimeout(personSearchTimeout);
   const q = document.getElementById('personSearch').value.trim();
-  if (q.length < 2) { document.getElementById('personSearchResults').innerHTML = ''; return; }
+  if (q.length < 2) {
+    personSearchController?.abort();
+    document.getElementById('personSearchResults').innerHTML = '';
+    // A results list hides the loaded person's panel (and the new-person card
+    // was already hidden by loadPersonForm), so clearing the search would
+    // otherwise leave an empty tab. Hand back the "add new person" form.
+    if (document.getElementById('personPanel').style.display === 'none') closePerson();
+    return;
+  }
   personSearchTimeout = setTimeout(async () => {
     personSearchController?.abort();
     personSearchController = new AbortController();
