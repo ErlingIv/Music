@@ -530,6 +530,9 @@ function personNameOverlap(newFirst, newLast, existing) {
   const nf = newFirst.toLowerCase().trim();
   if (!ef || !nf) return true;                          // one side has no first name
   if (ef === nf)  return true;                          // exact match
+  // Placeholder last names (e.g. "e. Illustrator", "Lyricist Unknown"): the first
+  // name *is* the identity, so only an exact match counts as a duplicate
+  if (['illustrator', 'unknown', 'various'].includes(newLast.toLowerCase())) return false;
   // Initial match: "r." matches "rudolf", or "rudolf" matches "r."
   const efInit = ef.replace(/\.$/, '');
   const nfInit = nf.replace(/\.$/, '');
