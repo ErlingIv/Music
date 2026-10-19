@@ -456,7 +456,7 @@ async function load() {
             <h1 class="composer-name">${escapeHtml(fullName(person))} ${flag}</h1>
             ${years ? `<p class="composer-dates">${escapeHtml(years)}</p>` : ''}
             <div class="badges" style="margin-top:0.5rem">
-              ${female ? '<span class="badge badge-female">♀ Female composer</span>' : ''}
+              ${female ? `<span class="badge badge-female">♀ Female ${escapeHtml(roleParam.toLowerCase())}</span>` : ''}
               ${person.nationality ? `<span class="badge badge-nation">${escapeHtml(person.nationality.toUpperCase())}</span>` : ''}
               ${roleParam === 'Lyricist' && !hasComposer ? '<span class="badge badge-lyricist">Lyricist</span>' : ''}
             </div>
