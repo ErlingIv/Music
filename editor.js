@@ -865,7 +865,7 @@ document.getElementById('newForm').addEventListener('submit', async e => {
               <button id="scoreDupCancel" class="btn btn-secondary" style="font-size:0.8rem;padding:0.25rem 0.6rem">Avbryt</button>
             </div>
           </div>`;
-          msgEl.className = 'msg';
+          msgEl.className = 'msg warn';
           msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
           // Button stays disabled while this choice is pending, so a stray click elsewhere can't start a second save.
           document.getElementById('scoreDupCancel').onclick = () => { msgEl.innerHTML = ''; resetBtn(); };
@@ -2771,7 +2771,7 @@ async function addNewPerson() {
         <button onclick="forceAddPerson(this)" class="btn" style="font-size:0.8rem;padding:0.25rem 0.6rem;background:#c8a000;color:#fff;border:none;border-radius:4px;cursor:pointer">Opprett likevel som ny person</button>
       </div>
     </div>`;
-    msgEl.className = 'msg';
+    msgEl.className = 'msg warn';
     scrollToMsg();
     return;
   }
