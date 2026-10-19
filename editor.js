@@ -2740,13 +2740,23 @@ async function forceAddPerson(btn) {
   } catch(err) {
     showMsg('personMsg', 'Feil: ' + err.message, 'error');
   }
+  document.getElementById('personMsg').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 async function addNewPerson() {
   const last  = document.getElementById('np_lastName').value.trim();
   const first = document.getElementById('np_firstName').value.trim();
   if (!last) { alert('Etternavn er påkrevd.'); return; }
-  const existing = await get(`/person?last_name=ilike.${encodeURIComponent(last)}&select=person_id,first_name,last_name,born,died,pseudonym`);
+  // #personMsg sits at the top of the tab, far above this button — always scroll to it
+  const scrollToMsg = () => document.getElementById('personMsg').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  let existing;
+  try {
+    existing = await get(`/person?last_name=ilike.${encodeURIComponent(last)}&select=person_id,first_name,last_name,born,died,pseudonym`);
+  } catch(err) {
+    showMsg('personMsg', 'Feil ved duplikatsjekk: ' + err.message, 'error');
+    scrollToMsg();
+    return;
+  }
   const match = existing.find(p => personNameOverlap(first, last, p));
   if (match) {
     const fullName = ((match.first_name || '') + ' ' + match.last_name).trim();
@@ -2762,6 +2772,7 @@ async function addNewPerson() {
       </div>
     </div>`;
     msgEl.className = 'msg';
+    scrollToMsg();
     return;
   }
   try {
@@ -2777,6 +2788,7 @@ async function addNewPerson() {
       nationality,
       nationality_uncertain: false,
       birth_country,
+      birth_country_primary,
       gender:              gender || null,
       bio_url:             document.getElementById('np_bioUrl').value.trim() || null,
       bio_url_verified:    document.getElementById('np_bioUrlVerified').checked || false,
@@ -2787,6 +2799,7 @@ async function addNewPerson() {
   } catch(err) {
     showMsg('personMsg', 'Feil: ' + err.message, 'error');
   }
+  scrollToMsg();
 }
 
 
