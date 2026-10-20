@@ -73,11 +73,14 @@ Staged filenames are prefixed with the score_id when it's unambiguously known (`
 - `year_composed` is a **text** field (word-based uncertainty qualifiers only — see Naming Conventions)
 - **Open architecture item (not started):** migrate from service-role key (currently in `localStorage`, bypasses RLS) to Supabase Auth + RLS policies scoped to `auth.uid()` on all editable tables. Publishable key would replace service-role key; Auth sessions persist so no repeated login. Low probability / high impact risk in current state.
 
-### New tables require explicit grants (from May 30, 2026):
+### New tables require explicit grants (from May 30, 2026; enforced for this existing project from October 30, 2026):
 
 ```sql
 GRANT SELECT ON public.new_table TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.new_table TO service_role;
 ```
+
+The `service_role` line is required for any table `editor.js` writes to (it uses the service-role key) — without it the editor can't save there ("permission denied"). Views only need the first line. Tables created before October 30, 2026 keep their existing grants (verified: anon/authenticated/service_role all have full privileges on them, RLS does the gating).
 
 ### Read-only Supabase MCP (added September 2026)
 
