@@ -124,7 +124,7 @@ A `supabase` MCP server is registered locally (`claude mcp add supabase --scope 
 - composition_id (PK, autoincrement)
 - title (text 255)
 - musescore_link (memo) — plain URL
-- musescore_notes (text) — renders as `innerHTML` on score.html, composer.html, musikk_editor.html (BBCode links converted to `<a>` before saving)
+- musescore_notes (text) — renders as `innerHTML` on score.html, composer.html, musikk_editor.html — links are stored as BBCode (`[url=https://…]label[/url]`, the intended format, not converted to `<a>`) and rendered client-side by `linkify()` in `shared.js`; `linkfix.html` turns bare URLs into labelled BBCode
 - musescore_uploaded (date), musescore_modified (date)
 - year_composed (text 50) — word-based uncertainty only: `ca. YYYY`, `before YYYY`, `after YYYY`, `YYYY–YYYY`, `YYYY?`. **Never** use `<`/`>` symbols (HTML-unsafe, inconsistent with `lifespan()` which uses the word "after")
 - opus_number (text) — normalized format: `Opus N no. N` (full word "Opus", lowercase "no.", no trailing periods)
@@ -342,7 +342,7 @@ score_info = data.get('text')
 1. Read all musescore_link values from Supabase composition table
 1. Fetch each URL using curl_cffi with cookies
 1. Extract text field from JSON-LD
-1. Convert BBCode links to HTML `<a>` tags before saving
+1. Keep MuseScore's BBCode links as-is (`linkify()` renders them; do not convert to `<a>`)
 1. Update composition_notes in Supabase
 1. Pause 2 seconds between requests
 1. Log failures to scrape_failures.txt
