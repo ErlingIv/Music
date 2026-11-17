@@ -37,15 +37,6 @@
     border: 1px solid var(--border);
     flex-shrink: 0;
   }
-  /* An illustrator's mark stands in for a missing portrait: shown whole
-     (contain, on white) rather than circle-cropped like a face. */
-  .composer-photo.signature-photo {
-    border-radius: 8px;
-    object-fit: contain;
-    background: #fff;
-    padding: 4px;
-    box-sizing: border-box;
-  }
   .signatures {
     margin-top: 1.25rem;
     padding-top: 1rem;
@@ -449,9 +440,7 @@ async function load() {
           <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
             ${person.photo_url
               ? `<a href="${safeHref(person.photo_url)}" target="_blank" rel="noopener noreferrer" title="View full photo" style="display:contents"><img src="${safeHref(person.photo_url)}" alt="Photo of ${escapeHtml(fullName(person))}" class="composer-photo"></a>`
-              : signatures.length
-                ? `<a href="${safeHref(signatures[0])}" target="_blank" rel="noopener noreferrer" title="View full signature" style="display:contents"><img src="${safeHref(signatures[0])}" alt="Signature of ${escapeHtml(fullName(person))}" class="composer-photo signature-photo"></a>`
-                : ''}
+              : ''}
             <div>
             <h1 class="composer-name">${escapeHtml(fullName(person))} ${flag}</h1>
             ${years ? `<p class="composer-dates">${escapeHtml(years)}</p>` : ''}
