@@ -1592,7 +1592,7 @@ function illustratorRow(p) {
   return `
     <div class="ill-row${open ? ' open' : ''}" id="ill-${p.person_id}">
       <button type="button" class="ill-head" aria-expanded="${open}" onclick="toggleIllustrator(${p.person_id})">
-        <span class="ill-name"><span class="caret" aria-hidden="true">▸</span>${escapeHtml(illName(p))}
+        <span class="ill-name"><span class="caret" aria-hidden="true">▸</span>${escapeHtml(illName(p))} ${p.nationality ? renderFlags(p.nationality, p.birth_country, p.birth_country_primary, p.nationality_uncertain) : ''}
           <small>${years ? escapeHtml(years) + ' · ' : ''}${p.work_count} work${p.work_count !== 1 ? 's' : ''}</small></span>
         <span class="ill-sigs">${sigs}</span>
       </button>
