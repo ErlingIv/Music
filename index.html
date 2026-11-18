@@ -253,6 +253,25 @@
   .ill-cover img { width: 100%; aspect-ratio: 3 / 4; object-fit: contain; background: var(--faint); border-radius: 3px; }
   .ill-cover span { font-size: 0.76rem; line-height: 1.25; overflow-wrap: anywhere; }
   .ill-cover:hover span { color: var(--accent); }
+  .ill-cover { background: none; border: 0; padding: 0; font: inherit; text-align: left; cursor: zoom-in; }
+  .ill-cover:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ill-lb {
+    position: fixed; inset: 0; z-index: 1000; background: rgba(20, 18, 14, 0.92);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.6rem;
+    padding: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+  }
+  .ill-lb img { max-width: 100%; max-height: calc(100vh - 7rem); object-fit: contain; background: #fff; border-radius: 3px; }
+  .ill-lb-bar { display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; align-items: center; justify-content: center; color: #f3efe6; font-size: 0.9rem; max-width: 100%; }
+  .ill-lb-bar .t { font-family: var(--serif); font-size: 1rem; overflow-wrap: anywhere; text-align: center; }
+  .ill-lb-bar a, .ill-lb-bar button {
+    color: #f3efe6; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 5px; padding: 0.35rem 0.75rem; font: inherit; font-size: 0.85rem; text-decoration: none; cursor: pointer;
+  }
+  .ill-lb-bar a:hover, .ill-lb-bar button:hover { background: rgba(255,255,255,0.25); }
+  .ill-lb-nav { position: absolute; top: 50%; transform: translateY(-50%); font-size: 2rem; line-height: 1; padding: 0.4rem 0.7rem;
+    color: #f3efe6; background: rgba(0,0,0,0.35); border: 0; border-radius: 5px; cursor: pointer; }
+  .ill-lb-nav.prev { left: max(8px, env(safe-area-inset-left, 0px)); }
+  .ill-lb-nav.next { right: max(8px, env(safe-area-inset-right, 0px)); }
   .ill-nocover { font-size: 0.8rem; color: var(--muted); padding: 0 0.9rem; }
   .ill-foot { padding: 0 0.9rem 0.8rem; font-size: 0.8rem; }
   .ill-foot a { color: var(--accent); }
@@ -1490,15 +1509,68 @@ function illustratorBody(p) {
   const withCover = p.works.filter(w => w.cover);
   const without = p.works.length - withCover.length;
   return `
-    ${withCover.length ? `<div class="ill-covers">${withCover.map(w => `
-      <a class="ill-cover" href="score.html?id=${w.id}">
+    ${withCover.length ? `<div class="ill-covers">${withCover.map((w, i) => `
+      <button type="button" class="ill-cover" onclick="openIllCover(${p.person_id}, ${i})" aria-label="Show cover full size: ${escapeHtml(w.title)}">
         <img src="${safeHref(w.cover)}" alt="Cover: ${escapeHtml(w.title)}" loading="lazy">
         <span>${escapeHtml(w.title)}</span>
-      </a>`).join('')}</div>` : '<p class="ill-nocover">No covers uploaded yet.</p>'}
+      </button>`).join('')}</div>` : '<p class="ill-nocover">No covers uploaded yet.</p>'}
     <div class="ill-foot">
       ${without ? `<span style="color:var(--muted)">${without} work${without !== 1 ? 's' : ''} without cover · </span>` : ''}
       <a href="${composerHref(p.person_id, '&role=Illustrator', 'illustrators')}">All works by ${escapeHtml(illName(p))} →</a>
     </div>`;
+}
+
+// Full-size cover viewer (lightbox) with prev/next within one illustrator's covers
+let illLb = null;
+function openIllCover(personId, idx) {
+  const p = illustratorsData.find(x => x.person_id === personId);
+  if (!p) return;
+  const covers = p.works.filter(w => w.cover);
+  if (!illLb) {
+    illLb = document.createElement('div');
+    illLb.className = 'ill-lb';
+    illLb.setAttribute('role', 'dialog');
+    illLb.setAttribute('aria-modal', 'true');
+    illLb.hidden = true;
+    document.body.appendChild(illLb);
+    illLb.addEventListener('click', e => { if (Date.now() - (illLb._swiped || 0) < 400) return; if (e.target === illLb || e.target.tagName === 'IMG') closeIllCover(); });
+    let tx = null;
+    illLb.addEventListener('touchstart', e => { tx = e.touches.length === 1 ? e.touches[0].clientX : null; }, { passive: true });
+    illLb.addEventListener('touchend', e => {
+      if (tx === null) return;
+      const dx = e.changedTouches[0].clientX - tx; tx = null;
+      if (Math.abs(dx) > 50) { illLb._swiped = Date.now(); illLb._step(dx < 0 ? 1 : -1); }
+    });
+    document.addEventListener('keydown', e => {
+      if (illLb.hidden) return;
+      if (e.key === 'Escape') closeIllCover();
+      else if (e.key === 'ArrowLeft') illLb._step(-1);
+      else if (e.key === 'ArrowRight') illLb._step(1);
+    });
+  }
+  const show = i => {
+    idx = (i + covers.length) % covers.length;
+    const w = covers[idx];
+    illLb.innerHTML = `
+      <img src="${safeHref(w.cover)}" alt="Cover: ${escapeHtml(w.title)}">
+      <div class="ill-lb-bar">
+        <span class="t">${escapeHtml(w.title)}${covers.length > 1 ? ` <small>(${idx + 1}/${covers.length})</small>` : ''}</span>
+        <a href="score.html?id=${w.id}">Open score →</a>
+        <button type="button" onclick="closeIllCover()">Close ✕</button>
+      </div>
+      ${covers.length > 1 ? `<button type="button" class="ill-lb-nav prev" aria-label="Previous cover" onclick="illLb._step(-1)">‹</button>
+      <button type="button" class="ill-lb-nav next" aria-label="Next cover" onclick="illLb._step(1)">›</button>` : ''}`;
+  };
+  illLb._step = d => show(idx + d);
+  show(idx);
+  illLb.hidden = false;
+  document.body.style.overflow = 'hidden';
+  illLb.querySelector('.ill-lb-bar button').focus();
+}
+function closeIllCover() {
+  if (!illLb) return;
+  illLb.hidden = true;
+  document.body.style.overflow = '';
 }
 
 function illName(p) {
