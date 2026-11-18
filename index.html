@@ -227,6 +227,41 @@
   }
 
   /* ── Letter group heading ── */
+  /* Illustrators, copyright mode: name left, signatures right, covers on expand */
+  .ill-list { display: flex; flex-direction: column; gap: 0.4rem; }
+  .ill-row { background: var(--paper); border: 1px solid var(--border); border-radius: 6px; }
+  .ill-row.open { border-color: var(--accent); }
+  .ill-head {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 1rem; align-items: center;
+    width: 100%; padding: 0.55rem 0.9rem; background: none; border: 0; text-align: left;
+    font: inherit; color: inherit; cursor: pointer;
+  }
+  .ill-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ill-name { font-family: var(--serif); font-size: 0.95rem; color: var(--ink); min-width: 0; }
+  .ill-name .caret { display: inline-block; width: 1em; color: var(--muted); transition: transform 0.15s; }
+  .ill-row.open .ill-name .caret { transform: rotate(90deg); }
+  .ill-name small { display: block; margin-left: 1em; font-family: var(--body); font-size: 0.76rem; color: var(--muted); }
+  .ill-sigs { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: flex-end; min-width: 0; }
+  .ill-sigs img { height: 44px; max-width: 140px; object-fit: contain; background: #fff; border: 1px solid var(--faint); border-radius: 3px; padding: 2px; }
+  .ill-sigs .ill-nosig { font-size: 0.76rem; color: var(--muted); font-style: italic; }
+  .ill-sigs .ill-fallback { opacity: 0.85; }
+  .ill-covers {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.7rem;
+    padding: 0.2rem 0.9rem 0.9rem;
+  }
+  .ill-cover { text-decoration: none; color: var(--ink); display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+  .ill-cover img { width: 100%; aspect-ratio: 3 / 4; object-fit: contain; background: var(--faint); border-radius: 3px; }
+  .ill-cover span { font-size: 0.76rem; line-height: 1.25; overflow-wrap: anywhere; }
+  .ill-cover:hover span { color: var(--accent); }
+  .ill-nocover { font-size: 0.8rem; color: var(--muted); padding: 0 0.9rem; }
+  .ill-foot { padding: 0 0.9rem 0.8rem; font-size: 0.8rem; }
+  .ill-foot a { color: var(--accent); }
+  .ill-unident-note { font-size: 0.82rem; color: var(--muted); margin: -0.3rem 0 0.7rem; }
+  @media (max-width: 600px) {
+    .ill-head { grid-template-columns: 1fr; gap: 0.4rem; }
+    .ill-sigs { justify-content: flex-start; margin-left: 1em; }
+  }
+
   .letter-group { margin-bottom: 1.5rem; }
   .letter-heading {
     font-family: var(--serif);
@@ -1333,6 +1368,9 @@ let _illustratorsLoaded = false;
 let _illustratorsLoadedMode = null;
 let illustratorsData = [];
 let illustratorsActiveLetter = 'ALL';
+const illCompTitles = {};
+const illOpen = new Set();
+const isUnidentified = p => (p.last_name || '') === 'Illustrator';
 
 async function loadIllustrators() {
   if (_illustratorsLoaded && _illustratorsLoadedMode === siteMode) return;
@@ -1369,10 +1407,10 @@ async function loadIllustrators() {
     const chunk = allCompIds.slice(i, i + 200).join(',');
     const pdFilter = modePdFilter(siteMode);
     const r = await fetch(
-      SUPABASE_URL + '/rest/v1/composition_public?composition_id=in.(' + chunk + ')&public_domain=' + pdFilter + modeLinkParam(siteMode) + '&select=composition_id',
+      SUPABASE_URL + '/rest/v1/composition_public?composition_id=in.(' + chunk + ')&public_domain=' + pdFilter + modeLinkParam(siteMode) + '&select=composition_id,title',
       { headers: H }
     );
-    (await r.json()).forEach(c => pdIds.add(c.composition_id));
+    (await r.json()).forEach(c => { pdIds.add(c.composition_id); illCompTitles[c.composition_id] = c.title; });
   }
 
   const pdCpRows = cpRows.filter(r => pdIds.has(r.composition_id));
@@ -1406,8 +1444,91 @@ async function loadIllustrators() {
     return (a.first_name || '').localeCompare(b.first_name || '', 'no');
   });
 
+  // Copyright mode: also fetch signatures and covers for the row view.
+  // Non-fatal — the list still renders if either fetch fails.
+  if (siteMode === 'copyright') {
+    const compsByPerson = {};
+    pdCpRows.forEach(row => (compsByPerson[row.person_id] ||= []).push(row.composition_id));
+    const sigsByPerson = {}, coverByComp = {};
+    try {
+      for (let i = 0; i < personIds.length; i += 200) {
+        const r = await fetch(SUPABASE_URL + '/rest/v1/person_signature?person_id=in.(' + personIds.slice(i, i + 200).join(',') + ')&select=person_id,image_url&order=created_at', { headers: H });
+        if (r.ok) (await r.json()).forEach(s => { if (safeHref(s.image_url)) (sigsByPerson[s.person_id] ||= []).push(s.image_url); });
+      }
+      const compIds = [...pdIds];
+      for (let i = 0; i < compIds.length; i += 200) {
+        const r = await fetch(SUPABASE_URL + '/rest/v1/score?composition_id=in.(' + compIds.slice(i, i + 200).join(',') + ')&frontpage_url=not.is.null&select=composition_id,frontpage_url', { headers: H });
+        if (r.ok) (await r.json()).forEach(s => { if (safeHref(s.frontpage_url) && !coverByComp[s.composition_id]) coverByComp[s.composition_id] = s.frontpage_url; });
+      }
+    } catch (e) { console.warn('Illustrator signatures/covers failed', e); }
+    persons.forEach(p => {
+      p.signatures = sigsByPerson[p.person_id] || [];
+      p.works = [...new Set(compsByPerson[p.person_id] || [])]
+        .map(id => ({ id, title: illCompTitles[id] || '', cover: coverByComp[id] || null }))
+        .sort((a, b) => (b.cover ? 1 : 0) - (a.cover ? 1 : 0) || a.title.localeCompare(b.title, 'no'));
+    });
+  }
+
   illustratorsData = persons;
   renderIllustrators();
+}
+
+
+function toggleIllustrator(id) {
+  illOpen.has(id) ? illOpen.delete(id) : illOpen.add(id);
+  const row = document.getElementById('ill-' + id);
+  if (!row) return;
+  const open = illOpen.has(id);
+  row.classList.toggle('open', open);
+  row.querySelector('.ill-head').setAttribute('aria-expanded', open);
+  const body = row.querySelector('.ill-body');
+  if (open && !body.innerHTML) body.innerHTML = illustratorBody(illustratorsData.find(p => p.person_id === id));
+  body.hidden = !open;
+}
+
+function illustratorBody(p) {
+  const withCover = p.works.filter(w => w.cover);
+  const without = p.works.length - withCover.length;
+  return `
+    ${withCover.length ? `<div class="ill-covers">${withCover.map(w => `
+      <a class="ill-cover" href="score.html?id=${w.id}">
+        <img src="${safeHref(w.cover)}" alt="Cover: ${escapeHtml(w.title)}" loading="lazy">
+        <span>${escapeHtml(w.title)}</span>
+      </a>`).join('')}</div>` : '<p class="ill-nocover">No covers uploaded yet.</p>'}
+    <div class="ill-foot">
+      ${without ? `<span style="color:var(--muted)">${without} work${without !== 1 ? 's' : ''} without cover · </span>` : ''}
+      <a href="${composerHref(p.person_id, '&role=Illustrator', 'illustrators')}">All works by ${escapeHtml(illName(p))} →</a>
+    </div>`;
+}
+
+function illName(p) {
+  return isUnidentified(p) ? '«' + (p.first_name || '?') + '»' : (p.last_name || '') + (p.first_name ? ', ' + p.first_name : '');
+}
+
+function illustratorRow(p) {
+  const years = lifespan(p.born, p.died, p.died_uncertain);
+  const open = illOpen.has(p.person_id);
+  // Unidentified illustrators without a signature image: show the first cover
+  // small instead, so the initials can still be compared by eye.
+  const firstCover = (p.works.find(w => w.cover) || {}).cover;
+  const sigs = p.signatures.length
+    ? p.signatures.map((u, i) => `<img src="${safeHref(u)}" alt="Signature ${i + 1} of ${escapeHtml(illName(p))}" loading="lazy">`).join('')
+    : (isUnidentified(p) && firstCover
+        ? `<img class="ill-fallback" src="${safeHref(firstCover)}" alt="First cover" loading="lazy" title="No signature image — first cover shown">`
+        : '<span class="ill-nosig">No signature</span>');
+  return `
+    <div class="ill-row${open ? ' open' : ''}" id="ill-${p.person_id}">
+      <button type="button" class="ill-head" aria-expanded="${open}" onclick="toggleIllustrator(${p.person_id})">
+        <span class="ill-name"><span class="caret" aria-hidden="true">▸</span>${escapeHtml(illName(p))}
+          <small>${years ? escapeHtml(years) + ' · ' : ''}${p.work_count} work${p.work_count !== 1 ? 's' : ''}</small></span>
+        <span class="ill-sigs">${sigs}</span>
+      </button>
+      <div class="ill-body"${open ? '' : ' hidden'}>${open ? illustratorBody(p) : ''}</div>
+    </div>`;
+}
+
+function illustratorRowsHtml(list) {
+  return `<div class="ill-list">${list.map(illustratorRow).join('')}</div>`;
 }
 
 function setIllustratorLetter(letter) {
@@ -1451,7 +1572,11 @@ function renderIllustrators() {
 
   countEl.textContent = illustratorsData.length + ' illustrator' + (illustratorsData.length !== 1 ? 's' : '');
 
-  const letters = [...new Set(illustratorsData.map(p => (p.last_name || '?')[0].toUpperCase()))].sort();
+  const rowMode = siteMode === 'copyright';
+  const named = rowMode ? illustratorsData.filter(p => !isUnidentified(p)) : illustratorsData;
+  const unident = rowMode ? illustratorsData.filter(isUnidentified)
+    .sort((a, b) => (a.first_name || '').localeCompare(b.first_name || '', 'no')) : [];
+  const letters = [...new Set(named.map(p => (p.last_name || '?')[0].toUpperCase()))].sort();
   const allLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ'.split('');
 
   alphaEl.innerHTML = `
@@ -1473,10 +1598,11 @@ function renderIllustrators() {
   `;
 
   const filtered = illustratorsActiveLetter === 'ALL'
-    ? illustratorsData
-    : illustratorsData.filter(p => (p.last_name || '?')[0].toUpperCase() === illustratorsActiveLetter);
+    ? named
+    : named.filter(p => (p.last_name || '?')[0].toUpperCase() === illustratorsActiveLetter);
+  const showUnident = rowMode && illustratorsActiveLetter === 'ALL' && unident.length;
 
-  if (!filtered.length) {
+  if (!filtered.length && !showUnident) {
     listEl.innerHTML = '<div class="loading-state">No illustrators found.</div>';
     return;
   }
@@ -1491,11 +1617,16 @@ function renderIllustrators() {
   listEl.innerHTML = Object.entries(groups).map(([letter, list]) => `
     <div class="letter-group">
       <div class="letter-heading">${escapeHtml(letter)}</div>
-      <div class="composer-grid">
+      ${rowMode ? illustratorRowsHtml(list) : `<div class="composer-grid">
         ${list.map(p => illustratorCard(p)).join('')}
-      </div>
+      </div>`}
     </div>
-  `).join('');
+  `).join('') + (showUnident ? `
+    <div class="letter-group">
+      <div class="letter-heading">Unidentified</div>
+      <p class="ill-unident-note">Known only by initials or a mark. Compare with the signatures above.</p>
+      ${illustratorRowsHtml(unident)}
+    </div>` : '');
 }
 
 </script>
