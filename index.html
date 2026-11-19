@@ -1464,9 +1464,9 @@ async function loadIllustrators() {
     return (a.first_name || '').localeCompare(b.first_name || '', 'no');
   });
 
-  // Copyright mode: also fetch signatures and covers for the row view.
+  // Fetch signatures and covers for the row view (both modes).
   // Non-fatal — the list still renders if either fetch fails.
-  if (siteMode === 'copyright') {
+  {
     const compsByPerson = {};
     pdCpRows.forEach(row => (compsByPerson[row.person_id] ||= []).push(row.composition_id));
     const sigsByPerson = {}, coverByComp = {};
@@ -1645,7 +1645,7 @@ function renderIllustrators() {
 
   countEl.textContent = illustratorsData.length + ' illustrator' + (illustratorsData.length !== 1 ? 's' : '');
 
-  const rowMode = siteMode === 'copyright';
+  const rowMode = true;
   const named = rowMode ? illustratorsData.filter(p => !isUnidentified(p)) : illustratorsData;
   const unident = rowMode ? illustratorsData.filter(isUnidentified)
     .sort((a, b) => (a.first_name || '').localeCompare(b.first_name || '', 'no')) : [];
