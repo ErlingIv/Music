@@ -254,6 +254,10 @@
   .ill-cover span { font-size: 0.76rem; line-height: 1.25; overflow-wrap: anywhere; }
   .ill-cover:hover span { color: var(--accent); }
   .ill-cover { background: none; border: 0; padding: 0; font: inherit; text-align: left; cursor: zoom-in; }
+  .ill-cover-img { position: relative; display: block; }
+  .ill-cover-img img { display: block; }
+  .ai-mark { position: absolute; right: 4px; bottom: 4px; font-style: normal; font-size: 0.62rem; letter-spacing: 0.04em; line-height: 1; padding: 2px 4px; border-radius: 3px; background: rgba(255,255,255,0.72); color: #555; opacity: 0.8; pointer-events: auto; }
+  .ai-note { flex-basis: 100%; text-align: center; font-size: 0.75rem; opacity: 0.7; }
   .ill-cover:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .ill-lb {
     position: fixed; inset: 0; z-index: 1000; background: rgba(20, 18, 14, 0.92);
@@ -1469,7 +1473,7 @@ async function loadIllustrators() {
   {
     const compsByPerson = {};
     pdCpRows.forEach(row => (compsByPerson[row.person_id] ||= []).push(row.composition_id));
-    const sigsByPerson = {}, coverByComp = {};
+    const sigsByPerson = {}, coverByComp = {}, aiByComp = {};
     try {
       for (let i = 0; i < personIds.length; i += 200) {
         const r = await fetch(SUPABASE_URL + '/rest/v1/person_signature?person_id=in.(' + personIds.slice(i, i + 200).join(',') + ')&select=person_id,image_url&order=created_at', { headers: H });
@@ -1477,14 +1481,14 @@ async function loadIllustrators() {
       }
       const compIds = [...pdIds];
       for (let i = 0; i < compIds.length; i += 200) {
-        const r = await fetch(SUPABASE_URL + '/rest/v1/score?composition_id=in.(' + compIds.slice(i, i + 200).join(',') + ')&frontpage_url=not.is.null&select=composition_id,frontpage_url', { headers: H });
-        if (r.ok) (await r.json()).forEach(s => { if (safeHref(s.frontpage_url) && !coverByComp[s.composition_id]) coverByComp[s.composition_id] = s.frontpage_url; });
+        const r = await fetch(SUPABASE_URL + '/rest/v1/score?composition_id=in.(' + compIds.slice(i, i + 200).join(',') + ')&frontpage_url=not.is.null&select=composition_id,frontpage_url,ai_frontpage', { headers: H });
+        if (r.ok) (await r.json()).forEach(s => { if (safeHref(s.frontpage_url) && !coverByComp[s.composition_id]) { coverByComp[s.composition_id] = s.frontpage_url; aiByComp[s.composition_id] = !!s.ai_frontpage; } });
       }
     } catch (e) { console.warn('Illustrator signatures/covers failed', e); }
     persons.forEach(p => {
       p.signatures = sigsByPerson[p.person_id] || [];
       p.works = [...new Set(compsByPerson[p.person_id] || [])]
-        .map(id => ({ id, title: illCompTitles[id] || '', cover: coverByComp[id] || null }))
+        .map(id => ({ id, title: illCompTitles[id] || '', cover: coverByComp[id] || null, ai: !!aiByComp[id] }))
         .sort((a, b) => (b.cover ? 1 : 0) - (a.cover ? 1 : 0) || a.title.localeCompare(b.title, 'no'));
     });
   }
@@ -1512,7 +1516,7 @@ function illustratorBody(p) {
   return `
     ${withCover.length ? `<div class="ill-covers">${withCover.map((w, i) => `
       <button type="button" class="ill-cover" onclick="openIllCover(${p.person_id}, ${i})" aria-label="Show cover full size: ${escapeHtml(w.title)}">
-        <img src="${safeHref(w.cover)}" alt="Cover: ${escapeHtml(w.title)}" loading="lazy">
+        <span class="ill-cover-img"><img src="${safeHref(w.cover)}" alt="Cover: ${escapeHtml(w.title)}" loading="lazy">${w.ai ? '<i class="ai-mark" title="Cover digitally restored with AI">✦ AI</i>' : ''}</span>
         <span>${escapeHtml(w.title)}</span>
       </button>`).join('')}</div>` : '<p class="ill-nocover">No covers uploaded yet.</p>'}
     <div class="ill-foot">
@@ -1558,6 +1562,7 @@ function openIllCover(personId, idx) {
         <span class="t">${escapeHtml(w.title)}${covers.length > 1 ? ` <small>(${idx + 1}/${covers.length})</small>` : ''}</span>
         <a href="score.html?id=${w.id}">Open score →</a>
         <button type="button" onclick="closeIllCover()">Close ✕</button>
+        ${w.ai ? '<small class="ai-note">✦ Cover digitally restored with the help of AI</small>' : ''}
       </div>
       ${covers.length > 1 ? `<button type="button" class="ill-lb-nav prev" aria-label="Previous cover" onclick="illLb._step(-1)">‹</button>
       <button type="button" class="ill-lb-nav next" aria-label="Next cover" onclick="illLb._step(1)">›</button>` : ''}`;
