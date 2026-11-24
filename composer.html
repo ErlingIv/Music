@@ -297,7 +297,7 @@
 <script>
 document.getElementById('siteNameLink').textContent = SITE_NAME;
 const H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
-function fullName(p) { return isUnknownIllustrator(p) ? 'Unknown' : [p.first_name, p.last_name].filter(Boolean).join(' '); }
+function fullName(p) { return [p.first_name, p.last_name].filter(Boolean).join(' '); }
 
 const params    = new URLSearchParams(window.location.search);
 const personId  = params.get('id');
