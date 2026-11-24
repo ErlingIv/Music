@@ -1394,7 +1394,7 @@ let illustratorsData = [];
 let illustratorsActiveLetter = 'ALL';
 const illCompTitles = {};
 const illOpen = new Set();
-const isUnidentified = p => (p.last_name || '') === 'Illustrator';
+const isUnidentified = p => isUnknownIllustrator(p);
 
 async function loadIllustrators() {
   if (_illustratorsLoaded && _illustratorsLoadedMode === siteMode) return;
@@ -1580,7 +1580,7 @@ function closeIllCover() {
 }
 
 function illName(p) {
-  return isUnidentified(p) ? '«' + (p.first_name || '?') + '»' : (p.last_name || '') + (p.first_name ? ', ' + p.first_name : '');
+  return isUnidentified(p) ? 'Unknown' : (p.last_name || '') + (p.first_name ? ', ' + p.first_name : '');
 }
 
 function illustratorRow(p) {
@@ -1598,7 +1598,7 @@ function illustratorRow(p) {
     <div class="ill-row${open ? ' open' : ''}" id="ill-${p.person_id}">
       <button type="button" class="ill-head" aria-expanded="${open}" onclick="toggleIllustrator(${p.person_id})">
         <span class="ill-name"><span class="caret" aria-hidden="true">▸</span>${escapeHtml(illName(p))} ${p.nationality ? renderFlags(p.nationality, p.birth_country, p.birth_country_primary, p.nationality_uncertain) : ''}
-          <small>${years ? escapeHtml(years) + ' · ' : ''}${p.work_count} work${p.work_count !== 1 ? 's' : ''}</small></span>
+          <small>${isUnidentified(p) && p.last_name === 'Illustrator' && p.first_name ? 'signed «' + escapeHtml(p.first_name) + '» · ' : ''}${years ? escapeHtml(years) + ' · ' : ''}${p.work_count} work${p.work_count !== 1 ? 's' : ''}</small></span>
         <span class="ill-sigs">${sigs}</span>
       </button>
       <div class="ill-body"${open ? '' : ' hidden'}>${open ? illustratorBody(p) : ''}</div>
@@ -1701,7 +1701,7 @@ function renderIllustrators() {
     </div>
   `).join('') + (showUnident ? `
     <div class="letter-group">
-      <div class="letter-heading">Unidentified</div>
+      <div class="letter-heading">Unknown</div>
       <p class="ill-unident-note">Known only by initials or a mark. Compare with the signatures above.</p>
       ${illustratorRowsHtml(unident)}
     </div>` : '');
